@@ -1,0 +1,85 @@
+/* The existing calculator keeps its proportions and accounting functions. */
+#page-yevmiye .yevmiye-calc-wrap { display: none; }
+#page-yevmiye .sw-yev-card-tools { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; }
+#page-yevmiye .sw-yev-summary-actions { display: flex; justify-content: flex-end; width: 430px; max-width: 100%; margin: 0 0 14px; }
+@media (min-width: 1081px) {
+  #page-yevmiye .fc-company-picker { padding-right: 116px; }
+  #page-yevmiye .yevmiye-side { top: 68px; }
+  #page-yevmiye .sw-yev-summary-actions { position: absolute; right: 0; bottom: calc(100% + 14px); margin: 0; }
+}
+#page-yevmiye :is(#swCalculatorOpen,#yevmiyeClearBtn) {
+  position: static; min-height: 44px; padding: 11px 18px; border: 1px solid;
+  border-radius: 10px; font: 600 14px 'IBM Plex Sans',sans-serif;
+  color: #fff; cursor: pointer; white-space: nowrap; touch-action: manipulation;
+  transition: box-shadow .18s, background .18s, border-color .18s;
+}
+#page-yevmiye #swCalculatorOpen {
+  border-color: #a99eff; background: linear-gradient(140deg,#6854bd,#44318e);
+  box-shadow: inset 0 1px 0 #ffffff26, 0 0 15px #a78bfa38;
+}
+#page-yevmiye #swCalculatorOpen:is(:hover,:active,[aria-expanded="true"]) {
+  border-color: #d2c9ff; background: linear-gradient(140deg,#7b65d4,#5540aa);
+  box-shadow: inset 0 1px 0 #ffffff40, 0 0 22px #aa93ff80, 0 0 38px #8b5cf633;
+}
+#page-yevmiye #yevmiyeClearBtn {
+  border-color: #f49aae; background: linear-gradient(140deg,#b4355c,#852347);
+  box-shadow: inset 0 1px 0 #ffffff26, 0 0 15px #fb718538;
+}
+#page-yevmiye #yevmiyeClearBtn:is(:hover,:active) {
+  border-color: #ffd2dc; background: linear-gradient(140deg,#c7446d,#9d2c54);
+  box-shadow: inset 0 1px 0 #ffffff40, 0 0 22px #fb718580, 0 0 38px #e9406a33;
+}
+#page-yevmiye :is(#swCalculatorOpen,#yevmiyeClearBtn):focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+body.sw-calc-open { overflow: hidden; }
+#swCalculatorDialog {
+  position: fixed; inset: auto; margin: 0; padding: 0; width: fit-content;
+  left: 50%; top: 50%; transform: translate(-50%,-50%);
+  max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
+  border: 1px solid #9c8cdb80; border-radius: 20px; color: #f8f6ff;
+  background: linear-gradient(145deg,#18243b,#111829);
+  box-shadow: 0 0 0 1px #ffffff0d, 0 0 44px #a78bfa24, 0 28px 90px #0009;
+  overflow: hidden;
+}
+#swCalculatorDialog[open] { display: flex; flex-direction: column; }
+#swCalculatorDialog::backdrop { background: #050b16b8; backdrop-filter: blur(6px); }
+#swCalculatorDialog .sw-calc-dialog-head {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 12px 16px; border-bottom: 1px solid #ffffff1c;
+}
+#swCalculatorDialog h2 { margin: 0; font: 600 clamp(17px,1.5vw,23px) 'IBM Plex Sans',sans-serif; color: #fff; }
+#swCalculatorClose {
+  display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px;
+  padding: 0; border: 1px solid #ffffff40; border-radius: 10px;
+  background: #ffffff0d; color: #fff; cursor: pointer;
+}
+#swCalculatorClose svg { width: 22px; height: 22px; }
+#swCalculatorClose:hover { background: #ffffff24; }
+#swCalculatorClose:focus-visible { outline: 2px solid #d1bfff; outline-offset: 3px; }
+#swCalculatorDialog .sw-calc-dialog-body { padding: 16px; overflow: auto; overscroll-behavior: contain; min-height: 0; }
+#swCalculatorDialog .sw-calc-stage { position: relative; margin: auto; }
+#swCalculatorDialog #calc {
+  position: absolute; inset: 0 auto auto 0; width: 270px; max-width: none; margin: 0;
+  transform: scale(var(--sw-calc-scale,1)); transform-origin: top left;
+}
+#swCalculatorDialog #calcOut:focus-visible { outline: 2px solid #344b26; outline-offset: 2px; }
+@media (max-width: 1080px) {
+  #page-yevmiye .sw-yev-summary-actions { width: 100%; max-width: 520px; }
+}
+@media (max-width: 1024px) {
+  #swCalculatorDialog #calc .calc-grid { grid-auto-rows: 36px; }
+  #swCalculatorDialog #calc .calc-btn.mem, #swCalculatorDialog #calc .calc-btn.tax { height: 32px; }
+  #swCalculatorDialog #calc .sl-opt { min-height: 22px; font-size: 8px; }
+  #swCalculatorDialog #calc input { font-size: 16px; }
+}
+@media (max-width: 540px) {
+  #page-yevmiye .sw-yev-card-tools { width: 100%; }
+  #page-yevmiye .sw-yev-card-tools > label { flex-basis: 100%; }
+  #page-yevmiye .sw-yev-card-tools > select { flex: 1; }
+  #page-yevmiye #swCalculatorOpen { padding-inline: 12px; }
+  #swCalculatorDialog { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 15px; }
+  #swCalculatorDialog .sw-calc-dialog-head { padding: 8px 12px; }
+  #swCalculatorDialog .sw-calc-dialog-body { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #page-yevmiye :is(#swCalculatorOpen,#yevmiyeClearBtn) { transition: none; }
+}

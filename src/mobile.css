@@ -140,12 +140,6 @@ html { -webkit-text-size-adjust: 100%; }
   body > main .yevmiye-side { position: static; margin: 0; }
   body > main .kur-block, body > main .mah-block { width: 100%; max-width: 520px; overflow-x: auto; }
   body > main .mah-tbl { min-width: 360px; }
-  body > main .yevmiye-calc-wrap { width: min(100%, 340px); margin: 18px auto; padding-top: 54px; }
-  body > main #calc { transform: none !important; width: 100%; margin: 0; }
-  body > main #yevmiyeClearBtn { top: 0; right: 0 !important; }
-  body > main #calc .calc-grid { grid-auto-rows: 44px; }
-  body > main #calc .calc-btn.mem, body > main #calc .calc-btn.tax { height: 36px; }
-  body > main #calc .sl-opt { min-height: 28px; font-size: 9px; }
 
   body > main #page-mutabakat .cm-studio { flex-direction: column; gap: 18px; }
   body > main #page-mutabakat :is(.cm-queue,.cm-form-col,.cm-preview-col) { width: 100%; max-width: 100%; min-width: 0; flex-basis: auto; }

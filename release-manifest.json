@@ -14,8 +14,16 @@
       "sha256": "34aa1c60e13f2b09bd98954d9aa4a48f92c6bfbaad39d8929c70edb575aa427d"
     },
     {
+      "file": "app/calculator-ui.css",
+      "sha256": "2fee1c6b5aa0160ddf9e803d5205ae3c91f2e765dfa3b37b0658305beb6f897e"
+    },
+    {
+      "file": "app/calculator-ui.js",
+      "sha256": "2bbd70e4e33d639bcbdbfcce893878a4801c1bb1b4bf9f0cd0c893a3529cabe6"
+    },
+    {
       "file": "app/mobile.css",
-      "sha256": "1062b2783688b0b5237c39de2cc147ebc9966aa0a904393e52e41286f67cdf1c"
+      "sha256": "937fd031713458b27952bcf60420d0a3aa337a9150dbba440899ac9c385ad918"
     },
     {
       "file": "app/mobile.js",
@@ -167,7 +175,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "f868bd972a5e4cedfe56693c0a08c17b23540b2bf6f627a452fe3bcdc1e4bc70"
+      "sha256": "ff10b620e8e3118aa5a93436c0c6df671a6b5502abc3624dd73a640f68d9547e"
     },
     {
       "file": "robots.txt",
