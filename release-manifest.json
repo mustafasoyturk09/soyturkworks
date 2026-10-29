@@ -15,7 +15,7 @@
     },
     {
       "file": "app/calculator-ui.css",
-      "sha256": "2fee1c6b5aa0160ddf9e803d5205ae3c91f2e765dfa3b37b0658305beb6f897e"
+      "sha256": "64a27e692c1e6efe7be8b57bb4b1494915c85a35d6dd4732008bdc2a9c22dcc5"
     },
     {
       "file": "app/calculator-ui.js",
@@ -175,7 +175,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "ff10b620e8e3118aa5a93436c0c6df671a6b5502abc3624dd73a640f68d9547e"
+      "sha256": "2be29c574b912c12c2bbdd1ecb3c07a58b0ad6e878bbf5db33e81dac7c621b22"
     },
     {
       "file": "robots.txt",
