@@ -11,7 +11,9 @@ const seed=raw.match(/<script[^>]+id="fc153PortableData">([\s\S]*?)<\/script>/);
 if(seed)for(const [key,value] of Object.entries(JSON.parse(seed[1]).values))if(/history|undo/.test(key))assert.equal(value,'[]');
 for(const m of live.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi))if(m[2].trim()&&!/type\s*=\s*["'](?!text\/javascript|application\/javascript|module)/i.test(m[1]))new vm.Script(m[2]);
 for(const m of live.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"[^>]*>/g)){
- assert(m[1].startsWith('./'),'Dış kaynak veya kök yola bağlı varlık: '+m[1]);await readFile(root+'/dist/'+m[1].slice(2));
+ assert(m[1].startsWith('./'),'Dış kaynak veya kök yola bağlı varlık: '+m[1]);
+ // Cache versions and fragments are URL metadata, not part of the filename.
+ await readFile(new URL(m[1],new URL('../dist/index.html',import.meta.url)));
 }
 assert(live.includes('s177Description'));
 assert(!live.includes("console.log('[Satınalma OCR]"));

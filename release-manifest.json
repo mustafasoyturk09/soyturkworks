@@ -43,19 +43,19 @@
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
-      "sha256": "194f5203ca9d161617b39cc719b1cfc0b4d5ce5274634c92610abca6b431a45a"
+      "sha256": "ac1a2eab25a1bd8f4440e8b035f15643bbe8bfc6bd475ad39810dccb995cb504"
     },
     {
       "file": "assets/brand/favicon-16.png",
-      "sha256": "ffa8ad4b74bf284c0f03058a3dc28686b2874f1fa6657fae8fda49c14168d249"
+      "sha256": "ef1c0aa4ce6f1d10346657e54c5bb4391fb4b5a6f138102198fc678cb45529e5"
     },
     {
       "file": "assets/brand/favicon-32.png",
-      "sha256": "2cea5931f61c4b2143ae76086a6950831f0affcd7220d479ff3a0a6ea3161629"
+      "sha256": "b1ee9c292c07b09778b3f5b47a443ee7f7b79afd6e5aa0cf47cecccb6427f26d"
     },
     {
       "file": "assets/brand/favicon-48.png",
-      "sha256": "6c7cc2e602b1cf797d91266c35a41fd3a67c5c330a2ac5aad84c1ac9a0f92288"
+      "sha256": "e2ea5819d9ec0240262e0c03aeb64668ae685d15b15fcda91692d34ba2153faa"
     },
     {
       "file": "assets/brand/sw-logo.png",
@@ -163,11 +163,11 @@
     },
     {
       "file": "favicon.ico",
-      "sha256": "7552c65e1ef4daf24fa28c117f5f0b261c8a5f5d9a80ac9141cac5066e310121"
+      "sha256": "7d9bda6f2737ea15c41808656d8035e7edf06c243bdec8d944504ca4537edbc4"
     },
     {
       "file": "index.html",
-      "sha256": "4ee90b3b5b342540cf5492d5fdaccf430a69a1876f090cefd5c178de55acf8d3"
+      "sha256": "62666e03464ecc6e4ab6ab2a099650a5dce177f436dce23e59bc3efd31fa9c2f"
     },
     {
       "file": "robots.txt",
