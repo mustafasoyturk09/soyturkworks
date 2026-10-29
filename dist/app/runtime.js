@@ -14,7 +14,13 @@
   document.addEventListener('drop',e=>{if(!ready){e.preventDefault();e.stopImmediatePropagation();notify('Uygulama yüklenirken dosya alınamaz; yükleme tamamlanınca tekrar sürükle.');}},true);
   window.addEventListener('error',e=>{
     const tag=e.target&&e.target.tagName;
-    if(tag==='SCRIPT'||tag==='LINK'){resourceFailed=true;notify('Bir uygulama bileşeni yüklenemedi. Dosya işleme başlatılmadı.',true);}
+    if(tag==='SCRIPT'||tag==='LINK'){
+      // Cloudflare may inject optional, third-party analytics. Only required
+      // same-origin application resources should block invoice processing.
+      const url=e.target.src||e.target.href;
+      if(url&&new URL(url,location.href).origin!==location.origin)return;
+      resourceFailed=true;notify('Bir uygulama bileşeni yüklenemedi. Dosya işleme başlatılmadı.',true);
+    }
     else if(e.message){if(!ready)resourceFailed=true;notify('Bu işlem tamamlanamadı. Açık verilerini yedekle; sorun sürerse hata ekranıyla birlikte bildir.',true);}
   },true);
   window.addEventListener('unhandledrejection',()=>notify('İşlem tamamlanamadı; mevcut kayıtlar silinmedi. Depolama alanını ve bağlantını kontrol et.',true));
