@@ -10,6 +10,14 @@
       "sha256": "3d8f57e7221b845ff67de4946914f39536fd35ca428f32e28cf5ff617408d710"
     },
     {
+      "file": "app/mobile.css",
+      "sha256": "1062b2783688b0b5237c39de2cc147ebc9966aa0a904393e52e41286f67cdf1c"
+    },
+    {
+      "file": "app/mobile.js",
+      "sha256": "f1bffca0e63d251c861ad75968169d5df449753d56874a3653dfa1932ac2e61c"
+    },
+    {
       "file": "app/pdf-loader.mjs",
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
@@ -131,7 +139,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "95f9e2fae5cf8ab40f22c4ca0dd27b978b2564add30ca02fb002b0e8c74a9935"
+      "sha256": "aac4709d866cf39168827b6c21917df6b1637c363aa9a75c08ec886530076c06"
     },
     {
       "file": "robots.txt",

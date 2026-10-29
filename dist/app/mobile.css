@@ -1,0 +1,220 @@
+/* Small-screen layout. Accounting rules, saved data and desktop layouts stay in
+   the application; these overrides only adapt its presentation. */
+.sw-mobile-bar, .sw-nav-backdrop, .sw-nav-close { display: none; }
+html { -webkit-text-size-adjust: 100%; }
+
+@media (max-width: 1024px) {
+  html { scroll-padding-top: calc(80px + env(safe-area-inset-top, 0px)); }
+  body, body.fc-home-full {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
+    padding-top: calc(64px + env(safe-area-inset-top, 0px));
+  }
+  body.sw-nav-open { overflow: hidden; }
+  body > main, body.fc-home-full > main {
+    width: 100%; max-width: none; min-width: 0;
+    padding: 24px max(16px, env(safe-area-inset-right, 0px))
+      max(36px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+  .sw-mobile-bar {
+    display: flex; align-items: center; gap: 12px;
+    position: fixed; inset: 0 0 auto; z-index: 110;
+    min-height: calc(64px + env(safe-area-inset-top, 0px));
+    padding: calc(8px + env(safe-area-inset-top, 0px))
+      max(16px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+    background: #101a2e; color: #f5f1e8;
+    border-bottom: 1px solid #ffffff1c; box-shadow: 0 3px 14px #08142622;
+  }
+  .sw-menu-button, .sw-nav-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 44px; width: 44px; height: 44px; padding: 10px;
+    border: 1px solid #ffffff38; border-radius: 12px;
+    background: #ffffff0c; color: #f6e9cf; cursor: pointer;
+  }
+  .sw-menu-button svg, .sw-nav-close svg { width: 22px; height: 22px; }
+  .sw-mobile-heading { min-width: 0; line-height: 1.3; }
+  .sw-mobile-brand { display: block; font: 600 18px 'Fraunces', serif; }
+  .sw-mobile-page { display: block; margin-top: 3px; font-size: 11px; color: #b1c1d7; }
+  body > aside, body.fc-home-full > aside {
+    position: fixed; inset: 0 auto 0 0; z-index: 130;
+    width: min(320px, calc(100vw - 32px));
+    height: 100vh; height: 100dvh;
+    padding: calc(28px + env(safe-area-inset-top, 0px)) 18px max(24px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(18px, env(safe-area-inset-left, 0px));
+    overflow-y: auto; overscroll-behavior: contain;
+    transform: translateX(-105%); visibility: hidden;
+    transition: transform .2s ease, visibility .2s;
+    box-shadow: 14px 0 48px #0005;
+  }
+  body.sw-nav-open > aside { transform: none; visibility: visible; }
+  body > aside .sw-nav-close { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; }
+  body > aside .brand { margin-top: 26px; }
+  body > aside .nav-item { min-height: 48px; font-size: 14px; }
+  body > aside .sidebar-foot { min-height: 24px; }
+  .sw-nav-backdrop {
+    position: fixed; inset: 0; z-index: 120;
+    width: 100%; height: 100%; border: 0; margin: 0; padding: 0;
+    background: #030b18a6; backdrop-filter: blur(3px); cursor: pointer;
+  }
+  body.sw-nav-open .sw-nav-backdrop { display: block; }
+  .sw-mobile-bar button:focus-visible, .sw-nav-close:focus-visible,
+  body > aside .nav-item:focus-visible { outline: 2px solid #e6bc70; outline-offset: 3px; }
+
+  body > main .page { min-width: 0; max-width: 100%; }
+  body > main .page, body > main .nt-editor { scroll-margin-top: calc(84px + env(safe-area-inset-top, 0px)); }
+  body > main #page-home {
+    margin: 0 !important; padding: 0 !important;
+    min-height: calc(100svh - 124px);
+  }
+  body > main .dash-hero { gap: 18px; padding: 0 0 24px; flex-direction: column; }
+  body > main .dash-hero > div { min-width: 0; width: 100%; }
+  body > main .dash-hero h1 { font-size: clamp(29px, 6vw, 44px); line-height: 1.15; }
+  body > main .dash-hero p { font-size: 14px; line-height: 1.6; }
+  body > main .dash-date { min-width: 0; max-width: 440px; }
+  body > main .dash-date .clock-widget { gap: 12px; justify-content: space-between; max-width: 100%; }
+  body > main .dash-date .analog { width: 62px; height: 62px; }
+  body > main .dash-grid { grid-template-columns: minmax(0, 1fr); }
+  body > main .dash-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  body > main .dash-metrics > div { min-width: 0; padding: 16px 12px; }
+  body > main .dash-panel { min-width: 0; padding: 18px; }
+  body > main .dash-panel-head { flex-wrap: wrap; gap: 8px; }
+  body > main #page-home .fc-home-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  body > main .dash-bottom { flex-wrap: wrap; gap: 10px; }
+
+  body > main .page-head { margin-bottom: 22px; }
+  body > main .page-head h1 { font-size: clamp(25px, 5vw, 36px); overflow-wrap: anywhere; }
+  body > main .page-desc { line-height: 1.6; }
+  body > main .step { padding: 18px; }
+  body > main .step-sub, body > main .dropzone, body > main .table-wrap,
+  body > main .btn-row, body > main .lx-tabs, body > main .lx-body,
+  body > main .title-edit { margin-left: 0; }
+  body > main .dropzone { padding: 24px 14px; }
+  body > main .step-head { align-items: flex-start; }
+  body > main .step-title { line-height: 1.4; }
+  body > main .btn-row { gap: 8px; }
+  body > main input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]),
+  body > main select, body > main textarea { font-size: 16px !important; max-width: 100%; min-width: 0; }
+  body > main button, body > main [role=button], body > main summary { touch-action: manipulation; }
+  body > main :is(.btn,.fc-clear-btn,.s79-btn,.s79-filter,.s84-view,.sf-btn,.sf-chip,.cm-btn) {
+    min-height: 44px; white-space: normal;
+  }
+  body > main .map-row { flex-wrap: wrap; }
+  body > main .map-row input.name, body > main .map-row input.domain { flex: 1 1 160px; width: 100%; }
+  body > main :is(.table-wrap,.sf-table-wrap,.lx-table-wrap) {
+    max-width: 100%; min-width: 0; overflow: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+  }
+  body > main .table-wrap table.ledger { min-width: 850px; }
+  body > main .table-wrap::before {
+    content: 'Diğer sütunlar için yana kaydır · Yatay ekranda daha geniş görüntüle';
+    display: block; position: sticky; left: 0; padding: 10px 12px;
+    width: fit-content; max-width: calc(100vw - 70px); white-space: normal;
+    font-size: 11px; line-height: 1.5; color: #52687d; background: #f2f6fa;
+  }
+
+  body > main #ef115Layout { display: flex; flex-direction: column; }
+  body > main #ef115Main, body > main #ef115Side { width: 100%; min-width: 0; }
+  body > main #ef115Side { order: -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  body > main #ef115Side #step3 { grid-column: 1 / -1; }
+  body > main #ef115Status { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  body > main #ef115Status button { min-width: 0; min-height: 56px; padding: 12px 8px; overflow-wrap: anywhere; }
+  body > main #ef115Top { flex-wrap: wrap; }
+  body > main #ef115Tabs, body > main #ef115Selection { gap: 8px; }
+  body > main #ef115Tabs button, body > main #ef115Selection button { min-height: 44px; }
+
+  body > main .s79-stats { min-width: 0; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  body > main .s79-stat { min-width: 0; padding: 12px 7px; overflow-wrap: anywhere; }
+  body > main .s79-topline, body > main .s79-toolbar, body > main .s82-report-head { gap: 14px; }
+  body > main .s79-actions, body > main .s79-toolbar { padding: 16px; }
+  body > main .s79-drop { flex-basis: 100%; min-width: 0; min-height: 120px; }
+  body > main .s79-action-buttons, body > main .s82-report-controls { width: 100%; flex-wrap: wrap; }
+  body > main .s84-vcharts, body > main .s84-vcharts.annual { grid-template-columns: minmax(0, 1fr); }
+  body > main .s79-list, body > main .s79-detail { min-width: 0; max-width: 100%; }
+  body > main .s79-detail { overflow-x: auto; }
+  body > main .s80-pdf-frame { width: calc(100vw - 16px); max-width: none; height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); }
+
+  body > main .yevmiye-layout { flex-direction: column; }
+  body > main .yevmiye-main, body > main .yevmiye-side { width: 100%; min-width: 0; max-width: 100%; }
+  body > main .yevmiye-side { position: static; margin: 0; }
+  body > main .kur-block, body > main .mah-block { width: 100%; max-width: 520px; overflow-x: auto; }
+  body > main .mah-tbl { min-width: 360px; }
+  body > main .yevmiye-calc-wrap { width: min(100%, 340px); margin: 18px auto; padding-top: 54px; }
+  body > main #calc { transform: none !important; width: 100%; margin: 0; }
+  body > main #yevmiyeClearBtn { top: 0; right: 0 !important; }
+  body > main #calc .calc-grid { grid-auto-rows: 44px; }
+  body > main #calc .calc-btn.mem, body > main #calc .calc-btn.tax { height: 36px; }
+  body > main #calc .sl-opt { min-height: 28px; font-size: 9px; }
+
+  body > main #page-mutabakat .cm-studio { flex-direction: column; gap: 18px; }
+  body > main #page-mutabakat :is(.cm-queue,.cm-form-col,.cm-preview-col) { width: 100%; max-width: 100%; min-width: 0; flex-basis: auto; }
+  body > main #page-mutabakat .cm-queue { max-height: 360px; }
+  body > main #page-mutabakat .cm-preview-col { position: static; max-height: none; overflow: auto; }
+  body > main #page-mutabakat .cm-preview-wrap { max-width: 100%; overflow: auto; max-height: 75svh; }
+  body > main #page-mutabakat .cm-top-actions { margin-left: 0; }
+  body > main #page-mutabakat .cm-top { padding: 18px; }
+
+  body > main #page-notlar .nt-head-actions { flex-wrap: wrap; gap: 8px; }
+  body > main #page-notlar .nt-head h1 { font-size: 32px; margin-bottom: 8px; }
+  body > main #page-notlar .nt-head p { font-size: 16px; line-height: 1.5; }
+  body > main #page-notlar .nt-filterbar { gap: 8px; }
+  body > main #page-notlar .nt-filterbar button { min-height: 44px; font-size: 14px; padding: 9px 12px; }
+  body > main #page-notlar .nt-filterbar b { margin-left: 6px; min-width: 23px; height: 23px; font-size: 12px; }
+  body > main #page-notlar .nt-filterbar button .nt-icon { width: 18px; }
+  body > main #page-notlar .nt-head-actions > button { min-height: 44px; }
+  body > main #page-notlar .nt-head-actions button,
+  body > main #page-notlar .nt-themes label { min-height: 44px; padding: 8px 10px; font-size: 14px; }
+  body > main #page-notlar .nt-head-actions .nt-icon { width: 18px; height: 18px; }
+  body > main #page-notlar #ntBoard { max-width: 100%; overflow: auto; max-height: 75svh; overscroll-behavior: contain; }
+  body > main #page-notlar .nt-writing { min-width: 0; flex-basis: 100%; }
+  body > main #page-notlar .nt-editor { padding: 16px; }
+  body > main dialog, body > dialog { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow: auto; }
+  body > main #page-notlar #nt127Editor { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  body > main #page-notlar .nt127-appearance { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
+  body > main #page-notlar .nt127-dialog-footer { flex-wrap: wrap; padding: 12px; }
+  body > main #page-notlar .nt126-colorbody { grid-template-columns: minmax(0, 1fr); }
+  .toast { max-width: calc(100vw - 32px); white-space: normal; }
+  #sw177WebStatus { max-height: 40svh; overflow-y: auto; }
+}
+
+@media (max-width: 540px) {
+  body > main #page-home .fc-home-cards { grid-template-columns: minmax(0, 1fr); }
+  body > main .dash-chart-row { flex-direction: column; align-items: stretch; }
+  body > main .dash-donut { align-self: center; }
+  body > main #ef115Side { display: block; }
+  body > main #ef115Status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body > main .s79-company { flex-wrap: wrap; }
+  body > main .s79-company > button { flex: 1; min-width: 0; }
+  body > main .s79-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body > main .s79-action-buttons > button { flex: 1 1 120px; }
+  body > main .s82-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body > main .s83-history-row { grid-template-columns: minmax(0, 1fr); }
+  body > main .count-panel, body > main .summary-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 540px) {
+  body, body.fc-home-full { padding-top: calc(54px + env(safe-area-inset-top, 0px)); }
+  .sw-mobile-bar { min-height: calc(54px + env(safe-area-inset-top, 0px)); padding-top: calc(4px + env(safe-area-inset-top, 0px)); padding-bottom: 4px; }
+  .sw-mobile-brand { font-size: 16px; }
+  .sw-mobile-page { margin-top: 0; }
+  body > main { padding-top: 18px; }
+  body > main .dash-hero { flex-direction: row; }
+  body > main .dash-hero > .dash-date { width: 250px; flex-shrink: 0; }
+  body > main .dash-hero h1 { font-size: 28px; }
+  body > main #page-home .fc-home-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body > main .dash-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body > aside { padding-top: 8px; padding-bottom: 12px; }
+  body > aside .brand { margin-top: 0; min-height: 44px; padding-right: 44px; }
+  body > aside .brand-mark { width: 32px; height: 40px; }
+  body > aside .brand-mark-photo { width: 50px; }
+  body > aside .brand-text { font-size: 17px; }
+  body > aside .brand-sub { margin: 4px 0 8px 44px; font-size: 9px; }
+  body > aside .nav-label { margin-top: 6px; }
+  body > aside .nav-item { min-height: 40px; padding-top: 7px; padding-bottom: 7px; }
+  body > aside .nav-item.disabled, body > aside .sidebar-foot { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body > aside { transition: none; }
+}
