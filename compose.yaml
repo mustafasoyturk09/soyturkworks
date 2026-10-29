@@ -1,0 +1,26 @@
+services:
+  web:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Alan adini .env dosyasina girin}
+      ADMIN_USER: ${ADMIN_USER:?Kullanici adini .env dosyasina girin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Caddy ile olusturulan sifre ozetini girin}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./users.caddy:/etc/caddy/users.caddy:ro
+      - ./dist:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+volumes:
+  caddy_data:
+  caddy_config:

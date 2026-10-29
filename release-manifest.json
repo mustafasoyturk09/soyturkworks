@@ -1,0 +1,141 @@
+{
+  "version": 180,
+  "files": [
+    {
+      "file": "404.html",
+      "sha256": "9de6c36fb0db367a21518227a9b2d9c73463af77ae039557d8c4319638079223"
+    },
+    {
+      "file": "_headers",
+      "sha256": "3d8f57e7221b845ff67de4946914f39536fd35ca428f32e28cf5ff617408d710"
+    },
+    {
+      "file": "app/pdf-loader.mjs",
+      "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
+    },
+    {
+      "file": "app/runtime.js",
+      "sha256": "4c07995e82c60d122f51584336cbcd3f521b4a75dd41ed109dd53a3bdb51a864"
+    },
+    {
+      "file": "app/sfOcrCoreData.js",
+      "sha256": "34b069bac26b5a5679c2d19ab76acf5269a0f31d8855b26c2a93aa048cae18dd"
+    },
+    {
+      "file": "app/sfOcrLangData.js",
+      "sha256": "9afe761b32b28e7c8ccaa1211a64e41cd9dd7a5bb334106b6c6b5a89364aa99e"
+    },
+    {
+      "file": "app/sfOcrLangDataEng.js",
+      "sha256": "717ef0e60ff3f79be9c1414b39218836cb3376b5bb1f4d870ca4023f46cf55fd"
+    },
+    {
+      "file": "assets/vendor/LICENSE-exceljs.txt",
+      "sha256": "2ed526b7e7c7681dc2347995b5036ddf73dc27d0539cdea59b6d4a72b63a57a0"
+    },
+    {
+      "file": "assets/vendor/LICENSE-jszip.txt",
+      "sha256": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4"
+    },
+    {
+      "file": "assets/vendor/LICENSE-pdf-lib.txt",
+      "sha256": "f2c9fc00fdb66eb99ac156ba52d734af66d8d309f65753ae809ad34ee2883bcb"
+    },
+    {
+      "file": "assets/vendor/LICENSE-pdfjs.txt",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "file": "assets/vendor/LICENSE-sheetjs.txt",
+      "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+    },
+    {
+      "file": "assets/vendor/README-fontkit.md",
+      "sha256": "7315fcc54511f5ffc906969c39333f93cd47f5217ab014fe45acff14bd5ec4c0"
+    },
+    {
+      "file": "assets/vendor/exceljs.min.js",
+      "sha256": "7e49da68588e250dbb8bba190d2caa8ab3787cc0284bda1d8b2f805c4df742c9"
+    },
+    {
+      "file": "assets/vendor/font-0.ttf",
+      "sha256": "0c2fad18ed36cc400041f1e281ee79954a329b345caffc38dfaa3bb8bcef57de"
+    },
+    {
+      "file": "assets/vendor/font-1.ttf",
+      "sha256": "ff7cf63717c27756df857ca12045a83522569f7b561bedaff813a25274eb263f"
+    },
+    {
+      "file": "assets/vendor/font-2.ttf",
+      "sha256": "f0a9d39b9f14079c55070189562da36c794f824cbcf514b50a0ad0ef20c69379"
+    },
+    {
+      "file": "assets/vendor/font-3.ttf",
+      "sha256": "a7fdc993f9f0387caedba4e42521136fa97e4c0837ae6239bf0413ccf8af00c2"
+    },
+    {
+      "file": "assets/vendor/font-4.ttf",
+      "sha256": "4fc14a73ca53ba9d32fd759ae1ca1a3133326035d0dd337862b3ee1633cc156e"
+    },
+    {
+      "file": "assets/vendor/font-5.ttf",
+      "sha256": "754dfc9d50cf7aabfb6b108d2c2f7d20a3f1f2cc6f6c01640c6728091272cec0"
+    },
+    {
+      "file": "assets/vendor/font-6.ttf",
+      "sha256": "6dbe082463cf749cfa057d45c3048c90f4df031496498e5b5bdfd0b6babb9d16"
+    },
+    {
+      "file": "assets/vendor/font-7.ttf",
+      "sha256": "6f7a8c4219e021ff7c9131bc5f1f7af97bcd1436a59578d444a8cb92e9791742"
+    },
+    {
+      "file": "assets/vendor/font-8.ttf",
+      "sha256": "5311c66fd6d04ae45671236f7eae667b671c06c1dc7e88d52c206e5fadd0fb21"
+    },
+    {
+      "file": "assets/vendor/font-9.ttf",
+      "sha256": "e129a20e8ff7c907ffd07124b573e88c323b7b18afc934d4aa539a3e0f2fe100"
+    },
+    {
+      "file": "assets/vendor/fontkit-package.json",
+      "sha256": "42b7a756ea4c11abfa664ffe9f9b67c1e30e564b5e2fb6db5b1775dac3eabb35"
+    },
+    {
+      "file": "assets/vendor/fontkit.umd.min.js",
+      "sha256": "d8df561b9fba98e24f2e5130e40948809281bbbc55a20c412359f1a0a5eb35a6"
+    },
+    {
+      "file": "assets/vendor/fonts.css",
+      "sha256": "a0832e3dd13b4f405b8df43f4da9e09a2f3d6558ba72839392210605263ab550"
+    },
+    {
+      "file": "assets/vendor/jszip.min.js",
+      "sha256": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e"
+    },
+    {
+      "file": "assets/vendor/pdf-lib.min.js",
+      "sha256": "0f9a5cad07941f0826586c94e089d89b918c46e5c17cf2d5a3c6f666e3bc694f"
+    },
+    {
+      "file": "assets/vendor/pdf.min.mjs",
+      "sha256": "27fc2a057a00f92a4334ad06e17dbd7259912954e9fb7f76400bcca5fd190a9c"
+    },
+    {
+      "file": "assets/vendor/pdf.worker.min.mjs",
+      "sha256": "1baa1844c89c80a5b2797c916e75ab29254be46d8e9cb53cb6364d7aad84be36"
+    },
+    {
+      "file": "assets/vendor/xlsx.full.min.js",
+      "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41"
+    },
+    {
+      "file": "index.html",
+      "sha256": "95f9e2fae5cf8ab40f22c4ca0dd27b978b2564add30ca02fb002b0e8c74a9935"
+    },
+    {
+      "file": "robots.txt",
+      "sha256": "331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1"
+    }
+  ]
+}

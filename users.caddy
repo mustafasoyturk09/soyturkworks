@@ -1,0 +1,1 @@
+{env.ADMIN_USER} {env.ADMIN_PASSWORD_HASH}

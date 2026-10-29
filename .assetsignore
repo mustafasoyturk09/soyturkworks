@@ -1,0 +1,5 @@
+# If a dashboard deploy command overrides the asset directory to the repository
+# root, never publish source, configuration, or private files.
+/*
+!/dist/
+!/dist/**

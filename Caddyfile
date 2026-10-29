@@ -1,0 +1,25 @@
+{$SITE_DOMAIN} {
+    root * /srv
+    encode zstd gzip
+    header {
+        -Server
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer
+        X-Robots-Tag "noindex, nofollow, noarchive"
+        Cache-Control "private, no-store"
+        Strict-Transport-Security "max-age=31536000"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+    }
+    route {
+        basic_auth {
+            import /etc/caddy/users.caddy
+        }
+        @badMethod not method GET HEAD
+        respond @badMethod "Yalnızca dosya okuma desteklenir." 405
+        @private path /.env /.git/* /scripts/* /src/* /vendor/* /users.caddy /Caddyfile /compose.yaml /package.json
+        respond @private 404
+        file_server
+    }
+}
