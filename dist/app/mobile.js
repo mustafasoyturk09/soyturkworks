@@ -17,7 +17,11 @@
   heading.className='sw-mobile-heading';
   const brand=document.createElement('span'); brand.className='sw-mobile-brand'; brand.textContent='Soyturk Works';
   const pageName=document.createElement('span'); pageName.className='sw-mobile-page';
-  heading.append(brand,pageName); bar.append(toggle,heading);
+  const logo=document.createElement('img');
+  logo.className='sw-header-logo'; logo.alt=''; logo.width=36; logo.height=36;
+  const brandImage=sidebar.querySelector('.brand-mark-photo');
+  logo.src=brandImage?brandImage.src:new URL('./assets/brand/sw-logo.png',location.href).href;
+  heading.append(brand,pageName); bar.append(toggle,logo,heading);
   const backdrop=document.createElement('button');
   backdrop.type='button'; backdrop.className='sw-nav-backdrop';
   backdrop.setAttribute('aria-label','Modül menüsünü kapat'); backdrop.tabIndex=-1;

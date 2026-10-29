@@ -10,12 +10,16 @@
       "sha256": "3d8f57e7221b845ff67de4946914f39536fd35ca428f32e28cf5ff617408d710"
     },
     {
+      "file": "app/branding.css",
+      "sha256": "34aa1c60e13f2b09bd98954d9aa4a48f92c6bfbaad39d8929c70edb575aa427d"
+    },
+    {
       "file": "app/mobile.css",
       "sha256": "1062b2783688b0b5237c39de2cc147ebc9966aa0a904393e52e41286f67cdf1c"
     },
     {
       "file": "app/mobile.js",
-      "sha256": "f1bffca0e63d251c861ad75968169d5df449753d56874a3653dfa1932ac2e61c"
+      "sha256": "5e6de8f08c0ab2fdb36a60b5fe7eab8fec2771382ef5edcadf472a8df7306af8"
     },
     {
       "file": "app/pdf-loader.mjs",
@@ -36,6 +40,26 @@
     {
       "file": "app/sfOcrLangDataEng.js",
       "sha256": "717ef0e60ff3f79be9c1414b39218836cb3376b5bb1f4d870ca4023f46cf55fd"
+    },
+    {
+      "file": "assets/brand/apple-touch-icon.png",
+      "sha256": "194f5203ca9d161617b39cc719b1cfc0b4d5ce5274634c92610abca6b431a45a"
+    },
+    {
+      "file": "assets/brand/favicon-16.png",
+      "sha256": "ffa8ad4b74bf284c0f03058a3dc28686b2874f1fa6657fae8fda49c14168d249"
+    },
+    {
+      "file": "assets/brand/favicon-32.png",
+      "sha256": "2cea5931f61c4b2143ae76086a6950831f0affcd7220d479ff3a0a6ea3161629"
+    },
+    {
+      "file": "assets/brand/favicon-48.png",
+      "sha256": "6c7cc2e602b1cf797d91266c35a41fd3a67c5c330a2ac5aad84c1ac9a0f92288"
+    },
+    {
+      "file": "assets/brand/sw-logo.png",
+      "sha256": "131a09e9c447d567b058c4ef0fd7cc9bade523f76a1fdcef20337c2c492b83c0"
     },
     {
       "file": "assets/vendor/LICENSE-exceljs.txt",
@@ -138,8 +162,12 @@
       "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41"
     },
     {
+      "file": "favicon.ico",
+      "sha256": "7552c65e1ef4daf24fa28c117f5f0b261c8a5f5d9a80ac9141cac5066e310121"
+    },
+    {
       "file": "index.html",
-      "sha256": "aac4709d866cf39168827b6c21917df6b1637c363aa9a75c08ec886530076c06"
+      "sha256": "4ee90b3b5b342540cf5492d5fdaccf430a69a1876f090cefd5c178de55acf8d3"
     },
     {
       "file": "robots.txt",

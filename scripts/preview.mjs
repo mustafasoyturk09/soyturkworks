@@ -3,7 +3,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {resolve,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const root=resolve(fileURLToPath(new URL('../dist',import.meta.url)));
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.ttf':'font/ttf','.woff2':'font/woff2','.wasm':'application/wasm','.txt':'text/plain; charset=utf-8'};
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.ttf':'font/ttf','.woff2':'font/woff2','.wasm':'application/wasm','.txt':'text/plain; charset=utf-8','.png':'image/png','.ico':'image/x-icon','.webp':'image/webp'};
 export function createPreview(base=process.env.BASE_PATH||'/'){
  if(!/^\/(?:[A-Za-z0-9_-]+\/)*$/.test(base))throw Error('BASE_PATH / veya /works/ biçiminde olmalı.');
  return http.createServer(async(req,res)=>{

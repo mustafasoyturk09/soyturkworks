@@ -10,9 +10,10 @@ for(const entry of manifest){
  const hash=createHash('sha256').update(await readFile(join(vendor,entry.file))).digest('hex');
  if(hash!==entry.sha256)throw Error('Varlık bütünlüğü uyuşmuyor: '+entry.file);
 }
-const dist=join(root,'dist');await mkdir(join(dist,'app'),{recursive:true});await mkdir(join(dist,'assets/vendor'),{recursive:true});
+const dist=join(root,'dist');await mkdir(join(dist,'app'),{recursive:true});await mkdir(join(dist,'assets/vendor'),{recursive:true});await mkdir(join(dist,'assets/brand'),{recursive:true});
 const ocrIds=['sfOcrCoreData','sfOcrLangData','sfOcrLangDataEng'];
-const allowed=new Set(['index.html','robots.txt','404.html','_headers','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file)]);
+const brandFiles=['sw-logo.png','favicon-16.png','favicon-32.png','favicon-48.png','apple-touch-icon.png'];
+const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
 async function rejectUnexpected(dir,prefix=''){
  for(const name of await readdir(dir)){
   const file=join(dir,name),rel=prefix+name;
@@ -34,7 +35,9 @@ for(const id of ocrIds){
 }
 await writeFile(join(dist,'index.html'),html);
 await copyFile(join(root,'src/_headers'),join(dist,'_headers'));
-for(const name of ['runtime.js','pdf-loader.mjs','mobile.css','mobile.js'])await copyFile(join(root,'src',name),join(dist,'app',name));
+for(const name of ['runtime.js','pdf-loader.mjs','mobile.css','mobile.js','branding.css'])await copyFile(join(root,'src',name),join(dist,'app',name));
+for(const name of brandFiles)await copyFile(join(root,'src/assets/brand',name),join(dist,'assets/brand',name));
+await copyFile(join(root,'src/assets/brand/favicon.ico'),join(dist,'favicon.ico'));
 for(const entry of manifest)await copyFile(join(vendor,entry.file),join(dist,'assets/vendor',entry.file));
 await writeFile(join(dist,'robots.txt'),'User-agent: *\nDisallow: /\n');
 await writeFile(join(dist,'404.html'),'<!doctype html><html lang="tr"><meta charset="utf-8"><title>Sayfa bulunamadı</title><h1>Sayfa bulunamadı</h1><p>Soyturk Works ana adresini açın.</p></html>');
