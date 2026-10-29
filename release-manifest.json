@@ -43,19 +43,19 @@
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
-      "sha256": "ac1a2eab25a1bd8f4440e8b035f15643bbe8bfc6bd475ad39810dccb995cb504"
+      "sha256": "b5feedfb08a59069f42093b9cce8866d05853feaca2875cca6d0bab5611fc386"
     },
     {
       "file": "assets/brand/favicon-16.png",
-      "sha256": "ef1c0aa4ce6f1d10346657e54c5bb4391fb4b5a6f138102198fc678cb45529e5"
+      "sha256": "e5384726b42701524dd24aad22823f383a1e24a02d820b801db666e7e53fe90a"
     },
     {
       "file": "assets/brand/favicon-32.png",
-      "sha256": "b1ee9c292c07b09778b3f5b47a443ee7f7b79afd6e5aa0cf47cecccb6427f26d"
+      "sha256": "a812e5f3b8cb806a649307744a2131aef742937b08333bb121d56c61102ba8e7"
     },
     {
       "file": "assets/brand/favicon-48.png",
-      "sha256": "e2ea5819d9ec0240262e0c03aeb64668ae685d15b15fcda91692d34ba2153faa"
+      "sha256": "11808826ed8912cfa5f009ecae3fff1595e98dab2aff3a350f812c65ada91061"
     },
     {
       "file": "assets/brand/sw-logo.png",
@@ -163,11 +163,11 @@
     },
     {
       "file": "favicon.ico",
-      "sha256": "7d9bda6f2737ea15c41808656d8035e7edf06c243bdec8d944504ca4537edbc4"
+      "sha256": "98623980de9c64da2a38b8315e5c715a70ea428854db953d743a8690e281ae46"
     },
     {
       "file": "index.html",
-      "sha256": "62666e03464ecc6e4ab6ab2a099650a5dce177f436dce23e59bc3efd31fa9c2f"
+      "sha256": "f868bd972a5e4cedfe56693c0a08c17b23540b2bf6f627a452fe3bcdc1e4bc70"
     },
     {
       "file": "robots.txt",

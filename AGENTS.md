@@ -3,6 +3,7 @@
 - Kullanıcıyla Türkçe ve sade bir dille çalış.
 - Ana uygulama kaynağı `src/app.html`; üretilen web uygulaması `dist/` içindedir.
 - Her değişiklik telefon, tablet ve masaüstü için uyarlanmalı; dar ekran ve yatay telefon görünümü ayrıca kontrol edilmelidir. Kullanıcının bunu her seferinde tekrar söylemesi gerekmez. Mobil düzen dosyaları `src/mobile.css` ve `src/mobile.js` içindedir.
+- SW ambleminin özgün metalik renklerini, halka biçimini ve dış şeffaflığını koru. Kullanıcı açıkça istemedikçe kare/dikdörtgen zemin ekleme veya amblemi yeniden tasarlama.
 - Kullanıcı uygulamada değişiklik istediğinde, aksi belirtilmedikçe değişikliği tamamla, `npm run build`, `npm run check`, `npm test` çalıştır ve üretilen `dist/` dosyalarını da commit'e ekle.
 - Kullanıcı bu uygulama için kaydetme, çalıştırma ve mevcut GitHub deposuna gönderip yayınlama iş akışını yetkilendirmiştir. Yerel çalışma veya yayınlamama talimatı varsa onu öncelikle uygula.
 - Mevcut depo `mustafasoyturk09/soyturkworks`, üretim dalı `main`, Cloudflare Worker adı `soyturkworks`, canlı adres `https://soyturkworks.com`.
