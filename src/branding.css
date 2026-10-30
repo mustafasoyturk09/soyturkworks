@@ -14,8 +14,7 @@ body > aside .brand-text { color: #edf3fc; font-size: 20px; line-height: 1.18; l
 body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5px; letter-spacing: .13em; }
 .sw-header-logo { width: 36px; height: 36px; flex: 0 0 36px; object-fit: contain; filter: drop-shadow(0 2px 3px #0004); }
 
-/* The locked upload still follows the existing two-step workflow. Its surface
-   stays luminous; the small instruction makes the locked state explicit. */
+/* Incoming Excel uploads remain available, including before a reference file. */
 #page-efatura #ef115Side #step2 {
   opacity: 1;
   background: radial-gradient(ellipse at 20% 0%, #f4fff0c9, transparent 68%),
@@ -32,11 +31,6 @@ body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5
 #page-efatura #ef115Side #step2 .step-title { color: #0f291b; }
 #page-efatura #ef115Side #step2 .dropzone {
   background: #f3fff54d; border-color: #55775e; box-shadow: inset 0 1px 12px #ffffff21;
-}
-#page-efatura #ef115Side #step2[data-locked="true"]::after {
-  content: 'Önce eski Excel dosyasını yükle'; display: block;
-  margin-top: 12px; padding: 8px 10px; border-radius: 7px;
-  background: #f3fff54d; color: #284835; font-size: 11px; line-height: 1.5;
 }
 
 @media (max-width: 1024px) {
