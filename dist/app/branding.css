@@ -32,21 +32,20 @@ body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5
 #page-efatura #countPanel .cb-sub:empty { display: none; }
 #page-efatura #countPanel .count-box.done2 {
   --monthly-accent: #3de0b1;
-  background: radial-gradient(ellipse at 50% 0%, #3de0b126, transparent 75%),
-    linear-gradient(145deg, #213d37, #152a29 65%, #1b3530);
-  color: #e0fff5; border-color: var(--monthly-accent);
-  box-shadow: inset 0 1px 0 #a7ffe74d, 0 0 12px #3de0b155, 0 0 30px #3de0b12e;
+  background: #D4D6D9;
+  color: #000; border-color: #D4D6D9;
+  box-shadow: inset 0 1px 0 #ffffffa6, 0 0 12px #d4d6d959, 0 0 30px #d4d6d933;
 }
 #page-efatura #countPanel .count-box.done2 .cb-v {
-  color: var(--monthly-accent); text-shadow: 0 0 12px #3de0b17a;
+  color: var(--monthly-accent); text-shadow: 0 1px 1px #0005;
 }
 #page-efatura #efMonthlyPeriod {
   max-width: 100%; min-height: 36px; padding: 6px 8px; border-radius: 6px;
-  border: 1px solid #3de0b180; background: #102b26; color: #e0fff5;
-  font: 700 12px 'IBM Plex Sans', sans-serif; cursor: pointer; color-scheme: dark;
+  border: 1px solid #7c858f; background: #D4D6D9; color: #000;
+  font: 700 12px 'IBM Plex Sans', sans-serif; cursor: pointer; color-scheme: light;
 }
 #page-efatura #efMonthlyPeriod[hidden] { display: none; }
-#page-efatura #efMonthlyPeriod:focus-visible { outline: 2px solid #3de0b1; outline-offset: 3px; }
+#page-efatura #efMonthlyPeriod:focus-visible { outline: 2px solid #7c858f; outline-offset: 3px; }
 @media (max-width: 600px) {
   #page-efatura #countPanel .count-box { min-height: 180px; padding: 18px 10px; }
   #page-efatura #countPanel .cb-k { font-size: 13px; }
