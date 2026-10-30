@@ -29,8 +29,8 @@ for(const [name,source] of [['web',live],['portable',portable]]){
  });
  test(name+': new uploads stay available after reset and a late reference rematches invoices',()=>{
   const elements=new Map();
-  const document={getElementById(id){if(!elements.has(id))elements.set(id,{style:{},attrs:{},setAttribute(k,v){this.attrs[k]=v;},removeAttribute(k){delete this.attrs[k];}});return elements.get(id);}};
-  const context={document,parsedRows:[{fatno:'TEST-1',isRet:false},{fatno:'TEST-2',isRet:false},{fatno:'TEST-3',isRet:true}],eskiIslenmisSet:null,eskiToplamAdet:0,efaturaUploads:{reference:{token:0,loading:false,error:''},raw:{token:0,loading:false,error:''}},ef115:{selected:new Set()},normFatno:s=>s,ef115Render(){},setTimeout(){},toast(){},console};
+  const document={dispatchEvent(){},getElementById(id){if(!elements.has(id))elements.set(id,{style:{},attrs:{},setAttribute(k,v){this.attrs[k]=v;},removeAttribute(k){delete this.attrs[k];}});return elements.get(id);}};
+  const context={document,parsedRows:[{fatno:'TEST-1',isRet:false},{fatno:'TEST-2',isRet:false},{fatno:'TEST-3',isRet:true}],eskiIslenmisSet:null,eskiToplamAdet:0,efaturaUploads:{reference:{token:0,loading:false,error:''},raw:{token:0,loading:false,error:''}},ef115:{selected:new Set()},normFatno:s=>s,ef115Render(){},updateCounts(){},renderEfaturaUploads(){},Event,setTimeout(){},toast(){},console};
   vm.createContext(context);
   vm.runInContext(source.slice(source.indexOf('function applyMatching(){'),source.indexOf('function ef116Period(')),context);
   context.applyMatching();assert(context.parsedRows.every(r=>r.islendi===false));

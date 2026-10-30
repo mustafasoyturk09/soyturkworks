@@ -15,6 +15,48 @@ body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5
 .sw-header-logo { width: 36px; height: 36px; flex: 0 0 36px; object-fit: contain; filter: drop-shadow(0 2px 3px #0004); }
 #ef115Side .ef115-loaded[data-state="error"] { color: #862d20; font-weight: 600; overflow-wrap: anywhere; }
 
+#page-efatura #countPanel .count-box {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 176px; gap: 10px; padding: 20px 12px; text-align: center; font-weight: 700;
+}
+#page-efatura #countPanel .cb-k {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 56px; width: 100%; font-size: 13.5px; line-height: 1.45;
+  font-weight: 700; letter-spacing: .035em; overflow-wrap: anywhere;
+}
+#page-efatura #countPanel .cb-v {
+  width: 100%; font-family: 'IBM Plex Sans', sans-serif; font-size: 46px;
+  line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+#page-efatura #countPanel .cb-sub { font-size: 12px; line-height: 1.5; font-weight: 700; }
+#page-efatura #countPanel .cb-sub:empty { display: none; }
+#page-efatura #countPanel .count-box.done2 {
+  --monthly-accent: #3de0b1;
+  background: radial-gradient(ellipse at 50% 0%, #3de0b126, transparent 75%),
+    linear-gradient(145deg, #213d37, #152a29 65%, #1b3530);
+  color: #e0fff5; border-color: var(--monthly-accent);
+  box-shadow: inset 0 1px 0 #a7ffe74d, 0 0 12px #3de0b155, 0 0 30px #3de0b12e;
+}
+#page-efatura #countPanel .count-box.done2 .cb-v {
+  color: var(--monthly-accent); text-shadow: 0 0 12px #3de0b17a;
+}
+#page-efatura #efMonthlyPeriod {
+  max-width: 100%; min-height: 36px; padding: 6px 8px; border-radius: 6px;
+  border: 1px solid #3de0b180; background: #102b26; color: #e0fff5;
+  font: 700 12px 'IBM Plex Sans', sans-serif; cursor: pointer; color-scheme: dark;
+}
+#page-efatura #efMonthlyPeriod[hidden] { display: none; }
+#page-efatura #efMonthlyPeriod:focus-visible { outline: 2px solid #3de0b1; outline-offset: 3px; }
+@media (max-width: 600px) {
+  #page-efatura #countPanel .count-box { min-height: 180px; padding: 18px 10px; }
+  #page-efatura #countPanel .cb-k { font-size: 13px; }
+  #page-efatura #countPanel .cb-v { font-size: 42px; }
+}
+@media (max-width: 360px) {
+  #page-efatura #countPanel .cb-k { font-size: 12.5px; letter-spacing: .015em; }
+  #page-efatura #countPanel .cb-v { font-size: 36px; }
+}
+
 /* Incoming Excel uploads remain available, including before a reference file. */
 #page-efatura #ef115Side #step2 {
   opacity: 1;

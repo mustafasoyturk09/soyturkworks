@@ -34,6 +34,27 @@ istenir; ZIP'e veya çoklu indirme istemlerine geçilmez.
 
 ## Excel karşılaştırması ve yanıtlar
 
+### Aylık toplam
+
+Son kutu, aktif firmanın yeni Excel veya İzibiz listelerinden yüklenen benzersiz
+fatura numaralarını fatura tarihindeki aya yazar. “İşlendi” işaretini beklemez;
+reddedilmiş faturalar dahil yüklenen listedeki her fatura bir kez sayılır. Eski
+karşılaştırma Excel'ini tek başına yüklemek bu sayacı artırmaz. Tekrar yükleme
+ve İzibiz yenilemesi mükerrer sayı oluşturmaz.
+
+Kutu varsayılan olarak İstanbul takvimindeki güncel ayı gösterir; ay ve yıl
+geçişleri otomatik güncellenir. Kasım'da yüklenen Ekim tarihli yeni bir fatura
+Ekim toplamına eklenir. Önceki aylar son kutunun dönem seçiminden görülebilir;
+“Bu ay” seçeneği otomatik güncel ay görünümüne döner. Tarihi okunamayan kayıtlar
+aylık toplama eklenmez ve kutuda adetleri belirtilir; aynı fatura daha sonra
+geçerli tarihle yüklendiğinde ait olduğu aya eklenir.
+
+“Temizle” geçici dosyaları, ilk üç kutunun değerlerini ve İzibiz durum mesajını
+siler; aylık toplamı korur. Sayılar şirketlere ayrılmış tarayıcı kaydında tutulur;
+aynı tarayıcıda sayfayı yenilemek veya firma değiştirmek toplamları silmez.
+Taşınabilir ayarlı kopyanın verilerine yalnızca aktif firmanın aylık kayıtları
+eklenir. Bu kayıt sunucuya veya farklı tarayıcılara otomatik eşitlenmez.
+
 Güncel İzibiz listesi tüm sayfalarıyla alınır ve eski Excel'deki fatura numaraları
 ile karşılaştırılır. Önceden yüklenen ham listedeki elle işlenmiş işaretleri
 korunur. Yalnızca yeni, reddedilmemiş faturaların PDF'leri alınır. Tüm PDF'ler

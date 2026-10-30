@@ -11,7 +11,7 @@
     },
     {
       "file": "app/branding.css",
-      "sha256": "54fc888e4bcec06d4c69949f71df43b237f19f61c19752299eee26f3649a5f07"
+      "sha256": "922c1084e0244c2a8588c6794dee3f21c1ef1e41c0099b12b301e559375f16d9"
     },
     {
       "file": "app/calculator-ui.css",
@@ -27,7 +27,7 @@
     },
     {
       "file": "app/izibiz.js",
-      "sha256": "73845ae21656c66831944a7786f0a112a263b864921bf2cb0704e031ecf5fb17"
+      "sha256": "25f993be9b5ed02f055cb097de756cc0ad2e09bb281469f897de334098e60190"
     },
     {
       "file": "app/mobile.css",
@@ -63,7 +63,7 @@
     },
     {
       "file": "app/workspace.js",
-      "sha256": "0587de4bda864eab364ab4086c5b78b54819efe329abbe00b1046c7295548e5a"
+      "sha256": "c0a3a30dc18135d363e9b9460ff0a45f494937590d8474d9f5e7080d2c84530f"
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
@@ -191,7 +191,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "6d7081444f67355a2132704313973273a5c937468142c9fdf74e298affe4ba6f"
+      "sha256": "48788f7627e8f6fa081506d2091fab6db4a3b97f03b954424062978d14bab17d"
     },
     {
       "file": "portal/index.html",

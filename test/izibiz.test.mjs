@@ -155,4 +155,5 @@ test(companyName+': Izibiz distinguishes existing invoices, first use, read erro
   assert(calls.length>before);assert.match(nodes.get('swIziInlineStatus').textContent,/tarih aralığında gelen fatura yok/);
   nodes.get('swIziFrom').value='2026-09-01';nodes.get('swIziFrom').onchange();nodes.get('swIziTo').value='2026-09-30';await nodes.get('swIziButton').onclick();
   const custom=calls.filter(c=>c.url.endsWith('/list')).at(-1).body;assert.equal(custom.startDate,'2026-09-01');assert.equal(custom.endDate,'2026-09-30');
+  events['sw-efatura-reset']();assert.equal(nodes.get('swIziInlineStatus').textContent,'');assert.equal(nodes.get('swIziProgress').hidden,true);assert.equal(nodes.get('swIziTo').value,'2026-10-31');
 });

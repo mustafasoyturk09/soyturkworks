@@ -17,6 +17,7 @@
   function filterCompanyValue(key,value,id=companyId) {
     if(typeof value!=='string')return null;
     key=plainKey(key);let parsed;try{parsed=JSON.parse(value);}catch{return null;}
+    if(key==='efatura_monthly_v1')return parsed?.version===1&&parsed.company===id&&Array.isArray(parsed.entries)?JSON.stringify(parsed):null;
     if(['fc_sales_branch_memory_v1','fc_sales_service_memory_v1'].includes(key))return JSON.stringify(onlyCompany(parsed,id)||[]);
     if(key==='fc_sales_work_v156')return JSON.stringify({[id]:Array.isArray(parsed?.[id])?parsed[id].filter(x=>x?.company===id):[]});
     if(key==='fc_sales_companies_v156')return JSON.stringify(parsed?.[id]?{[id]:parsed[id]}:{});

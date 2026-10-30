@@ -83,6 +83,7 @@
     $('swIziFolder').onclick=chooseFolder;
     $('swIziRun').onclick=run;
     $('swIziFrom').onchange=$('swIziTo').onchange=()=>{datesEdited=true;};
+    document.addEventListener('sw-efatura-reset',()=>{if(running)return;datesEdited=false;setDates();status('');$('swIziProgress').hidden=true;});
   }
   async function documentBytes(response,format){
     let bytes=new Uint8Array(await response.arrayBuffer());
