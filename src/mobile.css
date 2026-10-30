@@ -1,5 +1,13 @@
 /* Small-screen layout. Accounting rules, saved data and desktop layouts stay in
    the application; these overrides only adapt its presentation. */
+@media(max-width:600px){
+  body .sw-izi-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:16px;border-radius:12px}
+  .sw-izi-dialog .sw-izi-dates{grid-template-columns:minmax(0,1fr);gap:10px}
+  body .sw-izi-dialog input{font-size:16px}
+  .sw-izi-actions>button{flex:1 1 180px}
+  #ef115Top{flex-wrap:wrap}
+}
+@media(max-height:500px) and (orientation:landscape){body .sw-izi-dialog{max-height:calc(100dvh - 12px);margin:6px auto;padding:16px}.sw-izi-heading h2{font-size:20px}}
 .sw-mobile-bar, .sw-nav-backdrop, .sw-nav-close { display: none; }
 html { -webkit-text-size-adjust: 100%; }
 

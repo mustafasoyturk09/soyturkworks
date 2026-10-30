@@ -14,7 +14,7 @@ for(const entry of manifest){
 const dist=join(root,'dist');await mkdir(join(dist,'app'),{recursive:true});await mkdir(join(dist,'assets/vendor'),{recursive:true});await mkdir(join(dist,'assets/brand'),{recursive:true});
 const ocrIds=['sfOcrCoreData','sfOcrLangData','sfOcrLangDataEng'];
 const brandFiles=['sw-logo.png','favicon-16.png','favicon-32.png','favicon-48.png','apple-touch-icon.png'];
-const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','app/workspace.js','app/workspace.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
+const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','app/workspace.js','app/workspace.css','app/izibiz.js','app/izibiz.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
 async function rejectUnexpected(dir,prefix=''){
  for(const name of await readdir(dir)){
   const file=join(dir,name),rel=prefix+name;
@@ -36,7 +36,7 @@ for(const id of ocrIds){
 }
 await writeFile(join(dist,'index.html'),html);
 await copyFile(join(root,'src/_headers'),join(dist,'_headers'));
-for(const name of ['runtime.js','pdf-loader.mjs','mobile.css','mobile.js','branding.css','calculator-ui.css','calculator-ui.js','workspace.js','workspace.css'])await copyFile(join(root,'src',name),join(dist,'app',name));
+for(const name of ['runtime.js','pdf-loader.mjs','mobile.css','mobile.js','branding.css','calculator-ui.css','calculator-ui.js','workspace.js','workspace.css','izibiz.js','izibiz.css'])await copyFile(join(root,'src',name),join(dist,'app',name));
 await mkdir(join(dist,'portal'),{recursive:true});
 for(const name of ['index.html','portal.css','portal.js'])await copyFile(join(root,'src/portal',name),join(dist,'portal',name));
 await build({entryPoints:[join(root,'src/portal/passkeys-entry.js')],outfile:join(dist,'portal/passkeys.js'),bundle:true,format:'iife',globalName:'SWPasskeys',minify:true,target:'es2022',legalComments:'none'});

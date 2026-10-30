@@ -1,0 +1,13 @@
+#ef115Top #swIziButton{min-height:40px;padding:8px 20px;background:#236e52;color:#fff;border:1px solid #75c9a5;border-radius:8px;font-weight:700}
+body:has(#swIziDialog[open]){overflow:hidden}
+.sw-izi-dialog{width:min(660px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:24px;border:1px solid #53647b;border-radius:18px;background:#1e2632;color:#e7eff9;box-sizing:border-box;overflow:auto;font-family:'IBM Plex Sans',sans-serif}
+.sw-izi-dialog::backdrop{background:#030b18b8;backdrop-filter:blur(3px)}
+.sw-izi-heading{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
+.sw-izi-heading h2{margin:6px 0 12px;font-size:24px;overflow-wrap:anywhere}.sw-izi-heading small{color:#a9c2dc;font-size:11px;letter-spacing:.1em}
+.sw-izi-dialog p{line-height:1.6;font-size:14px;overflow-wrap:anywhere}.sw-izi-dialog label{display:flex;flex-direction:column;gap:7px;font-size:13px;margin:12px 0;min-width:0}
+.sw-izi-dialog input{width:100%;min-width:0;box-sizing:border-box;min-height:44px;padding:10px;border:1px solid #71869e;border-radius:8px;background:#f7f9fc;color:#142237;font:inherit;color-scheme:light}
+.sw-izi-dialog details,.sw-izi-dialog fieldset{border:1px solid #53647b;border-radius:10px;padding:12px;margin:16px 0;min-width:0}.sw-izi-dialog summary{cursor:pointer;min-height:32px;line-height:32px;font-weight:600}
+.sw-izi-dates{display:grid;grid-template-columns:1fr 1fr;gap:16px}.sw-izi-dates label{margin:4px 0}
+.sw-izi-actions{display:flex;flex-wrap:wrap;gap:10px}.sw-izi-dialog button{min-height:44px;max-width:100%;padding:10px 16px;white-space:normal;overflow-wrap:anywhere;border:1px solid #71869e;border-radius:8px;background:#293951;color:#e7eff9;font:600 13px 'IBM Plex Sans',sans-serif;cursor:pointer}
+.sw-izi-dialog #swIziRun,.sw-izi-dialog #swIziConnect,.sw-izi-dialog #swIziSave{background:#236e52;border-color:#75c9a5}.sw-izi-dialog #swIziClose{font-size:24px;padding:2px 14px;flex-shrink:0}.sw-izi-dialog button:disabled{opacity:.5;cursor:wait}.sw-izi-dialog [hidden]{display:none!important}
+.sw-izi-dialog :focus-visible,#swIziButton:focus-visible{outline:3px solid #e6bc70;outline-offset:3px}.sw-izi-status{padding:12px;background:#101a2e;border-radius:8px;min-height:48px}.sw-izi-dialog #swIziConnection{color:#9fddbd}

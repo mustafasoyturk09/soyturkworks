@@ -36,6 +36,9 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.match((await request('/')).value,/loginTemplate/);
       assert.equal((await request('/portal/portal.css')).status,200);
       assert.equal((await request('/api/companies')).status,401);
+      assert.equal((await request('/api/izibiz/PUSULA/status')).status,401);
+      assert.equal((await request('/key',{},null)).status,405);
+      assert.equal((await request('/api/key',{},null)).status,401);
       assert.equal((await request('/api/login',{username:'x',password},null,'POST',{Origin:'https://other.example'})).status,403);
       assert.equal((await request('/api/login',{username:'x',password})).status,401);
       assert.equal((await request('/api/login',{username:'x',password:'x'.repeat(33000)})).status,413);
@@ -59,10 +62,14 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       for(const company of companies){const app=await request('/workspace/'+company.id+'/',null,cookie);assert.equal(app.status,200);assert(app.value.includes('"id":"'+company.id+'"'));assert(app.value.includes('<base href="/">'));}
       assert.equal((await request('/api/companies',{id:'PUSULA',active:false,deleted:false},cookie,'PATCH')).status,200);
       assert.equal((await request('/workspace/PUSULA/',null,cookie)).status,303);
+      assert.equal((await request('/api/izibiz/PUSULA/status',null,cookie)).status,403);
       assert.equal((await request('/api/companies',{id:'PUSULA',active:false,deleted:true},cookie,'PATCH')).status,200);
       assert.equal((await request('/api/companies',null,cookie)).value.companies[0].deleted,true);
       assert.equal((await request('/api/companies',{id:'PUSULA',active:true,deleted:false},cookie,'PATCH')).status,200);
       assert.equal((await request('/workspace/PUSULA/',null,cookie)).status,200);
+      const izibizStatus=await request('/api/izibiz/PUSULA/status',null,cookie);
+      assert.equal(izibizStatus.value.connected,false);assert.equal(izibizStatus.value.configured,true);
+      assert.equal((await request('/api/izibiz/UNKNOWN/status',null,cookie)).status,403);
       assert.equal((await request('/api/companies',{id:'UNKNOWN',active:true,deleted:false},cookie,'PATCH')).status,400);
     });
     let credentialId,privateKey;

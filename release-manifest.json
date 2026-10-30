@@ -22,8 +22,16 @@
       "sha256": "2bbd70e4e33d639bcbdbfcce893878a4801c1bb1b4bf9f0cd0c893a3529cabe6"
     },
     {
+      "file": "app/izibiz.css",
+      "sha256": "27dee822913ecac96b751a78b5b7ea43b9ddccf7c0443e01c874a574d50ffacd"
+    },
+    {
+      "file": "app/izibiz.js",
+      "sha256": "b1e37a1bd686c683c030bef15adc16b69b26be480e20ee637b247ffe71668cfe"
+    },
+    {
       "file": "app/mobile.css",
-      "sha256": "937fd031713458b27952bcf60420d0a3aa337a9150dbba440899ac9c385ad918"
+      "sha256": "d5da8f7922d4ec9fc3a5e10081826bbfd8677787563d6638526dc1a39bf2ab43"
     },
     {
       "file": "app/mobile.js",
@@ -183,7 +191,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "0e9939d2dff9f07c2337ca22dce5a492537d0bdb2e5e1d3e3468b6d61dbb4dae"
+      "sha256": "99e77576981553af51278b4da85c658a866193f1953b0d42e2e1247bbc2bcada"
     },
     {
       "file": "portal/index.html",

@@ -1,6 +1,7 @@
 import {DurableObject} from 'cloudflare:workers';
 import {randomBytes, createHash, scrypt, timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
+import {IzibizConnector} from './izibiz.mjs';
 import {generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse} from '@simplewebauthn/server';
 
 const derive = promisify(scrypt);
@@ -136,6 +137,13 @@ export class AuthStore extends DurableObject {
   }
   async handle(request) {
     const url=new URL(request.url), path=url.pathname;
+    // This origin is reachable only through the internal Durable Object binding.
+    // The public Worker rejects every origin except APP_ORIGIN before routing.
+    // Keep the encryption key in a separate private object from credentials.
+    if(url.origin==='https://izibiz-key.internal'&&path==='/key'&&request.method==='POST'){
+      const key=await this.storage.transaction(async tx=>{let key=await tx.get('encryption-key:v1');if(!key){key=token();await tx.put('encryption-key:v1',key);}return key;});
+      return json({key});
+    }
     const account=await this.storage.get('account');
     if(path==='/api/local-mail'&&local(this.env))return json(await this.storage.get('local-mail')||{});
     if(path==='/api/session'&&request.method==='GET') {
@@ -195,6 +203,22 @@ export class AuthStore extends DurableObject {
     }
     const session=await this.session(request);
     if(!session||!account)fail('Oturum açmanız gerekiyor.',401);
+    if(path.startsWith('/api/izibiz/')){
+      const match=path.match(/^\/api\/izibiz\/([A-Z_]+)\/(status|connect|disconnect|list|download)$/);
+      const company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
+      if(!company)fail('Firma bulunamadı veya etkin değil.',403);
+      if(match[2]==='connect')await this.rate(request,'izibiz-connection:'+company.id,5,15);
+      if(!this.izibiz){
+        let key=this.env.IZIBIZ_ENCRYPTION_KEY;
+        if(!key){const vault=this.env.AUTH.get(this.env.AUTH.idFromName('izibiz-encryption-key-v1'));const result=await vault.fetch(new Request('https://izibiz-key.internal/key',{method:'POST'}));key=(await result.json()).key;}
+        this.izibiz=new IzibizConnector({storage:this.storage,key});
+      }
+      try{return await this.izibiz.handle(company.id,match[2],request.method,body);}catch(error){
+        // Infrastructure errors must not consume the user's login attempts.
+        if(match[2]==='connect'&&error.status>=500){const ip=request.headers.get('CF-Connecting-IP')||'local',key='rate:izibiz-connection:'+company.id+':'+hash(ip).slice(0,20);await this.storage.transaction(async tx=>{const value=await tx.get(key);if(value){value.count=Math.max(0,value.count-1);await tx.put(key,value);}});}
+        throw error;
+      }
+    }
     if(path==='/api/logout'&&request.method==='POST'){await this.storage.delete(session.key);return json({ok:true},200,{'Set-Cookie':cookie('',new URL(this.env.APP_ORIGIN).protocol==='https:',0)});}
     if(path==='/api/companies'&&request.method==='GET')return json({companies:await this.companies()});
     if(path==='/api/companies'&&request.method==='PATCH') {

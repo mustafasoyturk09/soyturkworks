@@ -10,6 +10,14 @@ template=template.replace(/<style id="sw-workspace-ui">[\s\S]*?<\/style>/,()=>'<
 template=template.replace(/<script>\/\* Company context is fixed[\s\S]*?<\/script>/,()=>'<script>'+js+'</script>');
 const mobile=await readFile(new URL('../src/mobile.js',import.meta.url),'utf8');
 template=template.replace(/<script>\s*\(\(\) => \{\n  'use strict';\n  const sidebar=document.querySelector[\s\S]*?<\/script>/,()=>'<script>\n'+mobile+'</script>');
+const iziCSS=await readFile(new URL('../src/izibiz.css',import.meta.url),'utf8');
+const iziJS=await readFile(new URL('../src/izibiz.js',import.meta.url),'utf8');
+const mobileCSS=await readFile(new URL('../src/mobile.css',import.meta.url),'utf8');
+const iziMedia=mobileCSS.slice(mobileCSS.indexOf('@media(max-width:600px)'),mobileCSS.indexOf('.sw-mobile-bar, .sw-nav-backdrop'));
+const iziStyle='<style id="sw-izibiz-ui">'+iziCSS+iziMedia+'</style>';
+const iziScript='<script id="sw-izibiz-code">'+iziJS+'</script>';
+if(template.includes('id="sw-izibiz-ui"'))template=template.replace(/<style id="sw-izibiz-ui">[\s\S]*?<\/style>/,()=>iziStyle);else template=template.replace('</head>',()=>iziStyle+'</head>');
+if(template.includes('id="sw-izibiz-code"'))template=template.replace(/<script id="sw-izibiz-code">[\s\S]*?<\/script>/,()=>iziScript);else template=template.replace('</body>',()=>iziScript+'</body>');
 const serialized=JSON.stringify(template).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
 source=source.replace(match[0],()=>match[1]+serialized+match[3]);
 await writeFile(path,source);
