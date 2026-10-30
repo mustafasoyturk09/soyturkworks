@@ -40,5 +40,6 @@ for(const [name,source] of [['web',live],['portable',portable]]){
   assert.equal(context.parsedRows.length,0);assert.equal(context.eskiIslenmisSet,null);
   assert.equal(document.getElementById('step2').attrs['data-locked'],undefined);assert.equal(document.getElementById('step3').attrs['data-locked'],'true');
   assert(!/<section[^>]*id="step2"[^>]*data-locked/.test(source));
+  assert(!source.includes('Önce eski Excel dosyasını yükle'));
  });
 }
