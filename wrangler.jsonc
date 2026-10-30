@@ -3,15 +3,37 @@
   "name": "soyturkworks",
   "main": "server/worker.mjs",
   "compatibility_date": "2026-10-29",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": false,
   "keep_vars": true,
   "vars": {
-    "APP_ORIGIN": "https://soyturkworks.com"
+    "APP_ORIGIN": "https://soyturkworks.com",
+    "OWNER_SETUP_SHA256": "584dcc25ee39a735a3a8c3a0f124a8afc164c20867500e47faa978b7265b609e",
+    "OWNER_SETUP_EXPIRES": "1793440027316"
   },
-  "durable_objects": {"bindings": [{"name":"AUTH","class_name":"AuthStore"}]},
-  "migrations": [{"tag":"auth-v1","new_sqlite_classes":["AuthStore"]}],
-  "send_email": [{"name":"EMAIL"}],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AUTH",
+        "class_name": "AuthStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "auth-v1",
+      "new_sqlite_classes": [
+        "AuthStore"
+      ]
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
   "assets": {
     "binding": "ASSETS",
     "run_worker_first": true,

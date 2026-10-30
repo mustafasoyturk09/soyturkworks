@@ -5,6 +5,7 @@
   const parameters=new URLSearchParams(location.hash.slice(1)||location.search);
   const recoveryToken=parameters.get('reset')||parameters.get('setup');
   const isSetup=parameters.has('setup');
+  const ownerEmail=parameters.get('owner');
   if(recoveryToken) history.replaceState(null,'',location.pathname);
   async function api(path,body,method=body?'POST':'GET') {
     const response=await fetch('/api/'+path,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
@@ -23,6 +24,7 @@
       $('loginHeading').textContent=isSetup?'Hesabını oluştur.':'Yeni parolanı belirle.';
       $('loginDescription').textContent='Parolanı yalnızca bu ekranda belirle. En az 12 karakter kullan.';
       if(!isSetup)form.querySelector('[name=username]').closest('label').remove();
+      if(isSetup&&ownerEmail){const label=document.createElement('label');label.textContent='Kurtarma e-postası';const input=document.createElement('input');input.type='email';input.name='recoveryEmail';input.value=ownerEmail;input.readOnly=true;input.required=true;label.append(input);form.prepend(label);}
       const password=form.querySelector('[name=password]');password.autocomplete='new-password';password.minLength=12;
       form.insertBefore(field('confirmPassword','Parola tekrar'),$('loginError'));
       form.querySelector('[type=submit]').textContent=isSetup?'Hesabı oluştur':'Parolayı yenile';
@@ -32,6 +34,7 @@
       $('loginHeading').textContent='İlk adımı atalım.';$('loginDescription').textContent='Hesabını oluşturmak için kurtarma e-postana güvenli bir bağlantı gönder.';
       form.hidden=true;$('forgot').textContent='Hesap kurulum bağlantısı gönder';$('forgot').className='primary';$('forgot').style.width='100%';
       $('passkeyLogin').hidden=true;main.querySelector('.divider').hidden=true;main.querySelector('.login-card>.fineprint').hidden=true;
+      if(state.setupMethod==='owner-link'){form.hidden=false;$('loginHeading').textContent='Çalışma alanına hoş geldin.';$('loginDescription').textContent='İlk hesap kurulumu uygulama sahibi tarafından tamamlanıyor. Ardından kullanıcı adı ve parolanla giriş yapabilirsin.';$('forgot').hidden=true;}
     }
     form.addEventListener('submit',event=>{event.preventDefault();const data=Object.fromEntries(new FormData(form));$('loginError').hidden=true;busy(form.querySelector('[type=submit]'),async()=>{
       try{if(recoveryToken){if(data.password!==data.confirmPassword)throw Error('Parolalar aynı olmalı.');await api('recovery/complete',{...data,token:recoveryToken});}else await api('login',data);location.href='/companies';}catch(error){$('loginError').textContent=error.message;$('loginError').hidden=false;}

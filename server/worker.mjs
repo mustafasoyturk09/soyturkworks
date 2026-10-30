@@ -107,15 +107,22 @@ export class AuthStore extends DurableObject {
     await this.storage.setAlarm(Date.now()+DAY);
     return cookie(raw, new URL(this.env.APP_ORIGIN).protocol==='https:');
   }
-  async sendRecovery(account) {
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.env.OWNER_EMAIL||''))fail('Kurtarma e-posta adresi sunucuda henüz tanımlanmadı.',503);
+  ownerSetup(raw,email,account) {
+    if(account||typeof raw!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(raw)||!Number.isFinite(Number(this.env.OWNER_SETUP_EXPIRES))||Number(this.env.OWNER_SETUP_EXPIRES)<Date.now()||!/^[a-f0-9]{64}$/.test(this.env.OWNER_SETUP_SHA256||''))return null;
+    if(!timingSafeEqual(Buffer.from(hash(raw),'hex'),Buffer.from(this.env.OWNER_SETUP_SHA256,'hex')))return null;
+    if(typeof email!=='string'||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('Geçerli bir kurtarma e-posta adresi gerekiyor.');
+    return {kind:'setup',expires:Number(this.env.OWNER_SETUP_EXPIRES),email:email.trim().toLowerCase()};
+  }
+  async sendRecovery(account,setupEmail) {
+    const recipient=account?.email||setupEmail||this.env.OWNER_EMAIL;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient||''))fail('İlk hesap kurulumu uygulama sahibi tarafından tamamlanmalı.',503);
     const raw=token(), kind=account?'reset':'setup';
     const link=this.env.APP_ORIGIN+'/login#'+kind+'='+raw;
-    const message={from:{email:'giris@soyturkworks.com',name:'Soyturk Works'},to:this.env.OWNER_EMAIL,
+    const message={from:{email:'giris@soyturkworks.com',name:'Soyturk Works'},to:recipient,
       subject:account?'Soyturk Works — Parola yenileme':'Soyturk Works — Hesabını oluştur',
       text:`${account?'Parolanı yenilemek':'Hesabını oluşturmak'} için bu bağlantıyı aç:\n${link}\n\nBağlantı 15 dakika geçerlidir ve bir kez kullanılabilir. Bu işlemi sen istemediysen mesajı yok say.`,
       html:`<div style="font-family:Arial,sans-serif;max-width:520px;padding:32px;background:#101d30;color:#fff;border-radius:20px"><h1>Soyturk Works</h1><p>${account?'Parolanı yenile.':'Hesabını oluştur.'}</p><p><a style="display:inline-block;padding:14px 24px;background:#54d2b0;color:#091a24;text-decoration:none;border-radius:10px" href="${link}">${account?'Parolayı yenile':'Hesabı oluştur'}</a></p><p>Bu bağlantı 15 dakika geçerlidir ve bir kez kullanılabilir.</p><p>Bu işlemi sen istemediysen mesajı yok say.</p></div>`};
-    const pending={kind,expires:Date.now()+15*60000};
+    const pending={kind,email:recipient,expires:Date.now()+15*60000};
     await this.storage.put('recovery:'+hash(raw),pending);
     try {
       if(local(this.env)) await this.storage.put('local-mail',{...message,link});
@@ -133,7 +140,7 @@ export class AuthStore extends DurableObject {
     if(path==='/api/local-mail'&&local(this.env))return json(await this.storage.get('local-mail')||{});
     if(path==='/api/session'&&request.method==='GET') {
       const session=await this.session(request);
-      return json({initialized:!!account,account:session&&account?publicAccount(account):null,companies:session?await this.companies():[],localMailbox:local(this.env)});
+      return json({initialized:!!account,setupMethod:this.env.OWNER_EMAIL?'email':'owner-link',account:session&&account?publicAccount(account):null,companies:session?await this.companies():[],localMailbox:local(this.env)});
     }
     const body=request.method==='GET'?{}:await readJSON(request);
     if(path==='/api/login'&&request.method==='POST') {
@@ -144,13 +151,14 @@ export class AuthStore extends DurableObject {
     }
     if(path==='/api/recovery'&&request.method==='POST') {
       await this.rate(request,'recovery',3,30);
-      await this.sendRecovery(account);
+      const owner=!account?this.ownerSetup(body.ownerToken,body.recoveryEmail,account):null;
+      await this.sendRecovery(account,owner?.email);
       return json({ok:true,message:'Bağlantı kayıtlı kurtarma e-posta adresine gönderildi.'});
     }
     if(path==='/api/recovery/complete'&&request.method==='POST') {
       await this.rate(request,'recovery-complete',10);
       if(typeof body.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(body.token))fail('Bağlantı geçersiz veya süresi dolmuş.');
-      const key='recovery:'+hash(body.token), recovery=await this.storage.get(key);
+      const key='recovery:'+hash(body.token), recovery=await this.storage.get(key)||this.ownerSetup(body.token,body.recoveryEmail,account);
       if(!recovery||recovery.expires<Date.now()||recovery.kind!==(account?'reset':'setup'))fail('Bağlantı geçersiz veya süresi dolmuş.');
       validPassword(body.password);
       const username=account?.username||String(body.username||'').trim();
@@ -159,9 +167,9 @@ export class AuthStore extends DurableObject {
       // All links are single use. A completed recovery also revokes other links,
       // sessions and passkeys, so a lost device cannot keep access.
       await this.storage.transaction(async tx=>{
-        const current=await tx.get(key), currentAccount=await tx.get('account');
+        const currentAccount=await tx.get('account'),current=await tx.get(key)||this.ownerSetup(body.token,body.recoveryEmail,currentAccount);
         if(!current||current.expires<Date.now()||current.kind!==(currentAccount?'reset':'setup'))fail('Bu bağlantı daha önce kullanıldı.');
-        await tx.put('account',{username,email:this.env.OWNER_EMAIL,password,revision,webauthnId:account?.webauthnId||token(),created:account?.created||Date.now()});
+        await tx.put('account',{username,email:account?.email||current.email||this.env.OWNER_EMAIL,password,revision,webauthnId:account?.webauthnId||token(),created:account?.created||Date.now()});
         for(const prefix of ['recovery:','session:','passkey:','challenge:']){const records=await tx.list({prefix});if(records.size)await tx.delete([...records.keys()]);}
       });
       return json({ok:true},200,{'Set-Cookie':await this.issueSession(revision)});

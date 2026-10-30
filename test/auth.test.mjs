@@ -16,8 +16,9 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
   const portServer=createServer();await new Promise(r=>portServer.listen(0,'127.0.0.1',r));const port=portServer.address().port;await new Promise(r=>portServer.close(r));
   const origin='http://127.0.0.1:'+port;
   const directory=await mkdtemp(join(tmpdir(),'sw-auth-test-'));
+  const ownerToken=randomBytes(32).toString('base64url'),ownerDigest=sha(ownerToken).toString('hex');
   let logs='';
-  const child=spawn(process.execPath,[new URL('../node_modules/wrangler/bin/wrangler.js',import.meta.url).pathname,'dev','--ip','127.0.0.1','--port',String(port),'--var','APP_ORIGIN:'+origin,'--var','LOCAL_MAILBOX:1','--var','OWNER_EMAIL:auth-test@example.invalid','--persist-to',directory],{cwd:new URL('../',import.meta.url),env:{...process.env,WRANGLER_SEND_METRICS:'false'},stdio:['ignore','pipe','pipe']});
+  const child=spawn(process.execPath,[new URL('../node_modules/wrangler/bin/wrangler.js',import.meta.url).pathname,'dev','--ip','127.0.0.1','--port',String(port),'--var','APP_ORIGIN:'+origin,'--var','LOCAL_MAILBOX:1','--var','OWNER_SETUP_SHA256:'+ownerDigest,'--var','OWNER_SETUP_EXPIRES:'+String(Date.now()+120000),'--persist-to',directory],{cwd:new URL('../',import.meta.url),env:{...process.env,WRANGLER_SEND_METRICS:'false'},stdio:['ignore','pipe','pipe']});
   child.stdout.on('data',b=>logs+=b);child.stderr.on('data',b=>logs+=b);
   try {
     let ready=false;for(let i=0;i<100;i++){try{if((await fetch(origin+'/api/session')).ok){ready=true;break;}}catch{}if(child.exitCode!==null)break;await pause(100);}
@@ -40,12 +41,16 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/login',{username:'x',password:'x'.repeat(33000)})).status,413);
     });
     let cookie;
-    await t.test('Only a single-use email link can create the owner account',async()=>{
-      assert.equal((await request('/api/recovery',{})).status,200);const token=(await mail()).get('setup');assert(token);
-      assert.equal((await request('/api/recovery/complete',{token,username:'qa-user',password:'short'})).status,400);
-      const created=await request('/api/recovery/complete',{token,username:'qa-user',password});assert.equal(created.status,200);cookie=sessionCookie(created);
+    await t.test('Only deployment ownership can initialize the account; private setup links work once',async()=>{
+      assert.equal((await request('/api/recovery',{})).status,503);
+      assert.equal((await request('/api/recovery/complete',{token:randomBytes(32).toString('base64url'),username:'attacker',password,recoveryEmail:'attacker@example.invalid'})).status,400);
+      assert.equal((await request('/api/recovery',{ownerToken,recoveryEmail:'auth-test@example.invalid'})).status,200);const mailToken=(await mail()).get('setup');assert(mailToken);
+      const token=ownerToken,recoveryEmail='auth-test@example.invalid';
+      assert.equal((await request('/api/recovery/complete',{token,username:'qa-user',password:'short',recoveryEmail})).status,400);
+      const created=await request('/api/recovery/complete',{token,username:'qa-user',password,recoveryEmail});assert.equal(created.status,200);cookie=sessionCookie(created);
       assert.match(created.headers.get('set-cookie'),/HttpOnly; SameSite=Strict/);
       assert.equal((await request('/api/recovery/complete',{token,username:'qa-user',password})).status,400);
+      assert.equal((await request('/api/recovery/complete',{token:mailToken,username:'attacker',password})).status,400);
       assert.equal((await request('/api/login',{username:'qa-user',password:'incorrect'})).status,401);
       assert.equal((await request('/api/session',null,cookie)).value.account.username,'qa-user');
     });
@@ -83,7 +88,8 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/passkeys/login/verify',{id:bad.id,response:assertion})).status,401);
     });
     await t.test('Recovery invalidates old passwords, sessions, links and passkeys',async()=>{
-      await request('/api/recovery',{});const token=(await mail()).get('reset');assert(token);
+      await request('/api/recovery',{recoveryEmail:'attacker@example.invalid'});const token=(await mail()).get('reset');assert(token);
+      assert.equal((await request('/__local/mail')).value.to,'auth-test@example.invalid');
       const recovered=await request('/api/recovery/complete',{token,password:password+'-new'});assert.equal(recovered.status,200);
       assert.equal((await request('/api/companies',null,cookie)).status,401);
       assert.equal((await request('/api/login',{username:'qa-user',password})).status,401);
