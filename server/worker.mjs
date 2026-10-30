@@ -25,7 +25,7 @@ async function passwordHash(password, salt=randomBytes(16).toString('hex')) {
   return {salt, digest:derived.toString('hex')};
 }
 function validPassword(value) {
-  if(typeof value!=='string'||value.length<12||value.length>128) fail('Parola 12–128 karakter olmalı.');
+  if(typeof value!=='string'||value.length<7||value.length>128) fail('Parola 7–128 karakter olmalı.');
 }
 async function checkPassword(password, saved) {
   const test=await passwordHash(typeof password==='string'?password.slice(0,128):'', saved?.salt||'00000000000000000000000000000000');

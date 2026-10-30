@@ -29,7 +29,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
     };
     const mail=async()=>{const {value}=await request('/__local/mail');const link=new URL(value.link);assert.equal(link.search,'');return new URLSearchParams(link.hash.slice(1));};
     const sessionCookie=response=>response.headers.get('set-cookie').split(';')[0];
-    const password='Disposable-local-test-2026!';
+    const password='Qa2026!';
     await t.test('Unauthenticated requests cannot bypass login through HTML or app assets',async()=>{
       for(const path of ['/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
       assert.equal((await request('/workspace/PUSULA/')).status,303);
@@ -46,7 +46,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/recovery/complete',{token:randomBytes(32).toString('base64url'),username:'attacker',password,recoveryEmail:'attacker@example.invalid'})).status,400);
       assert.equal((await request('/api/recovery',{ownerToken,recoveryEmail:'auth-test@example.invalid'})).status,200);const mailToken=(await mail()).get('setup');assert(mailToken);
       const token=ownerToken,recoveryEmail='auth-test@example.invalid';
-      assert.equal((await request('/api/recovery/complete',{token,username:'qa-user',password:'short',recoveryEmail})).status,400);
+      assert.equal((await request('/api/recovery/complete',{token,username:'qa-user',password:'123456',recoveryEmail})).status,400);
       const created=await request('/api/recovery/complete',{token,username:'qa-user',password,recoveryEmail});assert.equal(created.status,200);cookie=sessionCookie(created);
       assert.match(created.headers.get('set-cookie'),/HttpOnly; SameSite=Strict/);
       assert.equal((await request('/api/recovery/complete',{token,username:'qa-user',password})).status,400);

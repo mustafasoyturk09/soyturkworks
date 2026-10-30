@@ -16,16 +16,16 @@
   function message(text){$('notice').textContent=text;$('notice').hidden=false;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').hidden=true,7000);}
   async function busy(button,action){if(button.disabled)return;button.disabled=true;try{await action();}catch(error){message(error.message);}finally{button.disabled=false;}}
   function template(id){main.replaceChildren($(id).content.cloneNode(true));}
-  const field=(name,label,autocomplete='new-password')=>{const l=document.createElement('label');l.textContent=label;const i=document.createElement('input');i.name=name;i.type='password';i.autocomplete=autocomplete;i.required=true;i.minLength=12;i.maxLength=128;l.append(i);return l;};
+  const field=(name,label,autocomplete='new-password')=>{const l=document.createElement('label');l.textContent=label;const i=document.createElement('input');i.name=name;i.type='password';i.autocomplete=autocomplete;i.required=true;i.minLength=7;i.maxLength=128;l.append(i);return l;};
   function login() {
     template('loginTemplate');
     const form=$('loginForm');
     if(recoveryToken){
       $('loginHeading').textContent=isSetup?'Hesabını oluştur.':'Yeni parolanı belirle.';
-      $('loginDescription').textContent='Parolanı yalnızca bu ekranda belirle. En az 12 karakter kullan.';
+      $('loginDescription').textContent='Parolanı yalnızca bu ekranda belirle. En az 7 karakter kullan.';
       if(!isSetup)form.querySelector('[name=username]').closest('label').remove();
       if(isSetup&&ownerEmail){const label=document.createElement('label');label.textContent='Kurtarma e-postası';const input=document.createElement('input');input.type='email';input.name='recoveryEmail';input.value=ownerEmail;input.readOnly=true;input.required=true;label.append(input);form.prepend(label);}
-      const password=form.querySelector('[name=password]');password.autocomplete='new-password';password.minLength=12;
+      const password=form.querySelector('[name=password]');password.autocomplete='new-password';password.minLength=7;
       form.insertBefore(field('confirmPassword','Parola tekrar'),$('loginError'));
       form.querySelector('[type=submit]').textContent=isSetup?'Hesabı oluştur':'Parolayı yenile';
       $('forgot').hidden=true;$('passkeyLogin').hidden=true;

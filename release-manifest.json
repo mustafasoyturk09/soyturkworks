@@ -187,7 +187,7 @@
     },
     {
       "file": "portal/index.html",
-      "sha256": "81aab36e5fcd1a2355c0a23967a7d25c98a8f5b2352907df6ee0a40e0d111870"
+      "sha256": "1a5dee2575d855689bb97f0b1638b1fd2a468fa8a517de69a7660eccc54bc14f"
     },
     {
       "file": "portal/passkeys.js",
@@ -199,7 +199,7 @@
     },
     {
       "file": "portal/portal.js",
-      "sha256": "9520f0287a672312f2151aaabbf653834cbdc7eb7534e8af9a816c4b87fd981f"
+      "sha256": "41ff374b1c239fdd6057806be5dfdda5c527ac29d226d8d6c240f0a461556d5a"
     },
     {
       "file": "robots.txt",
