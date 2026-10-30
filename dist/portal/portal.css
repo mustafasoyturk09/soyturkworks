@@ -5,3 +5,6 @@
 @media(max-width:350px){.company-grid{grid-template-columns:1fr}.company-card:last-child{grid-column:auto;width:100%}.company-card{padding:22px}.company-name{min-height:0}.company-open{min-height:120px}.top-actions .quiet-button{font-size:9px;padding:8px 5px}.brand{gap:6px}.brand>img{width:39px;height:39px}.brand>span{font-size:15px}.login-card{padding:20px}.private-label{max-width:110px;line-height:1.5}}
 @media(max-height:550px) and (min-width:651px){main{padding-top:15px;padding-bottom:30px}.login-layout{min-height:0}.intro-mark{display:none}.topbar{padding-top:12px;padding-bottom:12px}.login-card{padding:24px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+
+/* Customer welcome uses the existing mint accent and white heading. */
+.intro h1{color:#fff}.company-heading h1{text-wrap:balance}

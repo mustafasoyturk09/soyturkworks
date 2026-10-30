@@ -51,7 +51,7 @@
     },
     {
       "file": "app/workspace.css",
-      "sha256": "b8be434b555d4161ab6f28bd88182ce661d6295a926fce30094ced7ab9701977"
+      "sha256": "5f9116f74bddadbd76d46785bca98c2297261866a252df0cdfaf9f45fafc7505"
     },
     {
       "file": "app/workspace.js",
@@ -183,11 +183,11 @@
     },
     {
       "file": "index.html",
-      "sha256": "f55199b0afcb13ed6ca42a4951fde30402eab9c9acb63699404a65027846a752"
+      "sha256": "0e9939d2dff9f07c2337ca22dce5a492537d0bdb2e5e1d3e3468b6d61dbb4dae"
     },
     {
       "file": "portal/index.html",
-      "sha256": "1a5dee2575d855689bb97f0b1638b1fd2a468fa8a517de69a7660eccc54bc14f"
+      "sha256": "8448f83a39fdc5cddd4ea5d1569aa946de0d1cf799913b62bf92e7f876126f61"
     },
     {
       "file": "portal/passkeys.js",
@@ -195,7 +195,7 @@
     },
     {
       "file": "portal/portal.css",
-      "sha256": "67544176ee8ed28da9ab65a6beba1394a51a8a016ae31d6c2ea90751571bbc5d"
+      "sha256": "c982e14e5dddb490469b8e2936722456bcf988f1487d8eeeab75e30d2498f850"
     },
     {
       "file": "portal/portal.js",
