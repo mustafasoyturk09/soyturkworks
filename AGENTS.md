@@ -11,3 +11,4 @@
 - Yeni depo oluşturma, force push yapma veya mevcut DNS, alan adı, erişim kuralları ve tarayıcı kayıtlarını gereksiz yere değiştirme.
 - Şifreleri, anahtarları, `.env` dosyasını ve gerçek fatura/kişisel çalışma dosyalarını depoya veya sohbete koyma.
 - Cloudflare yayını yalnızca `dist/` dosyalarını sunar. Tek dosya boyutu 25 MiB sınırını aşmamalıdır. OCR dosyaları build sırasında ayrılır; taşınabilir HTML kaydetme işlevi korunmalıdır.
+- Tek hesap / firma ayrımı çalışması `feature/company-login` dalındadır. Canlıya geçişin kalan e-posta kurulumu ve doğrulama adımları `docs/giris-firma-gecisi.md` içindedir. Kurtarma bağlantısı gönderilemeden bu dalı main'e taşıyıp kullanıcıyı mevcut uygulamanın dışında bırakmayın; tamamlandığında bu geçiş notunu güncelleyin.

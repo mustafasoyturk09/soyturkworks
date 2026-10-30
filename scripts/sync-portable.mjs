@@ -1,0 +1,15 @@
+import {readFile,writeFile} from 'node:fs/promises';
+const path=new URL('../src/app.html',import.meta.url);
+let source=await readFile(path,'utf8');
+const match=source.match(/(<script\b[^>]*id="fc153PortableTemplate"[^>]*>)([\s\S]*?)(<\/script>)/);
+if(!match)throw Error('Taşınabilir şablon bulunamadı.');
+let template=JSON.parse(match[2]);
+const css=await readFile(new URL('../src/workspace.css',import.meta.url),'utf8');
+const js=await readFile(new URL('../src/workspace.js',import.meta.url),'utf8');
+template=template.replace(/<style id="sw-workspace-ui">[\s\S]*?<\/style>/,()=>'<style id="sw-workspace-ui">'+css+'</style>');
+template=template.replace(/<script>\/\* Company context is fixed[\s\S]*?<\/script>/,()=>'<script>'+js+'</script>');
+const mobile=await readFile(new URL('../src/mobile.js',import.meta.url),'utf8');
+template=template.replace(/<script>\s*\(\(\) => \{\n  'use strict';\n  const sidebar=document.querySelector[\s\S]*?<\/script>/,()=>'<script>\n'+mobile+'</script>');
+const serialized=JSON.stringify(template).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
+source=source.replace(match[0],()=>match[1]+serialized+match[3]);
+await writeFile(path,source);

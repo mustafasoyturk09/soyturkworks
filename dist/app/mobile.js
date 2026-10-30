@@ -15,7 +15,7 @@
   toggle.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
   const heading=document.createElement('div');
   heading.className='sw-mobile-heading';
-  const brand=document.createElement('span'); brand.className='sw-mobile-brand'; brand.textContent='Soyturk Works';
+  const brand=document.createElement('span'); brand.className='sw-mobile-brand'; brand.textContent=window.SWWorkspace?.companyName||'Soyturk Works';
   const pageName=document.createElement('span'); pageName.className='sw-mobile-page';
   const logo=document.createElement('img');
   logo.className='sw-header-logo'; logo.alt=''; logo.width=36; logo.height=36;
@@ -33,7 +33,7 @@
   for(const item of items){item.tabIndex=0;item.setAttribute('role','button');}
   function updateTitle(){
     const active=sidebar.querySelector('.nav-item.active[data-page]');
-    pageName.textContent=active?active.textContent.trim():'Ana Sayfa';
+    pageName.textContent=active?active.textContent.trim():'Modüller';
     for(const item of items)item.setAttribute('aria-current',item===active?'page':'false');
   }
   function setOpen(open,restoreFocus=true){
@@ -60,7 +60,7 @@
     if(!document.body.classList.contains('sw-nav-open'))return;
     if(e.key==='Escape'){e.preventDefault();setOpen(false);}
     if(e.key==='Tab'){
-      const focusable=[close,...items];
+      const focusable=[...sidebar.querySelectorAll('button:not(:disabled),a[href],[tabindex="0"]')].filter(el=>el.getClientRects().length&&!el.closest('[hidden]'));
       if(e.shiftKey&&document.activeElement===close){e.preventDefault();focusable.at(-1).focus();}
       else if(!e.shiftKey&&document.activeElement===focusable.at(-1)){e.preventDefault();close.focus();}
     }

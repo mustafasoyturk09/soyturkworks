@@ -1,12 +1,22 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "soyturkworks",
+  "main": "server/worker.mjs",
   "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "keep_vars": true,
+  "vars": {
+    "APP_ORIGIN": "https://soyturkworks.com"
+  },
+  "durable_objects": {"bindings": [{"name":"AUTH","class_name":"AuthStore"}]},
+  "migrations": [{"tag":"auth-v1","new_sqlite_classes":["AuthStore"]}],
+  "send_email": [{"name":"EMAIL"}],
   "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": true,
     "directory": "./dist",
-    "html_handling": "auto-trailing-slash",
+    "html_handling": "none",
     "not_found_handling": "404-page"
   }
 }

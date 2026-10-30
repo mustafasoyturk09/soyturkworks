@@ -27,7 +27,7 @@
     },
     {
       "file": "app/mobile.js",
-      "sha256": "5e6de8f08c0ab2fdb36a60b5fe7eab8fec2771382ef5edcadf472a8df7306af8"
+      "sha256": "6800616b2ed4c661d3c7060eb676c379661b1ccec3971021af495e413a46794d"
     },
     {
       "file": "app/pdf-loader.mjs",
@@ -48,6 +48,14 @@
     {
       "file": "app/sfOcrLangDataEng.js",
       "sha256": "717ef0e60ff3f79be9c1414b39218836cb3376b5bb1f4d870ca4023f46cf55fd"
+    },
+    {
+      "file": "app/workspace.css",
+      "sha256": "b8be434b555d4161ab6f28bd88182ce661d6295a926fce30094ced7ab9701977"
+    },
+    {
+      "file": "app/workspace.js",
+      "sha256": "0587de4bda864eab364ab4086c5b78b54819efe329abbe00b1046c7295548e5a"
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
@@ -175,7 +183,23 @@
     },
     {
       "file": "index.html",
-      "sha256": "2be29c574b912c12c2bbdd1ecb3c07a58b0ad6e878bbf5db33e81dac7c621b22"
+      "sha256": "f55199b0afcb13ed6ca42a4951fde30402eab9c9acb63699404a65027846a752"
+    },
+    {
+      "file": "portal/index.html",
+      "sha256": "81aab36e5fcd1a2355c0a23967a7d25c98a8f5b2352907df6ee0a40e0d111870"
+    },
+    {
+      "file": "portal/passkeys.js",
+      "sha256": "7fc3403fa7fe8478b0b7cac5e7a8812a7fd7f737b7f36ff83f27ab56340883b3"
+    },
+    {
+      "file": "portal/portal.css",
+      "sha256": "67544176ee8ed28da9ab65a6beba1394a51a8a016ae31d6c2ea90751571bbc5d"
+    },
+    {
+      "file": "portal/portal.js",
+      "sha256": "31b36741971359c785d8e9b88982b08837186e6929e823cc7b00400cf23698af"
     },
     {
       "file": "robots.txt",
