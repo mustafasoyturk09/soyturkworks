@@ -16,28 +16,41 @@ body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5
 #ef115Side .ef115-loaded[data-state="error"] { color: #862d20; font-weight: 600; overflow-wrap: anywhere; }
 
 #page-efatura #countPanel .count-box {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 176px; gap: 10px; padding: 20px 12px; text-align: center; font-weight: 700;
+  display: grid; grid-template-rows: 84px 52px; grid-auto-rows: max-content;
+  align-content: start; justify-items: center; align-items: start;
+  min-height: 196px; gap: 10px; padding: 16px 12px; text-align: center; font-weight: 700;
+  transition: box-shadow .2s ease, border-color .2s ease;
 }
 #page-efatura #countPanel .cb-k {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 56px; width: 100%; font-size: 13.5px; line-height: 1.45;
+  display: flex; align-items: flex-start; justify-content: center;
+  height: 84px; min-height: 0; width: 100%; font-size: 15px; line-height: 1.4;
   font-weight: 700; letter-spacing: .035em; overflow-wrap: anywhere;
 }
 #page-efatura #countPanel .cb-v {
+  display: flex; align-items: center; justify-content: center; height: 52px;
   width: 100%; font-family: 'IBM Plex Sans', sans-serif; font-size: 46px;
   line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums;
 }
 #page-efatura #countPanel .cb-sub { font-size: 12px; line-height: 1.5; font-weight: 700; }
 #page-efatura #countPanel .cb-sub:empty { display: none; }
 #page-efatura #countPanel .count-box.done2 {
-  --monthly-accent: #3de0b1;
+  --monthly-accent: #ff793d;
   background: #D4D6D9;
   color: #000; border-color: #D4D6D9;
   box-shadow: inset 0 1px 0 #ffffffa6, 0 0 12px #d4d6d959, 0 0 30px #d4d6d933;
 }
 #page-efatura #countPanel .count-box.done2 .cb-v {
   color: var(--monthly-accent); text-shadow: 0 1px 1px #0005;
+}
+#page-efatura #countPanel .count-box.ref { --count-glow: #c5d8ef; }
+#page-efatura #countPanel .count-box.yeni { --count-glow: #EDC49A; }
+#page-efatura #countPanel .count-box.ham { --count-glow: #a79bc7; }
+#page-efatura #countPanel .count-box.done2 { --count-glow: #D4D6D9; }
+#page-efatura #countPanel .count-box:hover {
+  border-color: var(--count-glow);
+  box-shadow: inset 0 1px 0 #ffffff70,
+    0 0 14px color-mix(in srgb, var(--count-glow) 65%, transparent),
+    0 0 32px color-mix(in srgb, var(--count-glow) 35%, transparent);
 }
 #page-efatura #efMonthlyPeriod {
   max-width: 100%; min-height: 36px; padding: 6px 8px; border-radius: 6px;
@@ -47,12 +60,12 @@ body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5
 #page-efatura #efMonthlyPeriod[hidden] { display: none; }
 #page-efatura #efMonthlyPeriod:focus-visible { outline: 2px solid #7c858f; outline-offset: 3px; }
 @media (max-width: 600px) {
-  #page-efatura #countPanel .count-box { min-height: 180px; padding: 18px 10px; }
-  #page-efatura #countPanel .cb-k { font-size: 13px; }
+  #page-efatura #countPanel .count-box { min-height: 196px; padding: 16px 10px; }
+  #page-efatura #countPanel .cb-k { font-size: 14px; }
   #page-efatura #countPanel .cb-v { font-size: 42px; }
 }
 @media (max-width: 360px) {
-  #page-efatura #countPanel .cb-k { font-size: 12.5px; letter-spacing: .015em; }
+  #page-efatura #countPanel .cb-k { font-size: 13.5px; letter-spacing: .015em; }
   #page-efatura #countPanel .cb-v { font-size: 36px; }
 }
 

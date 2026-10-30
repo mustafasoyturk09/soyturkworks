@@ -11,7 +11,7 @@
     },
     {
       "file": "app/branding.css",
-      "sha256": "09fbe078f99e94364095e3c7d45ee737227ea05046290d5b7c0d1aed9b6e3dfa"
+      "sha256": "d230b51ec9bdded6d71251adbbc7e87434966b8625aea9fa5ac216edd348c39d"
     },
     {
       "file": "app/calculator-ui.css",
@@ -191,7 +191,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "2fbb468241208ac3c0c1e595beb0b3064fbc1bf2a63c366c9d145e99e38f2608"
+      "sha256": "b154c707a36fb215a20079202db034699c339a5a5cf4c2796cc01a16080be3f5"
     },
     {
       "file": "portal/index.html",
