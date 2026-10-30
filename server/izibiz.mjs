@@ -20,6 +20,12 @@ export function customerIdentity(data){
   if(!/^\d{10,11}$/.test(identifier))error('İzibiz firma kimliği doğrulanamadı. Bağlantı kaydedilmedi.',502);
   return {identifier,name:text(value.commercialName||value.name||value.title||value.companyName)||[value.firstName,value.lastName].filter(Boolean).join(' ')||identifier};
 }
+export function invoiceReply(row){
+  // responseDescription contains free-form response notes. The portal's Yanıt
+  // column follows the invoice response state, separately from delivery status.
+  const state=String(row.invoiceStatus||row.documentStatus?.value||'').replace(/[^a-z]/gi,'').toUpperCase();
+  return ({WAITINGFORRESPONSE:'Yanıt bekliyor',RESPONSETIMEEXPIRED:'Kanunen kabul',RECEIVED:'Yanıt gerekmiyor',ACCEPTED:'Kabul edildi',REJECTED:'Reddedildi',RESPONSEUNDELIVERED:'Yanıt iletilemedi',CANCEL:'İptal',CANCELLED:'İptal'})[state]||text(row.documentStatus?.label);
+}
 export function invoiceRow(row,identifier){
   if(!row||!Number.isSafeInteger(Number(row.id))||Number(row.id)<=0||!text(row.documentNo)||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(row.uuid||''))error('İzibiz eksik fatura bilgisi döndürdü. İşlem durduruldu.',502);
   if(row.direction!=='IN'||String(row.accountingCustomer?.identifier||row.customerSSN||'')!==identifier)error('Faturanın alıcısı seçili firmayla eşleşmiyor. İşlem durduruldu.',409);
@@ -31,7 +37,7 @@ export function invoiceRow(row,identifier){
     amount=/^[+-]?\d+(?:\.\d+)?$/.test(amount)?Number(amount):NaN;
   }
   if(typeof amount!=='number'||!Number.isFinite(amount)||!text(row.currency))error('İzibiz fatura tutarı veya para birimi doğrulanamadı.',502);
-  return {id:Number(row.id),uuid:row.uuid,fatno:row.documentNo,tarih:date,unvan:row.accountingSupplier?.name||[row.accountingSupplier?.person?.firstName,row.accountingSupplier?.person?.familyName].filter(Boolean).join(' '),tip:row.invoiceType||row.documentType,tutar:amount,birim:row.currency,yanit:row.responseDescription||row.documentStatus?.label||row.statusDesc||'',isRet:[row.invoiceStatus,row.documentStatus?.value].some(v=>/^(REJECTED|REJECT|RED|RET)$/i.test(v||''))};
+  return {id:Number(row.id),uuid:row.uuid,fatno:row.documentNo,tarih:date,unvan:row.accountingSupplier?.name||[row.accountingSupplier?.person?.firstName,row.accountingSupplier?.person?.familyName].filter(Boolean).join(' '),tip:row.invoiceType||row.documentType,tutar:amount,birim:row.currency,yanit:invoiceReply(row),isRet:[row.invoiceStatus,row.documentStatus?.value].some(v=>/^(REJECTED|REJECT|RED|RET)$/i.test(v||''))};
 }
 
 // Only the official live API is reachable. Credentials are encrypted separately

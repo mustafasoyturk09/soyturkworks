@@ -1,71 +1,86 @@
 # İzibiz gelen fatura bağlantısı
 
-Gelen E-Fatura Takip modülündeki İzibiz düğmesi seçili firmaya bağlıdır. İlk
-bağlantıda mevcut İzibiz kullanıcı adı, şifresi ve alıcı firmanın VKN/TCKN bilgisi
-uygulamanın bağlantı ekranında girilir. Bunları sohbete veya Git'e koymayın.
-Chrome'daki parola kaydı başka alan adındaki uygulamaya otomatik aktarılmaz.
-İlk gerçek bağlantının ve hesap yetkisinin kontrolü bu ekranda yapılır.
+Gelen E-Fatura Takip modülündeki İzibiz düğmesi seçili firmaya bağlıdır. Her
+firma ilk kullanımda bir kez bağlanır ve kayıt klasörü seçilir. Daha sonra eski
+Excel yüklenip İzibiz'e basıldığında ayar ekranı açılmadan indirme başlar. Küçük
+ayar düğmesi bağlantıyı, klasörü veya tarih aralığını değiştirmek için kullanılır.
+
+## İndirme düzeni
+
+- Yalnızca seçilen klasöre doğrudan yazılır; ZIP ve tek tek tarayıcı indirmeleri yok.
+- Örnek klasör: `İndirilenler/Pusula - Gelen E-Faturalar/`.
+- Yeni PDF'ler ve bir karşılaştırılmış Excel doğrudan bu klasördedir. PDF/XML,
+  tarih/saat veya başka ara klasörler oluşturulmaz.
+- PDF adı: `GÖNDEREN FİRMANIN TAM UNVANI A.Ş. - FATURA_NO.pdf`. Unvan, doğrulanmış
+  fatura XML'indeki ticari unvandan alınır. A.Ş., LTD. ŞTİ. ve diğer yasal unvan
+  bölümleri korunur. Dosya sisteminin izin vermediği karakterler temizlenir.
+- Excel adı: `Pusula - Gelen Faturalar (30.10.2026).xlsx`. Tarih, indirme işleminin
+  yapıldığı günün İstanbul tarihidir; fatura döneminden alınmaz. Aynı kural bütün
+  firmalar için geçerlidir.
+- Excel iç başlığında firma adı Türkçe kurallarla büyük harflidir: `PUSULA`.
+- Önceki dosyaların üzerine yazılmaz. Aynı PDF içeriği mevcutsa yeniden yazılmaz;
+  aynı adlı farklı dosyalara `(2)`, `(3)` eklenir.
+- XML yalnızca fatura numarası, ETTN, alıcı VKN/TCKN ve tam gönderen unvanını
+  doğrulamak için bellekte işlenir; ayrıca XML dosyası indirilmez.
+
+Klasör seçimi ve yazma izni firma bazlı tarayıcı veritabanında saklanır. Tarayıcı
+izni yenilemek isterse bir kez sorabilir. Doğrudan klasör kaydı desteklenmeyen
+Safari/telefon tarayıcılarında bilgisayardaki Chrome veya Edge kullanılması
+istenir; ZIP'e veya çoklu indirme istemlerine geçilmez.
+
+## Excel karşılaştırması ve yanıtlar
+
+Güncel İzibiz listesi tüm sayfalarıyla alınır ve eski Excel'deki fatura numaraları
+ile karşılaştırılır. Önceden yüklenen ham listedeki elle işlenmiş işaretleri
+korunur. Yalnızca yeni, reddedilmemiş faturaların PDF'leri alınır. Tüm PDF'ler
+başarıyla kaydedildikten sonra karşılaştırılmış Excel aynı klasöre yazılır.
+İndirme yarıda kalırsa arayüz kaydedilen adetle birlikte tamamlanmadığını belirtir.
+
+Yanıt sütunu, yeni/işlenmiş bilgisiyle değiştirilmez. Portalın yanıt durumu korunur:
+`Yanıt bekliyor`, `Yanıt gerekmiyor`, `Kanunen kabul`, `Kabul edildi`, `Reddedildi`.
+API'nin `responseDescription` alanı serbest yanıt açıklamasıdır, teslim durumunun
+`Alındı` etiketi de yanıt değildir; bu ikisi Yanıt sütununa taşınmaz. Excel ile
+manuel yüklemede kaynak yanıt metni aynen korunur. Yeni/işlenmiş ayrımı renk ve
+uygulamanın ayrı işaretleriyle gösterilir.
+
+## Bağlantı ve gizlilik
+
+Mevcut İzibiz kullanıcı adı, şifre ve firma VKN/TCKN bilgisi yalnızca uygulamanın
+bağlantı ekranında girilir. Sohbete veya Git'e konmaz. Chrome parola kaydı başka
+alan adındaki uygulamaya otomatik aktarılmaz.
 
 Sunucu yalnızca `https://api.izibiz.com.tr` adresindeki resmî REST servislerine
-erişir. Oturum, firma kimliği ve gelen fatura okuma izni doğrulanmadan bağlantı
-kaydedilmez. Şifreler Durable Object içinde AES-256-GCM ile firma bağlamına bağlı
-şifrelenir. Anahtar bağlantılardan ayrı, özel bir Durable Object içinde otomatik
-oluşturulur (32 rastgele bayt, base64url). Bu nesne yalnızca Worker'ın iç
-bağlantısıyla erişilir; herkese açık URL veya API yolu yoktur. İstenirse dağıtımdan
-önce `IZIBIZ_ENCRYPTION_KEY` Worker secret'ı kullanılabilir. Kullanım başladıktan
-sonra anahtarı veya anahtar kaynağını değiştirmeyin: önceki bağlantılar açılamaz.
-Anahtarı, API token'larını veya şifreleri yazdırmayın.
-API token'ları yalnızca bellekte tutulur ve süreleri dolduğunda bir kez yenilenir.
-İzibiz'e ulaşılamazsa ya da yetki verilmezse işlem hata gösterir.
+bağlanır. Oturum, firma kimliği ve okuma izni doğrulanmadan bağlantı kaydedilmez.
+Şifreler Durable Object içinde AES-256-GCM ile firma bağlamına bağlı şifrelenir.
+Anahtar bağlantılardan ayrı özel bir Durable Object içinde otomatik oluşturulur.
+Bu nesnenin herkese açık URL veya API yolu yoktur. Dağıtımdan önce isteğe bağlı
+`IZIBIZ_ENCRYPTION_KEY` Worker secret'ı da kullanılabilir; kullanım başladıktan
+sonra anahtarı veya anahtar kaynağını değiştirmeyin.
 
-## Kullanım
+Token'lar yalnızca bellekte tutulur ve süre dolduğunda bir kez yenilenir. Excel
+ve faturalar sunucuda saklanmaz. Kabul/red, gönderme, silme veya okundu işaretleme
+yapılmaz. Manuel liste alma firma başına beş dakikayla sınırlıdır. Tek sorgu en
+fazla bir yıl ve 20.000 fatura kapsar. Taşınabilir HTML şifre/token içermez;
+otomatik bağlantı için canlı firma oturumu gerekir.
 
-1. Seçili firmada eski işlenmiş Excel'i yükleyin. İstenirse mevcut yeni ham
-   Excel de yüklenebilir; o satırlardaki elle işlenmiş işaretleri korunur.
-2. İzibiz düğmesinden bağlantıyı bir kez doğrulayın. Her firma ayrı bağlanır.
-3. Fatura tarihi aralığını seçin. Varsayılan, yüklü ham Excel'deki tarih aralığı;
-   ham Excel yoksa İstanbul tarihine göre bu ayın başından bugüne kadardır.
-4. Chrome/Edge masaüstünde İndirilenler klasörünü seçebilirsiniz. Klasör izni
-   firma bazlı tarayıcı veritabanında saklanır; gerekirse tarayıcı yeniden sorar.
-   Diğer tarayıcılarda firma klasörü içeren ZIP indirilir. ZIP içeriği 200 MB ile
-   sınırlıdır; daha büyük işlemlerde doğrudan klasör veya dar tarih aralığı seçin.
-5. “İzibiz’den al ve kaydet” tüm sayfaları alır, eski fatura numaralarıyla
-   karşılaştırır, mevcut Excel biçimlendiricisini kullanır ve yalnızca yeni,
-   reddedilmemiş faturaların PDF/XML çiftlerini kaydeder. XML fatura numarası,
-   ETTN ve alıcı VKN/TCKN bilgisi de doğrulanır.
+## Doğrulama
 
-Klasör: `Firma/Gelen E-Faturalar/tarih_saat_oturum/`. İçerik: güncel ham liste,
-biçimlenmiş Excel, `PDF/`, `XML/`, `Durum.txt`. Aynı isimli önceki indirmelerin
-üzerine yazılmaz. Her çalıştırmada ayrı klasör kullanılır. İndirme geçmişi
-“işlendi” sayılmaz; muhasebe karşılaştırmasının kaynağı yüklenen eski Excel'dir.
+30 Ekim 2026'da Pusula hesabıyla gerçek API oturumu, firma kimliği, listeleme ve
+örnek PDF/XML indirmesi doğrulandı. Örnek XML'in fatura numarası, ETTN ve alıcı
+VKN bilgisi eşleşti. Belgeler yalnızca bellekte işlendi. Gerçek servis firma
+bilgisinde `vknTckno`/`commercialName`, indirmede `{filename, content}` Base64
+yapısı kullanır. Diğer firmalar ilk bağlantıda kendi hesaplarıyla doğrulanır.
 
-Eksik sayfa, değişen liste, tekrar eden numara veya başka firmaya ait belge
-tespit edilirse tamamlandı denmez. Klasöre doğrudan yazarken yarım kalan dosyalar
-kalabilir; `Durum.txt` bunu açıkça belirtir. Tamamlanmayan ZIP indirilmez.
-Manuel liste alma firma başına beş dakikayla sınırlıdır. Tek sorgu en fazla bir
-yıl ve 20.000 fatura kapsar. Fatura kabul/red, gönderme, silme veya okundu
-işaretleme işlemleri yapılmaz. Faturalar ve Excel'ler sunucuda saklanmaz.
-
-Taşınabilir HTML'de düğme bulunur; otomatik servis bağlantısı için canlı sitedeki
-firma oturumu gerekir. Taşınabilir dosyada şifre veya API token'ı yoktur.
-
-## Doğrulama ve sınır
-
-Pusula hesabıyla 30 Ekim 2026'da yerel önizlemeden gerçek API oturumu, firma
-kimliği, gelen fatura listesi ve örnek faturanın PDF/XML indirmesi doğrulandı.
-XML'in fatura numarası, ETTN ve alıcı VKN bilgisi eşleşti. Gerçek belgeler test
-sırasında yalnızca bellekte işlendi; depoya veya test çıktısına konmadı.
-Gerçek servis `/customers/me` yanıtında `vknTckno` / `commercialName`, belge
-indirme yanıtında `{filename, content}` Base64 yapısı kullanıyor; bunlar desteklenir.
-Diğer firmaların API yetkisi henüz sınanmadı. Yerel önizleme bağlantısı canlı
-sunucuya kendiliğinden taşınmaz; canlı sitede firma bir kez bağlanmalıdır.
-
-Masaüstü ve 390 × 844 telefon görünümü Safari'de açıldı. Telefon için tarih
-alanları tek sütuna geçirildi; yatay telefon için kısa, kaydırılabilir pencere
-kuralları eklendi. Son tablet/yatay görsel doğrulaması tamamlanamadı.
+Kaynak yanıtların Excel hücrelerinde korunması, tam A.Ş./LTD. ŞTİ. dosya adları,
+tek klasör, eski dosyaların korunması, kayıtlı ayarlarla ekransız çalışma ve
+İstanbul'da gece yarısından sonra indirme tarihi otomatik testlerle doğrulanır.
+Safari önizlemesinde masaüstü, 390 × 844 telefon, 844 × 390 yatay telefon ve
+768 × 1024 tablet görünümü kontrol edildi. Klasöre gerçek yazma Chrome/Edge
+masaüstündeki File System Access iznini gerektirir.
 
 Kaynaklar:
 - https://dev.izibiz.com.tr/endpoint/authentication-api/auth-token
 - https://dev.izibiz.com.tr/endpoint/customer-api/customers-me
 - https://dev.izibiz.com.tr/endpoint/einvoice-v1-api/incoming-invoice-list
+- https://dev.izibiz.com.tr/endpoint/einvoice-v1-api/incoming-invoice-lookup-statuses
 - https://dev.izibiz.com.tr/endpoint/einvoice-v1-api/incoming-invoice-download

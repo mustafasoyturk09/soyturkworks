@@ -9,5 +9,9 @@ body:has(#swIziDialog[open]){overflow:hidden}
 .sw-izi-dialog details,.sw-izi-dialog fieldset{border:1px solid #53647b;border-radius:10px;padding:12px;margin:16px 0;min-width:0}.sw-izi-dialog summary{cursor:pointer;min-height:32px;line-height:32px;font-weight:600}
 .sw-izi-dates{display:grid;grid-template-columns:1fr 1fr;gap:16px}.sw-izi-dates label{margin:4px 0}
 .sw-izi-actions{display:flex;flex-wrap:wrap;gap:10px}.sw-izi-dialog button{min-height:44px;max-width:100%;padding:10px 16px;white-space:normal;overflow-wrap:anywhere;border:1px solid #71869e;border-radius:8px;background:#293951;color:#e7eff9;font:600 13px 'IBM Plex Sans',sans-serif;cursor:pointer}
-.sw-izi-dialog #swIziRun,.sw-izi-dialog #swIziConnect,.sw-izi-dialog #swIziSave{background:#236e52;border-color:#75c9a5}.sw-izi-dialog #swIziClose{font-size:24px;padding:2px 14px;flex-shrink:0}.sw-izi-dialog button:disabled{opacity:.5;cursor:wait}.sw-izi-dialog [hidden]{display:none!important}
+.sw-izi-dialog #swIziRun,.sw-izi-dialog #swIziConnect{background:#236e52;border-color:#75c9a5}.sw-izi-dialog #swIziClose{font-size:24px;padding:2px 14px;flex-shrink:0}.sw-izi-dialog button:disabled{opacity:.5;cursor:wait}.sw-izi-dialog [hidden]{display:none!important}
 .sw-izi-dialog :focus-visible,#swIziButton:focus-visible{outline:3px solid #e6bc70;outline-offset:3px}.sw-izi-status{padding:12px;background:#101a2e;border-radius:8px;min-height:48px}.sw-izi-dialog #swIziConnection{color:#9fddbd}
+#ef115Top #swIziSettings{min-height:40px;min-width:44px;padding:8px;border:1px solid #71869e;border-radius:8px;background:#293951;color:#e7eff9;cursor:pointer}
+#swIziProgress{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:14px 0;padding:12px 16px;border:1px solid #53647b;border-radius:10px;background:#1e2632;color:#e7eff9;overflow-wrap:anywhere}
+#swIziProgress p{flex:1 1 220px;min-width:0;margin:0;font-size:14px;line-height:1.5}#swIziInlineCancel{min-height:44px;padding:8px 14px;border:1px solid #71869e;border-radius:8px;background:#293951;color:#e7eff9;cursor:pointer}
+#swIziProgress[hidden],#swIziInlineCancel[hidden]{display:none!important}
