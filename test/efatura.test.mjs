@@ -30,7 +30,7 @@ for(const [name,source] of [['web',live],['portable',portable]]){
  test(name+': new uploads stay available after reset and a late reference rematches invoices',()=>{
   const elements=new Map();
   const document={getElementById(id){if(!elements.has(id))elements.set(id,{style:{},attrs:{},setAttribute(k,v){this.attrs[k]=v;},removeAttribute(k){delete this.attrs[k];}});return elements.get(id);}};
-  const context={document,parsedRows:[{fatno:'TEST-1',isRet:false},{fatno:'TEST-2',isRet:false},{fatno:'TEST-3',isRet:true}],eskiIslenmisSet:null,eskiToplamAdet:0,ef115:{selected:new Set()},normFatno:s=>s,ef115Render(){},setTimeout(){},toast(){},console};
+  const context={document,parsedRows:[{fatno:'TEST-1',isRet:false},{fatno:'TEST-2',isRet:false},{fatno:'TEST-3',isRet:true}],eskiIslenmisSet:null,eskiToplamAdet:0,efaturaUploads:{reference:{token:0,loading:false,error:''},raw:{token:0,loading:false,error:''}},ef115:{selected:new Set()},normFatno:s=>s,ef115Render(){},setTimeout(){},toast(){},console};
   vm.createContext(context);
   vm.runInContext(source.slice(source.indexOf('function applyMatching(){'),source.indexOf('function ef116Period(')),context);
   context.applyMatching();assert(context.parsedRows.every(r=>r.islendi===false));
@@ -41,5 +41,23 @@ for(const [name,source] of [['web',live],['portable',portable]]){
   assert.equal(document.getElementById('step2').attrs['data-locked'],undefined);assert.equal(document.getElementById('step3').attrs['data-locked'],'true');
   assert(!/<section[^>]*id="step2"[^>]*data-locked/.test(source));
   assert(!source.includes('Önce eski Excel dosyasını yükle'));
+ });
+ test(name+': reference workbooks accept late headers, legacy labels and multiple worksheets',()=>{
+  const context={XLSX:{utils:{sheet_to_json:sheet=>sheet}}};vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('function normFatno('),source.indexOf('/* ============ HELPERS')),context);
+  const sheet=[...Array.from({length:8},()=>['Başlık']),['FATURA\nNUMARASI'],[' test 1 '],['TEST2'],['GENEL TOPLAM']];
+  const result=context.referenceNumbers({SheetNames:['Kapak','Faturalar','Diğer'],Sheets:{Kapak:[['Açıklama']],Faturalar:sheet,Diğer:[['Fatura No.'],['TEST2'],['TEST3']]}});
+  assert.deepEqual([...result],['TEST1','TEST2','TEST3']);
+  assert.equal(context.extractFatnoList(sheet).headerIdx,8);
+  assert.throws(()=>context.referenceNumbers({SheetNames:['Kapak'],Sheets:{Kapak:[['Boş dosya']]}}),/sütunu bulunamadı/);
+  assert.equal(context.referenceNumbers({SheetNames:['Boş şablon'],Sheets:{'Boş şablon':[['Fatura No']]}}).length,0);
+ });
+ test(name+': upload failures survive table redraws until a retry or reset',()=>{
+  const nodes={ef115Loaded1:{dataset:{}},ef115Loaded2:{dataset:{}}};
+  const context={document:{getElementById:id=>nodes[id]},parsedRows:[{fatno:'TEST1'}],eskiIslenmisSet:null,eskiToplamAdet:0};vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('const efaturaUploads='),source.indexOf('// Fatura No\'ları')),context);
+  vm.runInContext("efaturaUploads.reference.error='Eski Excel okunamadı';renderEfaturaUploads();renderEfaturaUploads();",context);
+  assert.equal(nodes.ef115Loaded1.textContent,'Eski Excel okunamadı');assert.equal(nodes.ef115Loaded1.dataset.state,'error');
+  assert.equal(nodes.ef115Loaded2.textContent,'✓ 1 fatura yüklendi');
  });
 }

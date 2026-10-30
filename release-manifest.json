@@ -11,7 +11,7 @@
     },
     {
       "file": "app/branding.css",
-      "sha256": "0f667f1e476c8c5ea3074ae2d0f5c7d79df7c204ac24922856c72c021e6bf06e"
+      "sha256": "54fc888e4bcec06d4c69949f71df43b237f19f61c19752299eee26f3649a5f07"
     },
     {
       "file": "app/calculator-ui.css",
@@ -27,7 +27,7 @@
     },
     {
       "file": "app/izibiz.js",
-      "sha256": "efc7c74fac19885741c1e3dd17b63378c9d691a4220b9079952d21b3fbe6ca9f"
+      "sha256": "73845ae21656c66831944a7786f0a112a263b864921bf2cb0704e031ecf5fb17"
     },
     {
       "file": "app/mobile.css",
@@ -191,7 +191,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "bbcb55ed5d91d76d705ac9b6208fa62409520234fd21f165118b8e33dfc43ebd"
+      "sha256": "6d7081444f67355a2132704313973273a5c937468142c9fdf74e298affe4ba6f"
     },
     {
       "file": "portal/index.html",

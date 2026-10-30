@@ -26,7 +26,7 @@
   }
   window.SWIzibizFiles=Object.freeze({folderName,pdfName,writeUnique});
   const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  let dialog,connected=false,directory=null,running=false,controller=null,db=null,ready=Promise.resolve();
+  let dialog,connected=false,directory=null,running=false,controller=null,db=null,ready=Promise.resolve(),datesEdited=false;
   function status(message){$('swIziStatus').textContent=message;if($('swIziInlineStatus')){$('swIziInlineStatus').textContent=message;$('swIziProgress').hidden=dialog.open;}}
   async function api(action,body,signal){
     const response=await fetch('/api/izibiz/'+company+'/'+action,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal});
@@ -43,8 +43,9 @@
     try{const result=await (await api('status')).json();connected=result.connected;$('swIziConnection').textContent=connected?result.name+' · '+result.identifier:'Bu firma henüz bağlı değil';$('swIziSetup').open=!connected;$('swIziDisconnect').hidden=!connected;if(!result.configured)status('İzibiz bağlantı anahtarı sunucuda henüz tanımlı değil.');}catch(e){status(e.message);}
   }
   function setDates(){
+      if(datesEdited)return;
       const rows=window.SWInvoiceBridge.snapshot().rows,dates=rows.map(r=>String(r.tarih).split('.').reverse().join('-')).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v)).sort();
-      $('swIziFrom').value=dates[0]||today().slice(0,8)+'01';$('swIziTo').value=dates.at(-1)||today();
+      $('swIziFrom').value=(dates[0]||today()).slice(0,8)+'01';$('swIziTo').value=today();
   }
   async function open(){
     if(running)return;await ready;setDates();dialog.showModal();$('swIziProgress').hidden=true;
@@ -57,8 +58,6 @@
   async function activate(){
     if(running)return;await ready;setDates();
     if(!connected){await open();return;}
-    if(!window.SWInvoiceBridge.snapshot().reference){status('Önce eski işlenmiş Excel’i yükleyin.');return;}
-    if(!directory&&!await chooseFolder())return;
     await run();
   }
   function bootDialog(){
@@ -83,6 +82,7 @@
     $('swIziDisconnect').onclick=async()=>{try{await api('disconnect',{});$('swIziPassword').value='';await connection();status('Bu firmanın bağlantısı kaldırıldı.');}catch(e){status(e.message);}};
     $('swIziFolder').onclick=chooseFolder;
     $('swIziRun').onclick=run;
+    $('swIziFrom').onchange=$('swIziTo').onchange=()=>{datesEdited=true;};
   }
   async function documentBytes(response,format){
     let bytes=new Uint8Array(await response.arrayBuffer());
@@ -112,7 +112,8 @@
     if(running)return;
     if(!connected){$('swIziSetup').open=true;status('Önce bu firmanın bağlantısını bir kez doğrulayın.');return;}
     const snapshot=window.SWInvoiceBridge.snapshot();
-    if(!snapshot.reference){status('Önce eski işlenmiş Excel’i yükleyin. Faturalar bu dosyayla karşılaştırılacak.');return;}
+    if(snapshot.loading){status('Excel dosyası okunuyor. Okuma tamamlanınca yeniden deneyin.');return;}
+    if(snapshot.referenceError){status(snapshot.referenceError+' Eski dosyayı yeniden seçin veya ilk kullanım için Temizle ile kaldırın.');return;}
     if(!directory&&!await chooseFolder())return;
     const startDate=$('swIziFrom').value,endDate=$('swIziTo').value;
     if(!startDate||!endDate||startDate>endDate){status('Geçerli başlangıç ve bitiş tarihlerini seçin.');return;}
@@ -121,7 +122,7 @@
     $('swIziButton').disabled=true;$('swIziSettings').disabled=true;$('swIziButton').textContent='İndiriliyor…';
     if(dialog.open)dialog.close();$('swIziProgress').hidden=false;$('swIziInlineCancel').hidden=false;
     const locked=['step1','step2','efaturaClearBtn','tableWrap','bulkBtns'].map(id=>$(id)).filter(Boolean),inert=locked.map(n=>n.inert);locked.forEach(n=>n.inert=true);
-    let target=null,stored=0;const runId=crypto.randomUUID(),folder=folderName();
+    let target=null,stored=0,existing=0;const runId=crypto.randomUUID(),folder=folderName();
     try{
       if(await directory.queryPermission({mode:'readwrite'})!=='granted'&&await directory.requestPermission({mode:'readwrite'})!=='granted')throw Error('Klasöre yazma izni verilmedi. İndirilenler klasörünü yeniden seçin.');target=directory.name===folder?directory:await directory.getDirectoryHandle(folder,{create:true});
       const rows=[],ids=new Set(),uuids=new Set(),numbers=new Set();let expected=null,pages=1,identifier='';
@@ -144,12 +145,13 @@
         status('Yeni faturalar indiriliyor · '+(index+1)+' / '+fresh.length+' · '+row.fatno);
         const xml=await documentBytes(await api('download',{ticket:row.ticket,format:'ubl'},signal),'ubl'),title=verifyXml(xml,row,identifier),name=pdfName(title,row.fatno);
         const pdf=await documentBytes(await api('download',{ticket:row.ticket,format:'pdf'},signal),'pdf');
-        signal.throwIfAborted();await writeUnique(target,name,pdf);stored++;
+        signal.throwIfAborted();const saved=await writeUnique(target,name,pdf);if(saved.created)stored++;else existing++;
       }
       const formatted=await window.SWInvoiceBridge.excel();signal.throwIfAborted();
       await writeUnique(target,safe(formatted.name),formatted.bytes);
       signal.throwIfAborted();
-      status('Tamamlandı. '+stored+' yeni faturanın PDF’i ve karşılaştırılmış Excel kaydedildi: '+folder);
+      if(!fresh.length)status('Yeni fatura yok. '+rows.length+' fatura kontrol edildi; '+(snapshot.reference?'eski Excel’de bulunan veya işlenmiş/reddedilmiş faturalar tekrar indirilmedi.':'işlenmiş veya reddedilmiş faturalar indirilmedi.')+' Güncel Excel kaydedildi: '+folder);
+      else status((snapshot.reference?'Tamamlandı. ':'İlk liste alındı. Eski Excel olmadığı için işlenmemiş faturalar yeni sayıldı. ')+stored+' yeni PDF'+(existing?', '+existing+' PDF zaten klasörde mevcut':'')+' ve güncel Excel kaydedildi: '+folder);
     }catch(e){
       const message=e.name==='AbortError'?'İşlem durduruldu.':e.message;
       status(message+' İşlem tamamlanmadı. '+stored+' fatura kaydedildi; karşılaştırılmış Excel’in kaydı tamamlanamadı.');

@@ -4,6 +4,8 @@ let source=await readFile(path,'utf8');
 const match=source.match(/(<script\b[^>]*id="fc153PortableTemplate"[^>]*>)([\s\S]*?)(<\/script>)/);
 if(!match)throw Error('Taşınabilir şablon bulunamadı.');
 let template=JSON.parse(match[2]);
+const branding=await readFile(new URL('../src/branding.css',import.meta.url),'utf8');
+template=template.replace(/<style id="sw-responsive-branding">[\s\S]*?<\/style>/,()=>'<style id="sw-responsive-branding">'+branding+'</style>');
 const css=await readFile(new URL('../src/workspace.css',import.meta.url),'utf8');
 const js=await readFile(new URL('../src/workspace.js',import.meta.url),'utf8');
 template=template.replace(/<style id="sw-workspace-ui">[\s\S]*?<\/style>/,()=>'<style id="sw-workspace-ui">'+css+'</style>');

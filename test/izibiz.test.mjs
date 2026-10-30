@@ -123,8 +123,9 @@ test('Formatted Excel retains source reply cells for new, processed and rejected
     assert.equal((await vm.runInContext('buildAndDownloadExcel({returnFile:true})',context)).name,companyName+' - Gelen Faturalar (31.10.2026).xlsx');
   }
 });
-test('A configured Izibiz button downloads to the company folder without opening settings or individual downloads',async()=>{
-  const nodes=new Map(),events={},files=new Map(),folders=[],calls=[];let modals=0,loaded=[];
+for(const [company,companyName] of [['PUSULA','Pusula'],['COMED','Comed'],['KIB','Kendine İyi Bak'],['DIJITAL_GARAJ','Dijital Garaj'],['KIB_DIJITAL','KİB Dijital Tek']])
+test(companyName+': Izibiz distinguishes existing invoices, first use, read errors and custom dates',async()=>{
+  const nodes=new Map(),events={},files=new Map(),folders=[],calls=[];let modals=0,loaded=[{fatno:'TEST202600000001',tarih:'01.10.2026',islendi:false}],reference=['TEST202600000001'],referenceError='',loading=false,remoteRows=[{...invoiceRow(invoice,identifier),ticket:'test'}];
   class Node{
     constructor(tag){this.tag=tag;this.hidden=false;this.disabled=false;this.inert=false;this.open=false;}
     set id(value){this._id=value;nodes.set(value,this);}get id(){return this._id;}
@@ -138,12 +139,20 @@ test('A configured Izibiz button downloads to the company folder without opening
   const folder={async getFileHandle(name,options={}){if(!files.has(name)&&!options.create)throw Object.assign(Error('Missing'),{name:'NotFoundError'});return {async createWritable(){return {write:async bytes=>files.set(name,bytes),close:async()=>{},abort:async()=>{}};}};}};
   const directory={name:'Downloads',queryPermission:async()=> 'granted',requestPermission:async()=>assert.fail('Permission was already granted'),getDirectoryHandle:async name=>{folders.push(name);return folder;}};
   const indexedDB={open(){const request={result:{transaction(){const tx={objectStore(){return {get(){const req={result:directory};queueMicrotask(()=>{req.onsuccess?.();tx.oncomplete?.();});return req;}};}};return tx;}}};queueMicrotask(()=>request.onsuccess());return request;}};
-  const window={SW_CONTEXT:{},SWWorkspace:{companyId:'PUSULA',companyName:'Pusula',databaseName:name=>'PUSULA:'+name},showDirectoryPicker:()=>assert.fail('Stored directory must be reused'),SWInvoiceBridge:{snapshot:()=>({reference:['TEST202600000001'],rows:loaded}),load:grid=>{loaded=grid.slice(1).map(r=>({fatno:r[0],tarih:r[1],islendi:true,isRet:false}));},excel:async()=>({name:'Pusula - Gelen Faturalar (30.10.2026).xlsx',bytes:new Uint8Array([1])})}};
-  vm.runInNewContext(await readFile(new URL('../src/izibiz.js',import.meta.url),'utf8'),{window,document,indexedDB,AbortController,crypto:{randomUUID:()=>scan.run},fetch:async url=>{
-    calls.push(url);return new Response(JSON.stringify(url.endsWith('/status')?{connected:true,configured:true,name:'Pusula',identifier}:{rows:[{...invoiceRow(invoice,identifier),ticket:'test'}],total:1,pages:1,company:'PUSULA',identifier}));
+  const window={SW_CONTEXT:{},SWWorkspace:{companyId:company,companyName,databaseName:name=>company+':'+name},showDirectoryPicker:()=>assert.fail('Stored directory must be reused'),SWInvoiceBridge:{snapshot:()=>({reference,rows:loaded,referenceError,loading}),load:grid=>{loaded=grid.slice(1).map(r=>({fatno:r[0],tarih:r[1],islendi:true,isRet:false}));},excel:async()=>({name:companyName+' - Gelen Faturalar (31.10.2026).xlsx',bytes:new Uint8Array([1])})}};
+  vm.runInNewContext(await readFile(new URL('../src/izibiz.js',import.meta.url),'utf8'),{window,document,indexedDB,AbortController,crypto:{randomUUID:()=>scan.run},Date:class extends Date{constructor(...args){super(...(args.length?args:['2026-10-30T23:30:00Z']));}},fetch:async(url,options)=>{
+    calls.push({url,body:options.body?JSON.parse(options.body):null});return new Response(JSON.stringify(url.endsWith('/status')?{connected:true,configured:true,name:companyName,identifier}:{rows:remoteRows,total:remoteRows.length,pages:1,company,identifier}));
   }});
   events.DOMContentLoaded();await new Promise(resolve=>setImmediate(resolve));await nodes.get('swIziButton').onclick();
-  assert.equal(modals,0);assert.deepEqual(folders,['Pusula - Gelen E-Faturalar']);assert.deepEqual([...files.keys()],['Pusula - Gelen Faturalar (30.10.2026).xlsx']);
-  assert.equal(nodes.get('swIziProgress').hidden,false);assert.match(nodes.get('swIziInlineStatus').textContent,/Tamamlandı/);
-  assert(calls.some(url=>url.endsWith('/list')));assert(!calls.some(url=>url.endsWith('/download')));
+  assert.equal(modals,0);assert.deepEqual(folders,[companyName+' - Gelen E-Faturalar']);assert.deepEqual([...files.keys()],[companyName+' - Gelen Faturalar (31.10.2026).xlsx']);
+  assert.equal(nodes.get('swIziProgress').hidden,false);assert.match(nodes.get('swIziInlineStatus').textContent,/Yeni fatura yok/);
+  assert(calls.some(c=>c.url.endsWith('/list')));assert(!calls.some(c=>c.url.endsWith('/download')));
+  const first=calls.find(c=>c.url.endsWith('/list')).body;
+  assert.equal(first.startDate,'2026-10-01');assert.equal(first.endDate,'2026-10-31');
+  const before=calls.length;referenceError='Eski Excel okunamadı';await nodes.get('swIziButton').onclick();assert.equal(calls.length,before);assert.match(nodes.get('swIziInlineStatus').textContent,/Eski Excel okunamadı/);
+  referenceError='';loading=true;await nodes.get('swIziButton').onclick();assert.equal(calls.length,before);assert.match(nodes.get('swIziInlineStatus').textContent,/okunuyor/);
+  loading=false;reference=null;loaded=[];remoteRows=[];await nodes.get('swIziButton').onclick();
+  assert(calls.length>before);assert.match(nodes.get('swIziInlineStatus').textContent,/tarih aralığında gelen fatura yok/);
+  nodes.get('swIziFrom').value='2026-09-01';nodes.get('swIziFrom').onchange();nodes.get('swIziTo').value='2026-09-30';await nodes.get('swIziButton').onclick();
+  const custom=calls.filter(c=>c.url.endsWith('/list')).at(-1).body;assert.equal(custom.startDate,'2026-09-01');assert.equal(custom.endDate,'2026-09-30');
 });

@@ -13,6 +13,7 @@ body > aside .brand-mark-photo {
 body > aside .brand-text { color: #edf3fc; font-size: 20px; line-height: 1.18; letter-spacing: .01em; }
 body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5px; letter-spacing: .13em; }
 .sw-header-logo { width: 36px; height: 36px; flex: 0 0 36px; object-fit: contain; filter: drop-shadow(0 2px 3px #0004); }
+#ef115Side .ef115-loaded[data-state="error"] { color: #862d20; font-weight: 600; overflow-wrap: anywhere; }
 
 /* Incoming Excel uploads remain available, including before a reference file. */
 #page-efatura #ef115Side #step2 {

@@ -4,6 +4,10 @@ Gelen E-Fatura Takip modülündeki İzibiz düğmesi seçili firmaya bağlıdır
 firma ilk kullanımda bir kez bağlanır ve kayıt klasörü seçilir. Daha sonra eski
 Excel yüklenip İzibiz'e basıldığında ayar ekranı açılmadan indirme başlar. Küçük
 ayar düğmesi bağlantıyı, klasörü veya tarih aralığını değiştirmek için kullanılır.
+İlk kullanımda eski Excel zorunlu değildir; eski dosya yoksa reddedilmemiş ve
+işlenmiş olarak işaretlenmemiş faturalar yeni sayılır. Varsayılan sorgu dönemin
+ilk gününden bugüne kadardır; son faturanın tarihinde kesilmez. Ayarlarda elle
+seçilen tarih aralığı indirme düğmesine basıldığında korunur.
 
 ## İndirme düzeni
 
@@ -35,6 +39,15 @@ ile karşılaştırılır. Önceden yüklenen ham listedeki elle işlenmiş işa
 korunur. Yalnızca yeni, reddedilmemiş faturaların PDF'leri alınır. Tüm PDF'ler
 başarıyla kaydedildikten sonra karşılaştırılmış Excel aynı klasöre yazılır.
 İndirme yarıda kalırsa arayüz kaydedilen adetle birlikte tamamlanmadığını belirtir.
+Yeni fatura bulunmadığında bu sonuç açıkça yazılır; PDF'ler tekrarlanmaz ve güncel
+Excel yine kaydedilir. Seçilen dönemde hiç fatura bulunmaması ayrıca belirtilir.
+
+Eski Excel'in bütün çalışma sayfalarında fatura başlığı aranır; üstteki başlık ve
+boş satırlar ile `Fatura Numarası` gibi etiketler kabul edilir. Okuma hatası,
+tablo veya başka dosya yeniden çizildiğinde kaybolmaz. Okunamayan eski dosya
+düzeltilene ya da Temizle ile kaldırılana kadar İzibiz indirmesi başlatılmaz;
+okunamayan dosya yanlışlıkla boş referans sayılmaz. OneDrive dosyalarının yerel
+kopyası indirilmemişse önce “Her zaman bu cihazda tut” seçilmelidir.
 
 Yanıt sütunu, yeni/işlenmiş bilgisiyle değiştirilmez. Portalın yanıt durumu korunur:
 `Yanıt bekliyor`, `Yanıt gerekmiyor`, `Kanunen kabul`, `Kabul edildi`, `Reddedildi`.
