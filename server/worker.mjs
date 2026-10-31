@@ -66,8 +66,8 @@ export default {
           } else if(url.pathname==='/takip'||url.pathname==='/takip/'){
             if(!auth.account)return Response.redirect(origin+'/login?next='+encodeURIComponent(url.pathname+url.search),303);
             const company=auth.companies.find(c=>c.id===url.searchParams.get('company')&&c.active&&!c.deleted);
-            const view=url.searchParams.get('view');
-            return Response.redirect(origin+(company?'/workspace/'+company.id+'/takip/'+(['invoices','folders','notifications'].includes(view)?'?view='+view:''):'/companies'),303);
+            const view=url.searchParams.get('view'),month=url.searchParams.get('month'),search=new URLSearchParams();if(['invoices','folders','notifications','dashboard'].includes(view))search.set('view',view);if(/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))search.set('month',month);
+            return Response.redirect(origin+(company?'/workspace/'+company.id+'/takip/'+(search.size?'?'+search:''):'/companies'),303);
           } else if(url.pathname.startsWith('/workspace/')) {
             if(!auth.account) return Response.redirect(origin+'/login?next='+encodeURIComponent(url.pathname+url.search),303);
             const route=url.pathname.match(/^\/workspace\/([A-Z_]+)(\/takip)?\/?$/);
@@ -261,8 +261,8 @@ export class AuthStore extends DurableObject {
       if(!company)fail('Firma bulunamadı veya etkin değil.',403);
       if(match[2]==='events'&&request.method==='GET')return json({events:[...(await this.storage.list({prefix:'push:event:'})).values()].filter(e=>e.company===company.id).sort((a,b)=>b.created-a.created).slice(0,50)});
       if(match[2]==='summary'&&request.method==='GET'){const r=await this.companyArchive(company.id,'summary','GET');if(!r.ok)return r;return json({...await r.json(),connected:!!await this.storage.get('izibiz:config:'+company.id)});}
-      if(!['summary','scan','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
-      if(['scan','excel'].includes(match[2])&&request.method==='POST')await this.rate(request,'archive-'+match[2]+':'+company.id,20,15);
+      if(!['summary','scan','clear-all','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
+      if(['scan','excel','clear-all'].includes(match[2])&&request.method==='POST')await this.rate(request,'archive-'+match[2]+':'+company.id,20,15);
       return this.companyArchive(company.id,match[2],request.method,body,url.search);
     }
     if(path.startsWith('/api/izibiz/')){

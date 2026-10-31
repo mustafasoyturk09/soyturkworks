@@ -23,3 +23,6 @@ test('Invoice notification focuses only the matching firm window and rejects ext
  assert.deepEqual(calls,['https://soyturkworks.com/workspace/PUSULA/takip/?view=invoices','focus']);assert.deepEqual(f.opened,[]);
  await f.click('https://unrelated.invalid/workspace/PUSULA/takip/');await f.click('/account');assert.equal(calls.length,2);assert.deepEqual(f.opened,[]);
 });
+test('A late invoice notification preserves its invoice month when opening the company',async()=>{
+ const f=fixture();await f.click('/takip?company=PUSULA&view=invoices&month=2026-10');assert.deepEqual(f.opened,['https://soyturkworks.com/workspace/PUSULA/takip/?view=invoices&month=2026-10']);
+});

@@ -21,6 +21,22 @@ export class InvoiceArchive{
   async all(){return [...(await this.storage.list({prefix:'invoice:'})).values()];}
   async settings(){return await this.storage.get('settings')||{enabled:true};}
   async status(){return await this.storage.get('status')||{};}
+  async jobCurrent(job,storage=this.storage){const current=await storage.get('job');return current?.id===job.id&&(current.generation||0)===(job.generation||0);}
+  async requireJob(job,storage=this.storage){if(!await this.jobCurrent(job,storage))throw Object.assign(Error('İş iptal edildi.'),{cancelled:true});}
+  async clearAll(){
+    return this.storage.transaction(async tx=>{
+      const rows=[...(await tx.list({prefix:'invoice:'})).values()],folders=[...(await tx.list({prefix:'folder:'})).values()],keys=new Set(['job','audit','izibiz:scan:'+this.company.id]);
+      for(const row of rows){
+        if(row.file)for(const key of fileKeys(row.file))keys.add(key);
+        if(!row.isRet){const key='baseline:'+sha(row.fatno.replace(/\s/g,'').toLocaleUpperCase('tr'));if(row.done)await tx.put(key,await tx.get(key)||{at:this.now()});else await tx.delete(key);}
+      }
+      for(const folder of folders)if(folder.excel)for(const key of fileKeys(folder.excel))keys.add(key);
+      for(const prefix of ['invoice:','folder:','active-folder:','month-revision:'])for(const key of (await tx.list({prefix})).keys())keys.add(key);
+      const list=[...keys];for(let i=0;i<list.length;i+=100)await tx.delete(list.slice(i,i+100));
+      const generation=(await tx.get('archive-generation')||0)+1;await tx.put('archive-generation',generation);await tx.put('totalBytes',0);await tx.put('status',{clearedAt:this.now(),error:null,progress:null});
+      return {ok:true,generation};
+    });
+  }
   async period(initialize=false){
     const date=localDate(this.now());
     let settings=await this.settings();
@@ -54,15 +70,17 @@ export class InvoiceArchive{
     return {connector:new IzibizConnector({storage,key,now:this.now}),identifier:saved.identifier};
   }
   async queueTypeRefresh(rows){
+    const generation=await this.storage.get('archive-generation')||0;
     const missing=rows.filter(r=>r.profile===undefined);
     if(!missing.length||await this.storage.get('job'))return;
     const state=await this.status();if(state.typeRefreshAttempt&&this.now()-state.typeRefreshAttempt<300000)return;
     const connection=await this.getConnection(this.company.id);if(!connection.saved||!connection.active)return;
     let queued=false;
     await this.storage.transaction(async tx=>{
-      if(await tx.get('job'))return;
+      if(await tx.get('job')||(await tx.get('archive-generation')||0)!==generation)return;
+      const pending=[...(await tx.list({prefix:'invoice:'})).values()].filter(r=>!r.deletedAt&&r.profile===undefined);if(!pending.length)return;
       const scan=await tx.get('izibiz:scan:'+this.company.id);
-      await tx.put('job',{id:scan&&this.now()-scan.started<300000?scan.run:randomUUID(),metadataOnly:true,months:[...new Set(missing.map(r=>r.tarih.slice(0,7)))].sort(),monthIndex:0,page:0,seen:[],attempts:0,started:this.now()});
+      await tx.put('job',{id:scan&&this.now()-scan.started<300000?scan.run:randomUUID(),generation,metadataOnly:true,months:[...new Set(pending.map(r=>r.tarih.slice(0,7)))].sort(),monthIndex:0,page:0,seen:[],attempts:0,started:this.now()});
       await tx.put('status',{...await tx.get('status'),typeRefreshAttempt:this.now(),typeRefreshError:null,progress:'Fatura senaryoları güncelleniyor'});queued=true;
     });
     if(queued)await this.storage.setAlarm(this.now()+1000);
@@ -70,11 +88,13 @@ export class InvoiceArchive{
   async advanceTypes(job){
     const month=job.months[job.monthIndex],startDate=month+'-01',monthEnd=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).toISOString().slice(0,10),endDate=[monthEnd,localDate(this.now())].sort()[0];
     const {connector}=await this.connector(),result=await(await connector.handle(this.company.id,'list','POST',{run:job.id,page:job.page,startDate,endDate,dateType:'DOCUMENT'})).json();
+    await this.requireJob(job);
     if(job.total!==undefined&&job.total!==result.total)throw Error('Fatura listesi güncelleme sırasında değişti.');
     job.total=result.total;const seen=new Set(job.seen);
     for(const incoming of result.rows){
       const uuid=incoming.uuid.toLowerCase();if(seen.has(uuid))throw Error('Fatura listesinde mükerrer kayıt var.');seen.add(uuid);
       await this.storage.transaction(async tx=>{
+        await this.requireJob(job,tx);
         const row=await tx.get('invoice:'+uuid);if(!row||row.deletedAt||!row.tarih.startsWith(month))return;
         if(row.fatno!==incoming.fatno||row.tarih!==incoming.tarih)fail('Fatura kimliği değişti.',409);
         if(row.profile!==incoming.profile||row.tip!==incoming.tip){const key='month-revision:'+month;await tx.put(key,(await tx.get(key)||0)+1);}
@@ -85,23 +105,27 @@ export class InvoiceArchive{
     if(job.page>=result.pages){
       if(seen.size!==result.total)throw Error('Fatura listesinin tamamı alınamadı.');
       // A record no longer returned by the portal has an unknown scenario, never an assumed one.
-      for(const row of (await this.all()).filter(r=>!r.deletedAt&&r.tarih.startsWith(month)&&r.profile===undefined))await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);if(current&&!current.deletedAt&&current.profile===undefined)await tx.put('invoice:'+row.uuid,{...current,profile:''});});
+      for(const row of (await this.all()).filter(r=>!r.deletedAt&&r.tarih.startsWith(month)&&r.profile===undefined))await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current&&!current.deletedAt&&current.profile===undefined)await tx.put('invoice:'+row.uuid,{...current,profile:''});});
       job.monthIndex++;job.page=0;job.seen=[];delete job.total;
     }
-    if(job.monthIndex>=job.months.length){await this.storage.delete('job');await this.storage.put('status',{...await this.status(),progress:null,typeRefreshError:null});}
-    else{await this.storage.put('job',job);await this.storage.setAlarm(this.now()+1000);}
+    await this.storage.transaction(async tx=>{await this.requireJob(job,tx);if(job.monthIndex>=job.months.length){await tx.delete('job');await tx.put('status',{...await tx.get('status'),progress:null,typeRefreshError:null});}else await tx.put('job',job);});
+    if(job.monthIndex<job.months.length)await this.storage.setAlarm(this.now()+1000);
   }
   async start(manual=false){
+    const generation=await this.storage.get('archive-generation')||0;
     const settings=await this.settings();if(!manual&&!settings.enabled)return {skipped:true};
     await this.connector();
     const period=await this.period(true);
-    if(await this.storage.get('job'))return {running:true};
-    const state=await this.status();if(state.lastAttempt&&this.now()-state.lastAttempt<300000){if(manual)fail('Yeni kontrolü beş dakika sonra başlatabilirsiniz.',429);return {skipped:true};}
-    for(const row of (await this.all()).filter(r=>r.pdfError&&!r.file&&!r.deletedAt&&r.tarih>=period.from&&r.tarih<=period.to))await this.storage.put('invoice:'+row.uuid,{...row,pdfAttempts:0,pdfError:null});
-    const start=state.lastSuccess?[period.from,localDate(state.lastSuccess-2*86400000)].sort().at(-1):period.from;
-    await this.storage.put('job',{id:randomUUID(),manual,phase:'delivery',page:0,start,end:period.to,documentStart:period.from,periodVersion:1,started:this.now(),attempts:0,received:0,seen:[]});
-    await this.storage.put('status',{...state,lastAttempt:this.now(),error:null,progress:'İzibiz listesi bekleniyor'});
-    await this.storage.setAlarm(this.now()+1000);return {running:true};
+    const result=await this.storage.transaction(async tx=>{
+      if((await tx.get('archive-generation')||0)!==generation)return {skipped:true};
+      if(await tx.get('job'))return {running:true};
+      const state=await tx.get('status')||{};if(state.lastAttempt&&this.now()-state.lastAttempt<300000){if(manual)fail('Yeni kontrolü beş dakika sonra başlatabilirsiniz.',429);return {skipped:true};}
+      for(const row of (await tx.list({prefix:'invoice:'})).values())if(row.pdfError&&!row.file&&!row.deletedAt&&row.tarih>=period.from&&row.tarih<=period.to)await tx.put('invoice:'+row.uuid,{...row,pdfAttempts:0,pdfError:null});
+      const start=state.lastSuccess?[period.from,localDate(state.lastSuccess-2*86400000)].sort().at(-1):period.from;
+      await tx.put('job',{id:randomUUID(),generation,manual,phase:'delivery',page:0,start,end:period.to,documentStart:period.from,periodVersion:1,started:this.now(),attempts:0,received:0,seen:[]});
+      await tx.put('status',{...state,lastAttempt:this.now(),error:null,progress:'İzibiz listesi bekleniyor'});return {running:true};
+    });
+    if(result.running)await this.storage.setAlarm(this.now()+1000);return result;
   }
   async saveFile(id,name,bytes,transaction=this.storage){
     const file={id,name,size:bytes.byteLength,parts:Math.ceil(bytes.byteLength/CHUNK)};
@@ -111,7 +135,7 @@ export class InvoiceArchive{
   async removeFile(file){if(!file)return;const keys=fileKeys(file);for(let i=0;i<keys.length;i+=100)await this.storage.delete(keys.slice(i,i+100));}
   async *chunks(file){for(let i=0;i<file.parts;i++){const bytes=await this.storage.get('blob:'+file.id+':'+i);if(!bytes)throw Error('Arşiv dosyasının bir bölümü okunamadı.');yield bytes;}}
   async advance(){
-    if(this.busy)return;this.busy=true;let cleanupPending=false;
+    if(this.busy){if(await this.storage.get('job'))await this.storage.setAlarm(this.now()+1000);return;}this.busy=true;let cleanupPending=false,runId=null;
     try{
       const period=await this.period(true);
       const deleted=(await this.all()).filter(r=>r.deletedAt&&r.file).slice(0,2);
@@ -120,16 +144,18 @@ export class InvoiceArchive{
       cleanupPending=!!(deleted.length||deletedGroups.length);
       for(const group of deletedGroups){await this.removeFile(group.excel);await this.storage.transaction(async tx=>{const current=await tx.get('folder:'+group.id);if(current?.excel?.id===group.excel.id){await tx.put('folder:'+group.id,{...current,excel:null});await tx.put('totalBytes',Math.max(0,(await tx.get('totalBytes')||0)-group.excel.size));}});}
       let job=await this.storage.get('job');if(!job){if(deleted.length||deletedGroups.length)await this.storage.setAlarm(this.now()+1000);return;}
+      runId=job.id;
       if(job.metadataOnly){await this.advanceTypes(job);return;}
       if(!(await this.settings()).enabled&&!job.manual){await this.storage.delete('job');return;}
       if(job.periodVersion!==1||job.documentStart<period.from||job.end<period.from){
-        job={id:randomUUID(),manual:job.manual,phase:'delivery',page:0,start:period.from,end:period.to,documentStart:period.from,periodVersion:1,started:this.now(),attempts:0,received:0,seen:[]};
-        await this.storage.put('job',job);
+        const previous=job;job={id:randomUUID(),generation:previous.generation||0,manual:job.manual,phase:'delivery',page:0,start:period.from,end:period.to,documentStart:period.from,periodVersion:1,started:this.now(),attempts:0,received:0,seen:[]};
+        await this.storage.transaction(async tx=>{await this.requireJob(previous,tx);await tx.put('job',job);});runId=job.id;
       }
       const {connector,identifier}=await this.connector();
       if(job.phase!=='pdf'){
         const body={run:job.id,page:job.page,startDate:job.phase==='delivery'?job.start:job.documentStart,endDate:job.end,dateType:job.phase==='delivery'?'DELIVERY':'DOCUMENT'};
         const result=await(await connector.handle(this.company.id,'list','POST',body)).json();
+        await this.requireJob(job);
         const expectedKey=job.phase+'Total';if(job[expectedKey]!==undefined&&job[expectedKey]!==result.total)throw Error('Liste kontrol sırasında değişti; sonraki kontrolde yeniden denenecek.');
         job[expectedKey]=result.total;
         const seen=new Set(job.seen||[]);
@@ -138,6 +164,7 @@ export class InvoiceArchive{
           if(incoming.tarih<period.from||incoming.tarih>job.end)continue;
           const uuid=incoming.uuid.toLowerCase(),key='invoice:'+uuid;
           await this.storage.transaction(async tx=>{
+            await this.requireJob(job,tx);
             const current=await tx.get(key),baseline=await tx.get('baseline:'+sha(incoming.fatno.replace(/\s/g,'').toLocaleUpperCase('tr')));
             if(current&&(current.fatno!==incoming.fatno||current.tarih!==incoming.tarih))fail('Aynı ETTN için fatura kimliği değişti.',409);
             const {ticket,tipLabel,...data}=incoming;
@@ -150,8 +177,7 @@ export class InvoiceArchive{
         }
         job.page++;job.attempts=0;job.seen=[...seen];
         if(job.page>=result.pages){if(seen.size!==result.total)throw Error('Listenin tamamı alınamadı.');if(job.phase==='delivery'){job.phase='document';job.page=0;job.seen=[];}else{job.phase='pdf';job.seen=[];}}
-        await this.storage.put('job',job);
-        await this.storage.put('status',{...await this.status(),progress:job.phase==='pdf'?'Yeni PDF’ler hazırlanıyor':(job.phase==='delivery'?'Geliş tarihleri':'Önceki ve güncel ay')+' · sayfa '+(job.page+1)});
+        await this.storage.transaction(async tx=>{await this.requireJob(job,tx);await tx.put('job',job);await tx.put('status',{...await tx.get('status'),progress:job.phase==='pdf'?'Yeni PDF’ler hazırlanıyor':'Faturalar alınıyor · sayfa '+(job.page+1)});});
         await this.storage.setAlarm(this.now()+1000);return;
       }
       const todos=(await this.all()).filter(r=>r.tarih>=period.from&&r.tarih<=job.end&&!r.file&&!r.deletedAt&&!r.isRet&&(r.pdfAttempts||0)<3).slice(0,2);
@@ -160,11 +186,12 @@ export class InvoiceArchive{
           const saved=(await this.getConnection(this.company.id)).saved,config=connector.unseal(this.company.id,saved),ticket=connector.ticket(this.company.id,config,row);
           const xml=unwrapDocument(await(await connector.handle(this.company.id,'download','POST',{ticket,format:'ubl'})).arrayBuffer(),'ubl');
           const title=supplierFromXML(xml,row,identifier),bytes=unwrapDocument(await(await connector.handle(this.company.id,'download','POST',{ticket,format:'pdf'})).arrayBuffer(),'pdf');
+          await this.requireJob(job);
           const date=localDate(this.now()),month=row.tarih.slice(0,7),baseFolder=month+'_'+date;
           await this.storage.transaction(async tx=>{
-            const current=await tx.get('invoice:'+row.uuid);if(current.deletedAt||current.file)return;
+            await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(!current||current.deletedAt||current.file)return;
             const used=await tx.get('totalBytes')||0;if(used+bytes.byteLength>MAX_BYTES)fail('Firma arşivi 512 MB sınırına ulaştı. Kullanmadığınız klasörleri silin.',507);
-            const file=await this.saveFile('pdf-'+row.uuid,safeName(title+' - '+row.fatno)+'.pdf',bytes,tx);
+            const file=await this.saveFile('pdf-'+row.uuid+'-'+randomUUID(),safeName(title+' - '+row.fatno)+'.pdf',bytes,tx);
             let folder=await tx.get('active-folder:'+baseFolder)||baseFolder,group=await tx.get('folder:'+folder);
             if(group?.deletedAt){folder=baseFolder+'_'+randomUUID().slice(0,8);group=null;}
             group=group||{id:folder,month,date,created:this.now(),revision:0};
@@ -173,44 +200,48 @@ export class InvoiceArchive{
             await tx.put('folder:'+folder,{...group,revision:group.revision+1});const versionKey='month-revision:'+month;await tx.put(versionKey,(await tx.get(versionKey)||0)+1);await tx.put('totalBytes',used+bytes.byteLength);
           });
         }catch(e){
-          await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);if(current&&!current.deletedAt)await tx.put('invoice:'+row.uuid,{...current,pdfAttempts:(current.pdfAttempts||0)+1,pdfError:e.message});});
+          if(e.cancelled)throw e;await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current&&!current.deletedAt)await tx.put('invoice:'+row.uuid,{...current,pdfAttempts:(current.pdfAttempts||0)+1,pdfError:e.message});});
         }
       }
-      if(todos.length){await this.storage.setAlarm(this.now()+2000);return;}
+      await this.requireJob(job);if(todos.length){await this.storage.setAlarm(this.now()+2000);return;}
       const rows=await this.all(),inPeriod=r=>r.tarih>=period.from&&r.tarih<=job.end,unnotified=rows.filter(r=>inPeriod(r)&&r.file&&!r.deletedAt&&!r.notified&&!r.isRet),fresh=unnotified.filter(r=>!r.done),errors=rows.filter(r=>inPeriod(r)&&!r.deletedAt&&!r.file&&!r.isRet&&r.pdfError);
       if(fresh.length){
         const id=sha(this.company.id+':'+fresh.map(r=>r.uuid).sort().join(','));
         const pending=rows.filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length;
-        const months=[...new Set(fresh.map(r=>r.tarih.slice(0,7)))];
-        await this.notify({id,company:this.company.id,title:this.company.name+' · Yeni Gelen '+fresh.length+' Fatura',body:'PDF’ler özel klasörüne eklendi. İşlem bekleyen toplam: '+pending+'.'+(months.length>1?' '+months.length+' farklı aya ait fatura var.':'')+' Kontrol etmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'invoices',count:fresh.length,pending,created:this.now()});
+        const months=[...new Set(fresh.map(r=>r.tarih.slice(0,7)))],currentMonth=localDate(this.now()).slice(0,7),notificationMonth=months.includes(currentMonth)?currentMonth:months.sort().at(-1);
+        await this.notify({id,company:this.company.id,title:this.company.name+' · Yeni Gelen '+fresh.length+' Fatura',body:'PDF’ler özel klasörüne eklendi. İşlem bekleyen toplam: '+pending+'.'+(months.length>1?' '+months.length+' farklı aya ait fatura var.':'')+' Kontrol etmek için dokun.',url:'/workspace/'+this.company.id+'/takip/?view=invoices&month='+notificationMonth,kind:'invoices',count:fresh.length,pending,created:this.now()});
         }
-      for(const row of unnotified)await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
+      for(const row of unnotified)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
       if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});
-      await this.storage.put('status',{...await this.status(),lastSuccess:errors.length?(await this.status()).lastSuccess||null:this.now(),lastFinished:this.now(),error:errors.length?errors.length+' faturanın PDF’i hazırlanamadı. Şimdi kontrol et ile yeniden deneyebilirsiniz.':null,progress:null});
-      await this.storage.delete('job');
+      await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const state=await tx.get('status')||{};await tx.put('status',{...state,lastSuccess:errors.length?state.lastSuccess||null:this.now(),lastFinished:this.now(),lastResult:{fresh:fresh.length,pdfs:unnotified.length,errors:errors.length},error:errors.length?errors.length+' faturanın PDF’i hazırlanamadı. İzibiz Sistemini Başlat ile yeniden deneyebilirsiniz.':null,progress:null});await tx.delete('job');});
     }catch(e){
-      const job=await this.storage.get('job');
-      if(job?.metadataOnly){
-        await this.storage.put('status',{...await this.status(),typeRefreshError:'Fatura senaryoları güncellenemedi. Yenile ile tekrar denenecek.',progress:null});
-        if(job.attempts<2){await this.storage.put('job',{...job,attempts:job.attempts+1});await this.storage.setAlarm(this.now()+30000);}else await this.storage.delete('job');
-        return;
-      }
-      await this.storage.put('status',{...await this.status(),error:e.status?e.message:'İzibiz kontrolü tamamlanamadı. Bağlantı veya belge doğrulamasında hata oluştu.',progress:null});
-      if(job&&job.attempts<2){await this.storage.put('job',{...job,attempts:job.attempts+1});await this.storage.setAlarm(this.now()+30000);}else{
-        await this.storage.delete('job');
+      if(e.cancelled)return;
+      const outcome=await this.storage.transaction(async tx=>{
+        const job=await tx.get('job');if(!job||job.id!==runId)return null;
+        const metadata=!!job.metadataOnly,retry=job.attempts<2,status=await tx.get('status')||{};
+        await tx.put('status',{...status,...(metadata?{typeRefreshError:'Fatura senaryoları güncellenemedi. Yenile ile tekrar denenecek.'}:{error:e.status?e.message:'İzibiz kontrolü tamamlanamadı. Bağlantı veya belge doğrulamasında hata oluştu.'}),progress:null});
+        if(retry)await tx.put('job',{...job,attempts:job.attempts+1});else await tx.delete('job');
+        return {metadata,retry,generation:job.generation||0};
+      });
+      if(!outcome)return;
+      if(outcome.retry)await this.storage.setAlarm(this.now()+30000);
+      else if(!outcome.metadata&&(await this.storage.get('archive-generation')||0)===outcome.generation){
         const errorText=e.status?e.message:'İzibiz bağlantısı veya belge doğrulaması tamamlanamadı.';
         await this.notify({id:sha(this.company.id+':error:'+localDate(this.now())+':'+errorText),company:this.company.id,title:this.company.name+' · Kontrol tamamlanamadı',body:errorText+' Sonuç “yeni fatura yok” olarak kaydedilmedi. Detayları görmek için dokun.',url:'/takip?company='+this.company.id,kind:'error',created:this.now()});
       }
-    }finally{try{if(cleanupPending&&!await this.storage.get('job'))await this.storage.setAlarm(this.now()+1000);}finally{this.busy=false;}}
+    }finally{try{const job=await this.storage.get('job');if((cleanupPending&&!job)||(job&&runId&&job.id!==runId))await this.storage.setAlarm(this.now()+1000);}finally{this.busy=false;}}
   }
   async summary(){
     const period=await this.period();
     const rows=(await this.all()).filter(r=>!r.deletedAt),folders=[...(await this.storage.list({prefix:'folder:'})).values()].filter(f=>!f.deletedAt);
     await this.queueTypeRefresh(rows);const job=await this.storage.get('job');
-    return {company:this.company,period,settings:await this.settings(),status:await this.status(),running:!!job,updatingTypes:!!job?.metadataOnly,nextCheck:nextCheck(this.now()),counts:{total:rows.length,fresh:rows.filter(r=>!r.done&&!r.isRet).length,done:rows.filter(r=>r.done).length,pdfs:rows.filter(r=>r.file).length,errors:rows.filter(r=>r.pdfError&&!r.file).length,folders:folders.length},bytes:await this.storage.get('totalBytes')||0,capacity:MAX_BYTES};
+    const count=items=>({total:items.length,fresh:items.filter(r=>!r.done&&!r.isRet).length,done:items.filter(r=>r.done&&!r.isRet).length,rejected:items.filter(r=>r.isRet).length,pdfs:items.filter(r=>r.file).length,errors:items.filter(r=>r.pdfError&&!r.file&&!r.isRet).length});
+    const months=[...new Set([...rows.map(r=>r.tarih.slice(0,7)),...folders.map(f=>f.month)])],monthly=Object.fromEntries(months.map(month=>[month,{...count(rows.filter(r=>r.tarih.startsWith(month))),folders:folders.filter(f=>f.month===month).length}]));
+    return {company:this.company,period,monthly,settings:await this.settings(),status:await this.status(),running:!!job,updatingTypes:!!job?.metadataOnly,nextCheck:nextCheck(this.now()),counts:{...count(rows),folders:folders.length},bytes:await this.storage.get('totalBytes')||0,capacity:MAX_BYTES};
   }
   async handle(action,method,body={},params=new URLSearchParams()){
     await this.period(action==='baseline'&&method==='POST');
+    if(action==='clear-all'&&method==='POST'){if(body.confirm!==true)fail('Tümünü temizleme onayı gerekli.');return json(await this.clearAll());}
     if(action==='summary'&&method==='GET')return json(await this.summary());
     if(action==='scan'&&method==='POST'){
       return json(await this.start(true));
@@ -221,7 +252,7 @@ export class InvoiceArchive{
       let rows=(await this.all()).filter(r=>!r.deletedAt);
       if(params.get('month'))rows=rows.filter(r=>r.tarih.startsWith(params.get('month')));
       if(params.get('folder'))rows=rows.filter(r=>r.folder===params.get('folder'));
-      if(params.get('status')==='new')rows=rows.filter(r=>!r.done&&!r.isRet);if(params.get('status')==='done')rows=rows.filter(r=>r.done);
+      if(params.get('status')==='new')rows=rows.filter(r=>!r.done&&!r.isRet);if(params.get('status')==='done')rows=rows.filter(r=>r.done&&!r.isRet);if(params.get('status')==='rejected')rows=rows.filter(r=>r.isRet);
       const q=(params.get('q')||'').toLocaleUpperCase('tr');if(q)rows=rows.filter(r=>(r.fatno+' '+r.unvan).toLocaleUpperCase('tr').includes(q));
       rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));
       const offset=Math.max(0,Math.min(100000,Number(params.get('offset'))||0)),limit=100;
@@ -249,7 +280,7 @@ export class InvoiceArchive{
       return json({ok:true,matched:matches.length});
     }
     if(action==='folders'&&method==='GET'){
-      const rows=await this.all(),storedGroups=[...(await this.storage.list({prefix:'folder:'})).values()].filter(f=>!f.deletedAt);
+      const rows=await this.all(),storedGroups=[...(await this.storage.list({prefix:'folder:'})).values()].filter(f=>!f.deletedAt&&(!params.get('month')||f.month===params.get('month')));
       const versions=Object.fromEntries(await Promise.all([...new Set(storedGroups.map(f=>f.month))].map(async month=>[month,await this.storage.get('month-revision:'+month)||0])));
       const groups=storedGroups.map(f=>({...f,name:folderName(this.company.name,f.month,f.date),pdfs:rows.filter(r=>r.folder===f.id&&!r.deletedAt&&r.file).length,pending:rows.filter(r=>r.folder===f.id&&!r.deletedAt&&!r.done&&!r.isRet).length,excel:f.excel?{name:f.excel.name,at:f.excelAt,current:f.excelMonthRevision===versions[f.month]}:null}));
       return json({folders:groups.sort((a,b)=>b.date.localeCompare(a.date)||b.month.localeCompare(a.month))});
@@ -262,7 +293,7 @@ export class InvoiceArchive{
         const versionKey='month-revision:'+group.month;await tx.put(versionKey,(await tx.get(versionKey)||0)+1);return group;
       });
       if(group.excel){await this.removeFile(group.excel);await this.storage.transaction(async tx=>{await tx.put('totalBytes',Math.max(0,(await tx.get('totalBytes')||0)-group.excel.size));});}
-      for(const row of (await this.all()).filter(r=>r.folder===group.id&&!r.deletedAt))await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);await tx.put('invoice:'+row.uuid,{...current,deletedAt:this.now()});});
+      for(const row of (await this.all()).filter(r=>r.folder===group.id&&!r.deletedAt))await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);if(current&&!current.deletedAt&&current.folder===group.id)await tx.put('invoice:'+row.uuid,{...current,deletedAt:this.now()});});
       await this.storage.setAlarm(this.now()+1000);return json({ok:true});
     }
     if(action==='excel'&&method==='POST'){
@@ -270,7 +301,7 @@ export class InvoiceArchive{
       const monthRevision=await this.storage.get('month-revision:'+group.month)||0;
       const rows=(await this.all()).filter(r=>r.tarih.startsWith(group.month)&&!r.deletedAt).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.fatno.localeCompare(b.fatno));
       const bytes=makeExcel(this.company.name,group.month,localDate(this.now()),rows),name=excelName(this.company.name,group.month,localDate(this.now()));
-      await this.storage.transaction(async tx=>{const current=await tx.get('folder:'+group.id);if(current.deletedAt||current.revision!==group.revision||current.excel?.id!==group.excel?.id||(await tx.get('month-revision:'+group.month)||0)!==monthRevision)fail('Faturalar değişti. Excel’i yeniden hazırlayın.',409);const used=await tx.get('totalBytes')||0;if(used+bytes.length>MAX_BYTES)fail('Arşiv dolu.',507);const file=await this.saveFile('excel-'+randomUUID(),name,bytes,tx);await tx.put('folder:'+group.id,{...current,excel:file,excelAt:this.now(),excelRevision:current.revision,excelMonthRevision:monthRevision});await tx.put('totalBytes',used+bytes.length);});
+      await this.storage.transaction(async tx=>{const current=await tx.get('folder:'+group.id);if(!current||current.deletedAt||current.revision!==group.revision||current.excel?.id!==group.excel?.id||(await tx.get('month-revision:'+group.month)||0)!==monthRevision)fail('Faturalar değişti. Excel’i yeniden hazırlayın.',409);const used=await tx.get('totalBytes')||0;if(used+bytes.length>MAX_BYTES)fail('Arşiv dolu.',507);const file=await this.saveFile('excel-'+randomUUID(),name,bytes,tx);await tx.put('folder:'+group.id,{...current,excel:file,excelAt:this.now(),excelRevision:current.revision,excelMonthRevision:monthRevision});await tx.put('totalBytes',used+bytes.length);});
       if(group.excel){await this.removeFile(group.excel);await this.storage.transaction(async tx=>{await tx.put('totalBytes',Math.max(0,(await tx.get('totalBytes')||0)-group.excel.size));});}
       return json({ok:true,name});
     }

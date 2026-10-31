@@ -31,7 +31,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
     const sessionCookie=response=>response.headers.get('set-cookie').split(';')[0];
     const password='Qa2026!';
     await t.test('Unauthenticated requests cannot bypass login through HTML or app assets',async()=>{
-      for(const path of ['/automation/app.js','/api/automation','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
+      for(const path of ['/automation/app.js','/api/automation','/api/automation/PUSULA/clear-all','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
       assert.equal((await request('/workspace/PUSULA/')).status,303);
       assert.equal((await request('/takip')).status,303);
       assert.equal((await request('/push-sw.js')).status,200);
@@ -82,6 +82,9 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/push/devices?company=PUSULA',null,cookie)).value.devices.length,0);
       assert.equal((await request('/api/push/subscribe?company=PUSULA',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);
       assert.equal((await request('/api/automation/PUSULA/settings',{enabled:false},cookie)).status,200);
+      assert.equal((await request('/api/automation/PUSULA/clear-all',{},cookie)).status,400);
+      assert.equal((await request('/api/automation/UNKNOWN/clear-all',{confirm:true},cookie)).status,403);
+      assert.equal((await request('/api/automation/PUSULA/clear-all',{confirm:true},cookie)).status,200);
       assert.equal((await request('/api/automation/PUSULA/summary',null,cookie)).value.settings.enabled,false);
       assert.equal((await request('/api/automation/COMED/summary',null,cookie)).value.settings.enabled,true);
       assert.equal((await request('/api/automation/PUSULA/settings',{enabled:true},cookie)).status,200);

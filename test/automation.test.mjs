@@ -192,6 +192,41 @@ test('Initial processed-number import is company-local and does not require recu
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{await f.engine.handle('baseline','POST',{numbers:[' '+remoteInvoice(1,'2026-10-20').documentNo+' ' ]});await f.engine.start();await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.done,1);assert.equal((await f.engine.summary()).counts.fresh,1);}finally{globalThis.fetch=original;}
 });
+test('Clear all empties every invoice and archive, retains company setup and marks, then permits immediate reacquisition',async()=>{
+ const f=fixture(),other=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  const a=remoteInvoice(1,'2026-10-20'),b=remoteInvoice(2,'2026-11-17'),rejected={...remoteInvoice(3,'2026-11-16'),invoiceStatus:'REJECTED'};f.setRemote([a,b,rejected]);
+  await f.engine.handle('baseline','POST',{numbers:[a.documentNo]});await f.engine.start(true);await drain(f.engine,f.db);
+  let records=await f.engine.all();const first=records.find(r=>r.uuid===a.uuid),second=records.find(r=>r.uuid===b.uuid);
+  await f.engine.handle('mark','POST',{items:[{uuid:first.uuid,revision:first.revision}],done:false});await f.engine.handle('mark','POST',{items:[{uuid:second.uuid,revision:second.revision}],done:true});
+  const folder=(await f.engine.handle('folders','GET').then(r=>r.json())).folders[0];await f.engine.handle('excel','POST',{folder:folder.id});
+  await f.db.put('automation:company',company.id);await f.db.put('push:device:synthetic',{id:'keep'});await other.db.put('invoice:other',{uuid:'other',tarih:'2026-11-01'});
+  const before=await f.engine.summary();assert.equal(before.counts.rejected,1);assert.equal(before.monthly['2026-11'].rejected,1);assert.equal(before.monthly['2026-11'].done,1);
+  await assert.rejects(()=>f.engine.handle('clear-all','POST',{}),e=>e.status===400);assert.equal((await f.engine.all()).length,3);
+  await f.engine.handle('clear-all','POST',{confirm:true});
+  const empty=await f.engine.summary();assert.equal(empty.counts.total,0);assert.equal(empty.counts.folders,0);assert.equal(empty.bytes,0);assert.deepEqual(empty.monthly,{});assert(!empty.running);assert.equal(empty.settings.enabled,true);assert.equal(empty.period.startMonth,'2026-10');
+  assert.equal((await f.db.list({prefix:'blob:'})).size,0);assert.equal((await f.db.list({prefix:'invoice:'})).size,0);assert.equal((await f.db.list({prefix:'folder:'})).size,0);assert.equal((await f.db.list({prefix:'month-revision:'})).size,0);assert.equal((await f.db.list({prefix:'active-folder:'})).size,0);
+  assert.equal(await f.db.get('automation:company'),company.id);assert(await f.db.get('push:device:synthetic'));assert(await other.db.get('invoice:other'));
+  await f.engine.queueTypeRefresh(records.map(r=>({...r,profile:undefined})));assert.equal(await f.db.get('job'),undefined,'A stale summary cannot queue an old metadata job after clearing');
+  await assert.rejects(()=>f.engine.handle('pdf','GET',{},new URLSearchParams({id:a.uuid})),e=>e.status===404);await assert.rejects(()=>f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id})),e=>e.status===404);
+  await f.engine.start(true);await drain(f.engine,f.db);records=await f.engine.all();assert.equal(records.length,3);assert.equal(records.find(r=>r.uuid===a.uuid).done,false);assert.equal(records.find(r=>r.uuid===b.uuid).done,true);
+  assert.equal(records.filter(r=>r.file).length,2);assert.equal((await f.engine.handle('invoices','GET',{},new URLSearchParams({status:'done'})).then(r=>r.json())).total,1);assert.equal((await f.engine.handle('invoices','GET',{},new URLSearchParams({status:'rejected'})).then(r=>r.json())).total,1);
+  assert((await f.engine.handle('folders','GET',{},new URLSearchParams({month:'2026-10'})).then(r=>r.json())).folders.every(g=>g.month==='2026-10'));assert.equal((await f.engine.handle('folders','GET',{},new URLSearchParams({month:'2026-01'})).then(r=>r.json())).folders.length,0);
+ }finally{globalThis.fetch=original;}
+});
+for(const phase of ['list','pdf','metadata'])test('Clearing while '+phase+' is in flight cannot resurrect records or overwrite a new run',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  if(phase==='metadata'){await f.engine.start(true);await drain(f.engine,f.db);for(const row of await f.engine.all()){const {profile,...legacy}=row;await f.db.put('invoice:'+row.uuid,legacy);}await f.engine.summary();}
+  else{await f.engine.start(true);if(phase==='pdf'){await f.engine.advance();await f.engine.advance();assert.equal((await f.db.get('job')).phase,'pdf');}}
+  let unblock,started;const waiting=new Promise(r=>started=r),gate=new Promise(r=>unblock=r);let blocked=false;
+  globalThis.fetch=async(url,options)=>{if(!blocked&&(phase==='pdf'?url.endsWith('/pdf'):url.includes('/inbox?'))){blocked=true;started();await gate;}return f.fetcher(url,options);};
+  const pending=f.engine.advance();await waiting;await f.engine.handle('clear-all','POST',{confirm:true});const clearedAt=(await f.engine.status()).clearedAt;
+  let newJob;if(phase==='list'){await f.engine.start(true);newJob=await f.db.get('job');assert.equal(newJob.generation,1);}
+  unblock();await pending;assert.equal((await f.engine.all()).length,0);assert.equal((await f.db.list({prefix:'blob:'})).size,0);assert.equal((await f.engine.status()).clearedAt,clearedAt);assert.equal((await f.engine.status()).error,null);
+  if(newJob){assert.equal((await f.db.get('job')).id,newJob.id);globalThis.fetch=f.fetcher;await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.pdfs,2);}else assert.equal(await f.db.get('job'),undefined);
+ }finally{globalThis.fetch=original;}
+});
 test('Legacy invoice scenarios refresh without downloads, new invoices, notifications or changes to accounting marks',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{

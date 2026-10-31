@@ -14,7 +14,9 @@ sunucu kontrolüne uygulanmaz.
 ## Takvim ve kapsam
 
 - Türkiye saatiyle hafta içi 09, 11, 13, 15, 17. Cron UTC olarak 06, 08, 10,
-  12, 14 çalışır. Kullanıcı ayrıca Şimdi kontrol et ile kontrol başlatabilir.
+  12, 14 çalışır. Kullanıcı ayrıca İzibiz Sistemini Başlat ile o anda elle kontrol başlatabilir.
+  Bu düğme otomatik takibi açıp kapatmaz; otomatik takibin ayarı Takip durumu
+  bölümündedir.
 - Her etkin firma kendi kalıcı işi ve dosya alanında işlenir. Tarayıcı veya
   bilgisayarın açık kalması gerekmez. İşin adımları Durable Object alarmında
   devam eder; geçici hatalar sınırlı sayıda yeniden denenir.
@@ -34,6 +36,32 @@ sunucu kontrolüne uygulanmaz.
 - ETTN firma kapsamında benzersizdir. Sayfalar, toplam sayılar, belge kimliği ve
   XML alıcı vergi numarası doğrulanır. İzibiz'e kabul/red/işlendi komutu verilmez.
 
+## Ekran kullanımı
+
+İlk açılış Faturalar bölümüdür; Türkiye saatine göre mevcut yıl ve ay seçilir.
+Yıl seçimi, önceki/sonraki yıl düğmeleri ve Ocak–Aralık kutuları Faturalar ile
+Klasörler arasında ortak çalışır. Ay kutuları fatura veya PDF sayısını gösterir.
+Takip başlangıcından önceki aylar boş görünür. Bildirime dokunulunca o
+bildirimdeki yeni faturaların ayı açılır. Güncel ayda yeni fatura yoksa önceki
+aya geç gelen faturaların ayı seçilir.
+
+Üst durum alanı otomatik takibin açık/kapalı durumunu, çalışan işi, son ve
+sonraki kontrolü ve bağlı cihaz sayısını gösterir. Takip durumu bölümünde
+otomatik takip açılıp kapatılır; sayı kartları ilgili fatura filtresini açar.
+Fatura numarası, tarih, firma, tip, tutar ve birim aynı puntoda ve ortalıdır;
+başlıklar daha büyük, büyük harfli ve ortalıdır. Dar ekranlarda sütunlar
+etiketli kartlara dönüşür.
+
+Faturalar bölümündeki **Tümünü Temizle**, onaydan sonra yalnızca ilgili
+firmanın tüm aylardaki fatura listesi ve arşiv dosyalarını, reddedilmiş ve
+dosyası olmayan kayıtlar dahil, kaldırır. Devam eden alma işi iptal edilir;
+eski bir isteğin sonradan dönmesi kayıtları geri getirmez. İzibiz bağlantısı,
+başlangıç ayı, otomatik takip ayarı, bildirim cihazları ve işlenmiş fatura
+referansı korunur. İşareti geri alınmış faturalar yeniden alınırken yeni gelen
+kalır. İzibiz Sistemini Başlat ile geçerli tarama döneminin faturaları yeniden
+alınabilir. Otomatik takip açıksa sonraki planlı kontrol de tekrar alır;
+geçerli dönemden eski arşiv otomatik olarak yeniden indirilmez.
+
 ## İşlem durumu
 
 Yeni faturalar kullanıcı işaretleyene kadar YENİ GELEN olarak kalır.
@@ -41,6 +69,8 @@ Zaman geçmesi bunları BEKLENİYOR veya İŞLENDİ yapmaz. İşlendi işareti g
 alınabilir. Kayıt sürümü telefon/bilgisayar arasında eski bir ekranın yeni
 işaretlemeyi ezmesini engeller. Son 100 işaretleme grubu işlem geçmişinde tutulur.
 İzibiz yanıtı ayrı alandır; muhasebe işareti kabul/red anlamına gelmez.
+Reddedilmiş faturalar ayrı REDDEDİLDİ durumunda ve filtresinde gösterilir;
+İŞLENDİ sayısına katılmaz ve dosyası yoksa PDF hazırlanıyor denmez.
 Fatura listesi, filtreler ve devam sayfaları fatura tarihine göre eskiden yeniye
 sıralanır. Aynı tarihli faturalar geliş sırasını korur; sonradan gelen en alta eklenir.
 FATURA TİPİ sütunu senaryo ve tipi birlikte gösterir: Temel - Satış, Ticari -
@@ -79,7 +109,9 @@ durumudur; İzibiz yanıtı ayrı korunur.
 Klasörü dışa aktar, PDF'leri ve varsa son Excel'i klasör adı altında ZIP olarak
 verir. Dışa aktarma kullanıcının isteğiyle gerçekleşir.
 
-Klasör kartındaki Temizle veya klasör içindeki Klasörü sil dosyaları kaldırır. Yeniden aynı faturaları indirmemek için ETTN,
+Klasör kartları seçili ayda alınma tarihine göre PDF sayısını, Excel durumunu,
+Dosyaları aç ve ZIP indir işlemlerini gösterir. Klasör içindeki Klasörü sil
+dosyaları kaldırır. Yeniden aynı faturaları indirmemek için ETTN,
 fatura bilgileri, silinme bilgisi ve işlem durumu kalır. Otomatik süreli silme yoktur.
 
 ## Telefon bildirimleri
@@ -96,10 +128,12 @@ abonelik adresleri kabul edilmez.
 
 iPhone'da kullanıcı Safari Paylaş → Ana Ekrana Ekle adımını tamamlar; simgeden
 açılan uygulamada Bildirimler bölümünden izni verir. Bu adım telefon üzerinde
-kullanıcının işlemini gerektirir. Deneme bildirimi düğmesi gerçek push gönderir.
+kullanıcının işlemini gerektirir. Deneme bildirimi düğmesi gerçek push gönderir. Bağlı cihazların yanında
+Deneme gönder ile bilgisayardan seçilen telefona da deneme yapılabilir.
+Bağlantı durumu gerçek abonelikten alınır; örnek bildirim gösterilmez.
 
 Bildirim firma, hazır yeni PDF sayısı ve işlem bekleyen toplamı belirtir;
-dokununca yalnızca ilgili firmanın fatura listesi açılır. Başka firmada açık
+dokununca yalnızca ilgili firmanın ilgili aydaki fatura listesi açılır. Başka firmada açık
 pencere varsa o pencerenin firması değiştirilmez. Sessiz arka plan mesajı yerine görünür bildirim
 gösterilir. Fatura içeriği ve tutarlar kilit ekranına gönderilmez.
 Yeni fatura yoksa tekrar bildirim yoktur. Olaylar benzersiz kimlikle sıraya alınır;
@@ -115,5 +149,7 @@ npm run build, npm run check, npm test.
 Otomasyon testleri ilk ay sınırı, ay/yıl geçişi, önceki aya geç gelen fatura,
 başlangıçtan eski kayıtların temizliği ve yeniden alınmaması, PDF doğrulama,
 mükerrer tarama, ilk referans aktarımı, işaretleme/geri alma, eski kayıt
-çatışması, Excel sürümü, klasör silme ve gerçek şifreli push isteğini kapsar.
+çatışması, Excel sürümü, klasör silme, tüm arşivi temizleme ve yeniden alma, temizleme
+sırasında devam eden liste/PDF/metadata işlerinin iptali ve gerçek şifreli push
+isteğini kapsar.
 Kimlik doğrulama testi arşiv/API/manifest/service worker erişimlerini de sınar.
