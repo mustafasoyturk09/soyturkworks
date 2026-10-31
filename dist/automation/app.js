@@ -73,7 +73,7 @@ async function loadInvoices(append=false){
   if(!append){offset=0;selected.clear();}
   const requests=active().map(async c=>{const p=new URLSearchParams({offset:String(offset),status,month,q:query});const data=await api(apiURL(c.company.id,'invoices')+'?'+p);return {...data,company:c.company};});
   const result=await Promise.all(requests);if(request!==invoiceRequest)return;const loaded=result.flatMap(d=>d.rows.map(r=>({...r,company:d.company})));
-  rows=append?[...rows,...loaded]:loaded;rows.sort((a,b)=>b.firstSeen-a.firstSeen||b.tarih.localeCompare(a.tarih));
+  rows=append?[...rows,...loaded]:loaded;rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));
   more=result.some(d=>d.total>offset+d.rows.length);
   const months=[...new Set(result.flatMap(d=>d.months))].sort().reverse();$('monthFilter').innerHTML='<option value="">Bütün aylar</option>'+months.map(m=>'<option value="'+m+'">'+escape(monthName(m))+'</option>').join('');$('monthFilter').value=month;
   $('invoiceList').innerHTML=rows.length?invoiceHeader()+rows.map(invoiceHTML).join(''):empty('Kutun sakin.','Faturalar kontrol edildiğinde burada görünecek. İlk ay yalnızca o ay taranır; ay değişince önceki ay ve yeni ay birlikte kontrol edilir.');

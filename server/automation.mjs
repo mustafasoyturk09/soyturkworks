@@ -178,7 +178,7 @@ export class InvoiceArchive{
       if(params.get('folder'))rows=rows.filter(r=>r.folder===params.get('folder'));
       if(params.get('status')==='new')rows=rows.filter(r=>!r.done&&!r.isRet);if(params.get('status')==='done')rows=rows.filter(r=>r.done);
       const q=(params.get('q')||'').toLocaleUpperCase('tr');if(q)rows=rows.filter(r=>(r.fatno+' '+r.unvan).toLocaleUpperCase('tr').includes(q));
-      rows.sort((a,b)=>b.firstSeen-a.firstSeen||b.tarih.localeCompare(a.tarih)||a.uuid.localeCompare(b.uuid));
+      rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));
       const offset=Math.max(0,Math.min(100000,Number(params.get('offset'))||0)),limit=100;
       return json({total:rows.length,rows:rows.slice(offset,offset+limit).map(r=>{const {file,...data}=r;return {...data,pdfReady:!!file};}),months:[...new Set((await this.all()).filter(r=>!r.deletedAt).map(r=>r.tarih.slice(0,7)))].sort().reverse()});
     }

@@ -41,6 +41,8 @@ Zaman geçmesi bunları BEKLENİYOR veya İŞLENDİ yapmaz. İşlendi işareti g
 alınabilir. Kayıt sürümü telefon/bilgisayar arasında eski bir ekranın yeni
 işaretlemeyi ezmesini engeller. Son 100 işaretleme grubu işlem geçmişinde tutulur.
 İzibiz yanıtı ayrı alandır; muhasebe işareti kabul/red anlamına gelmez.
+Fatura listesi, filtreler ve devam sayfaları fatura tarihine göre eskiden yeniye
+sıralanır. Aynı tarihli faturalar geliş sırasını korur; sonradan gelen en alta eklenir.
 
 Başlangıç için son işlenmiş Excel isteğe bağlı bir kez aktarılabilir. Tarayıcı
 dosyayı okur; sunucuya yalnızca numaralar gider. Geçmiş faturaların işlenmiş

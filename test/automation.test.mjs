@@ -76,6 +76,23 @@ test('A first scan in November does not import October without an earlier tracki
  const f=fixture({startMonth:null}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,1);assert.equal((await f.db.get('settings')).startMonth,'2026-11');assert((await f.engine.all()).every(r=>r.tarih.startsWith('2026-11')));}finally{globalThis.fetch=original;}
 });
+test('Invoice dates stay oldest first across pages, filters and refreshes regardless of arrival order',async()=>{
+ const f=fixture(),expected=[];
+ for(let n=1;n<=205;n++){
+  const date=new Date(Date.UTC(2026,9,1+(n*17)%48)).toISOString().slice(0,10),source=remoteInvoice(n,date);
+  const row={uuid:source.uuid,fatno:source.documentNo,tarih:date,firstSeen:1000-n,done:n%2===0,revision:0};
+  await f.db.put('invoice:'+row.uuid,row);expected.push(row);
+ }
+ expected.sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.firstSeen-b.firstSeen||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));
+ const load=async params=>(await f.engine.handle('invoices','GET',{},new URLSearchParams(params))).json();
+ const actual=[];for(const offset of [0,100,200]){const page=await load({offset:String(offset)});assert.equal(page.total,205);actual.push(...page.rows);}
+ assert.deepEqual(actual.map(r=>r.uuid),expected.map(r=>r.uuid));
+ assert.deepEqual((await load({})).rows.map(r=>r.uuid),expected.slice(0,100).map(r=>r.uuid));
+ const filtered=await load({status:'new',month:'2026-10'});
+ assert.deepEqual(filtered.rows.map(r=>r.uuid),expected.filter(r=>!r.done&&r.tarih.startsWith('2026-10')).map(r=>r.uuid));
+ const incoming={...expected.at(-1),uuid:remoteInvoice(206,expected.at(-1).tarih).uuid,fatno:'AAA2026000000001',firstSeen:2000};await f.db.put('invoice:'+incoming.uuid,incoming);
+ assert.equal((await load({offset:'200'})).rows.at(-1).uuid,incoming.uuid,'A newly arrived invoice on the latest date goes last, even with an alphabetically earlier number');
+});
 test('An unconnected or paused company does not fix its first tracking month prematurely',async()=>{
  const f=fixture({date:'2026-10-31T06:00:00Z',startMonth:null}),connection=f.engine.getConnection;
  f.engine.getConnection=async()=>({saved:null,active:true});
