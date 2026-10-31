@@ -51,6 +51,7 @@
       box.append(label,title);
       if(window.SW_CONTEXT){const change=document.createElement('a');change.href='/companies';change.textContent='Firma değiştir ↗';change.addEventListener('click',event=>{if(!confirm('Firma seçimine dönülsün mü? Açık PDF ve Excel dosyaların bu ekranda tutulur; gerekiyorsa önce çıktını indir. Kaydedilmiş kayıtların korunur.'))event.preventDefault();});box.append(change);}
       aside.querySelector('nav')?.before(box);
+      if(window.SW_CONTEXT){const follow=document.createElement('a');follow.href='/takip?company='+companyId;follow.className='sw-auto-follow';follow.textContent='Otomatik Fatura Takibi ↗';aside.querySelector('nav')?.after(follow);}
       const foot=aside.querySelector('.sidebar-foot');if(foot){const legacy=document.createElement('button');legacy.type='button';legacy.textContent='Eski yerel kayıtları aktar';legacy.onclick=legacyDialog;foot.append(legacy);if(window.SW_CONTEXT){const account=document.createElement('a');account.href='/account';account.textContent='Hesabım';const out=document.createElement('button');out.type='button';out.textContent='Çıkış yap';out.onclick=logout;foot.append(account,out);}}
     }
     document.querySelector('.brand-mark')?.addEventListener('click',()=>{if(window.SW_CONTEXT)location.href='/companies';});

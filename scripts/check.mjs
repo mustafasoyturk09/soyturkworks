@@ -12,6 +12,8 @@ if(seed)for(const [key,value] of Object.entries(JSON.parse(seed[1]).values))if(/
 for(const m of live.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi))if(m[2].trim()&&!/type\s*=\s*["'](?!text\/javascript|application\/javascript|module)/i.test(m[1]))new vm.Script(m[2]);
 for(const name of ['workspace.js','mobile.js','calculator-ui.js','izibiz.js'])new vm.Script(await readFile(root+'/src/'+name,'utf8'));
 new vm.Script(await readFile(root+'/src/portal/portal.js','utf8'));
+new vm.Script(await readFile(root+'/src/automation/app.js','utf8'));
+new vm.Script(await readFile(root+'/src/push-sw.js','utf8'));
 const workerConfig=JSON.parse(await readFile(root+'/wrangler.jsonc','utf8'));
 assert.equal(workerConfig.assets.run_worker_first,true,'Giriş koruması varlıklardan önce çalışmalı.');
 assert.equal(workerConfig.assets.binding,'ASSETS');

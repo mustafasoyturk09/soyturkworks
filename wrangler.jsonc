@@ -40,5 +40,10 @@
     "directory": "./dist",
     "html_handling": "none",
     "not_found_handling": "404-page"
+  },
+  "triggers": {
+    "crons": [
+      "0 6,8,10,12,14 * * MON-FRI"
+    ]
   }
 }

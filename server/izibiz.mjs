@@ -113,7 +113,8 @@ export class IzibizConnector {
         if(current&&current.run!==body.run&&this.now()-current.started<300000)error('Yeni listeyi beş dakika sonra tekrar alabilirsiniz.',429);
         await this.storage.put('izibiz:scan:'+company,{run:body.run,started:current?.run===body.run?current.started:this.now(),start:body.startDate,end:body.endDate});
       }else if(!current||current.run!==body.run||current.start!==body.startDate||current.end!==body.endDate||this.now()-current.started>2*3600000)error('Listeleme oturumu değişti. Baştan başlayın.',409);
-      const query=new URLSearchParams({dateType:'DOCUMENT',startDate:body.startDate,endDate:body.endDate,page:String(page),pageSize:'100',sortProperty:'createDate',sort:'asc'});
+      const dateType=body.dateType||'DOCUMENT';if(!['DOCUMENT','DELIVERY'].includes(dateType))error('Geçersiz tarih türü.');
+      const query=new URLSearchParams({dateType,startDate:body.startDate,endDate:body.endDate,page:String(page),pageSize:'100',sortProperty:'createDate',sort:'asc'});
       const result=await this.authenticated(company,config,'/v1/einvoices/inbox?'+query,{});
       if(!Array.isArray(result?.contents))error('İzibiz fatura listesi okunamadı.',502);
       const rows=result.contents.map(value=>invoiceRow(value,config.identifier)).map(row=>({...row,ticket:this.ticket(company,config,row)}));

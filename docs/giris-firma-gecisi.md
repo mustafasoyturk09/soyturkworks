@@ -29,8 +29,10 @@ bilgisayar, telefon ve tarayıcılarda soyturkworks.com üzerinden yapılır.
 - Eksik hesap planlarına başka firmanın kodu atanmaz. Doğrulanmış mevcut Pusula ve
   Kendine İyi Bak kodları korunur. Diğer firmaların muhasebe çıktıları için kendi
   hesap planları ve gerekli kaşeleri sağlanmalıdır.
-- Finansal dosyalar ve mevcut yerel kayıtlar sunucuya yüklenmez. Bu değişiklik
-  cihazlar arasında muhasebe kayıtlarını eşitleme özelliği eklemez.
+- Eski manuel çalışma alanının yerel kayıtları otomatik taşınmaz. Yeni /takip
+  ekranında kullanıcı isteğiyle kurulan otomasyon, PDF ve isteğe bağlı Excel
+  dosyalarını firma bazlı özel sunucu arşivinde saklar; işlem işaretleri cihazlar
+  arasında eşitlenir. Ayrıntılar docs/otomatik-fatura-takibi.md içindedir.
 
 ## Yayın ve ilk hesap kurulumu
 

@@ -17,6 +17,7 @@
   async function busy(button,action){if(button.disabled)return;button.disabled=true;try{await action();}catch(error){message(error.message);}finally{button.disabled=false;}}
   function template(id){main.replaceChildren($(id).content.cloneNode(true));}
   const field=(name,label,autocomplete='new-password')=>{const l=document.createElement('label');l.textContent=label;const i=document.createElement('input');i.name=name;i.type='password';i.autocomplete=autocomplete;i.required=true;i.minLength=7;i.maxLength=128;l.append(i);return l;};
+  function loginDestination(){const next=new URLSearchParams(location.search).get('next');return next&&/^\/takip(?:\?|$)/.test(next)?next:'/companies';}
   function login() {
     template('loginTemplate');
     const form=$('loginForm');
@@ -37,13 +38,13 @@
       if(state.setupMethod==='owner-link'){form.hidden=false;$('loginHeading').textContent='Çalışma alanına hoş geldin.';$('loginDescription').textContent='İlk hesap kurulumu uygulama sahibi tarafından tamamlanıyor. Ardından kullanıcı adı ve parolanla giriş yapabilirsin.';$('forgot').hidden=true;}
     }
     form.addEventListener('submit',event=>{event.preventDefault();const data=Object.fromEntries(new FormData(form));$('loginError').hidden=true;busy(form.querySelector('[type=submit]'),async()=>{
-      try{if(recoveryToken){if(data.password!==data.confirmPassword)throw Error('Parolalar aynı olmalı.');await api('recovery/complete',{...data,token:recoveryToken});}else await api('login',data);location.href='/companies';}catch(error){$('loginError').textContent=error.message;$('loginError').hidden=false;}
+      try{if(recoveryToken){if(data.password!==data.confirmPassword)throw Error('Parolalar aynı olmalı.');await api('recovery/complete',{...data,token:recoveryToken});}else await api('login',data);location.href=loginDestination();}catch(error){$('loginError').textContent=error.message;$('loginError').hidden=false;}
     });});
     $('forgot').onclick=()=>busy($('forgot'),async()=>{const result=await api('recovery',{});message(result.message);if(state.localMailbox)localMail();});
     $('passkeyLogin').onclick=()=>busy($('passkeyLogin'),async()=>{
       if(!window.SWPasskeys?.browserSupportsWebAuthn())throw Error('Bu tarayıcı cihazla girişi desteklemiyor. Parolanla giriş yapabilirsin.');
       const challenge=await api('passkeys/login/options',{});
-      try{const response=await window.SWPasskeys.startAuthentication({optionsJSON:challenge.options});await api('passkeys/login/verify',{id:challenge.id,response});location.href='/companies';}catch(error){throw Error(error.name==='NotAllowedError'?'Cihaz doğrulaması iptal edildi veya süresi doldu.':error.message);}
+      try{const response=await window.SWPasskeys.startAuthentication({optionsJSON:challenge.options});await api('passkeys/login/verify',{id:challenge.id,response});location.href=loginDestination();}catch(error){throw Error(error.name==='NotAllowedError'?'Cihaz doğrulaması iptal edildi veya süresi doldu.':error.message);}
     });
   }
   async function localMail(){const mail=await fetch('/__local/mail').then(r=>r.json());let a=main.querySelector('.local-mail');if(!a){a=document.createElement('a');a.className='local-mail';main.querySelector('.login-card').append(a);}a.textContent='Yerel test e-postasını aç';a.href=mail.link;}

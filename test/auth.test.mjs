@@ -31,8 +31,11 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
     const sessionCookie=response=>response.headers.get('set-cookie').split(';')[0];
     const password='Qa2026!';
     await t.test('Unauthenticated requests cannot bypass login through HTML or app assets',async()=>{
-      for(const path of ['/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
+      for(const path of ['/automation/app.js','/api/automation','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
       assert.equal((await request('/workspace/PUSULA/')).status,303);
+      assert.equal((await request('/takip')).status,303);
+      assert.equal((await request('/push-sw.js')).status,200);
+      assert.equal((await request('/manifest.webmanifest')).status,200);
       assert.match((await request('/')).value,/loginTemplate/);
       assert.equal((await request('/portal/portal.css')).status,200);
       assert.equal((await request('/api/companies')).status,401);
@@ -56,6 +59,22 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/recovery/complete',{token:mailToken,username:'attacker',password})).status,400);
       assert.equal((await request('/api/login',{username:'qa-user',password:'incorrect'})).status,401);
       assert.equal((await request('/api/session',null,cookie)).value.account.username,'qa-user');
+    });
+    await t.test('Private archive and real push configuration require a session and stay company scoped',async()=>{
+      assert.equal((await request('/takip',null,cookie)).status,200);
+      const dashboard=(await request('/api/automation',null,cookie)).value;
+      assert.equal(dashboard.companies.length,5);assert(dashboard.companies.every(c=>c.counts.total===0&&c.settings.enabled));
+      assert.equal((await request('/api/automation/UNKNOWN/invoices',null,cookie)).status,403);
+      assert.equal((await request('/api/automation/PUSULA/invoices',null,cookie)).value.rows.length,0);
+      assert.equal((await request('/api/automation/PUSULA/pdf?id=not-an-invoice',null,cookie)).status,404);
+      assert.equal((await request('/api/automation/PUSULA/mark',{items:[{uuid:'11111111-2222-4333-8444-555555555555',revision:0}],done:true},cookie)).status,404);
+      const config=await request('/api/push/config',null,cookie);assert.equal(config.status,200);assert.equal(Buffer.from(config.value.publicKey,'base64url').length,65);assert.equal(config.value.privateKey,undefined);
+      assert.equal((await request('/api/push/devices',null,cookie)).value.devices.length,0);
+      assert.equal((await request('/api/push/subscribe',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);
+      assert.equal((await request('/api/automation/PUSULA/settings',{enabled:false},cookie)).status,200);
+      assert.equal((await request('/api/automation/PUSULA/summary',null,cookie)).value.settings.enabled,false);
+      assert.equal((await request('/api/automation/COMED/summary',null,cookie)).value.settings.enabled,true);
+      assert.equal((await request('/api/automation/PUSULA/settings',{enabled:true},cookie)).status,200);
     });
     await t.test('Company deactivation and recoverable removal apply on the server',async()=>{
       const companies=(await request('/api/companies',null,cookie)).value.companies;assert.equal(companies.length,5);

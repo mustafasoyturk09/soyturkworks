@@ -1,5 +1,9 @@
 # İzibiz gelen fatura bağlantısı
 
+Bu belge manuel Excel karşılaştırması ve İzibiz düğmesini açıklar. Yeni /takip
+özel arşivi, zamanlı kontroller ve telefon bildirimleri için
+[Otomatik Fatura Takibi](otomatik-fatura-takibi.md) belgesine bakın.
+
 Gelen E-Fatura Takip modülündeki İzibiz düğmesi seçili firmaya bağlıdır. Her
 firma ilk kullanımda bir kez bağlanır. Bütün tarayıcılarda firma adına tek ZIP
 indirilir; uygulama klasör seçtirmez veya klasöre yazma izni istemez. Daha sonra

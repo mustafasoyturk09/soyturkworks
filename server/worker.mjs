@@ -2,6 +2,8 @@ import {DurableObject} from 'cloudflare:workers';
 import {randomBytes, createHash, scrypt, timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
 import {IzibizConnector} from './izibiz.mjs';
+import {InvoiceArchive,workHours,nextCheck} from './automation.mjs';
+import {pushAPI,enqueueNotification,flushNotifications} from './push.mjs';
 import {generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse} from '@simplewebauthn/server';
 
 const derive = promisify(scrypt);
@@ -35,6 +37,10 @@ async function checkPassword(password, saved) {
 function publicAccount(account) {return {username:account.username, recoveryEmail:account.email.replace(/^(.{2}).*(@.*)$/, '$1••••$2')};}
 
 export default {
+  async scheduled(event,env,ctx){
+    const store=env.AUTH.get(env.AUTH.idFromName('single-owner-v1'));
+    ctx.waitUntil(store.fetch(new Request('https://automation.internal/tick',{method:'POST'})).then(async r=>{if(!r.ok)throw Error('Otomatik kontrol başlatılamadı.');}));
+  },
   async fetch(request, env) {
     const url=new URL(request.url);
     const origin=env.APP_ORIGIN;
@@ -50,13 +56,16 @@ export default {
         response=await store.fetch(new Request(new URL('/api/local-mail',origin)));
       } else {
         if(!['GET','HEAD'].includes(request.method)) return new Response('Yöntem desteklenmiyor.',{status:405});
-        const publicAsset=/^\/portal\/(?:portal\.(?:css|js)|passkeys\.js)$/.test(url.pathname) || /^\/assets\/brand\/(?:sw-logo|favicon-\d+|apple-touch-icon)\.png$/.test(url.pathname) || ['/favicon.ico','/robots.txt'].includes(url.pathname);
+        const publicAsset=/^\/portal\/(?:portal\.(?:css|js)|passkeys\.js)$/.test(url.pathname) || /^\/assets\/brand\/(?:sw-logo|favicon-\d+|apple-touch-icon)\.png$/.test(url.pathname) || ['/favicon.ico','/robots.txt','/manifest.webmanifest','/push-sw.js'].includes(url.pathname);
         if(publicAsset) response=await env.ASSETS.fetch(request);
         else {
           const sessionResponse=await store.fetch(new Request(new URL('/api/session',origin), {headers:request.headers}));
           const auth=await sessionResponse.json();
           if(url.pathname==='/' || url.pathname==='/login' || url.pathname==='/companies' || url.pathname==='/account') {
             response=await asset(env,request,'/portal/index.html');
+          } else if(url.pathname==='/takip'||url.pathname==='/takip/'){
+            if(!auth.account)return Response.redirect(origin+'/login?next='+encodeURIComponent(url.pathname+url.search),303);
+            response=await asset(env,request,'/automation/index.html');
           } else if(url.pathname.startsWith('/workspace/')) {
             if(!auth.account) return Response.redirect(origin+'/login',303);
             const id=url.pathname.match(/^\/workspace\/([A-Z_]+)\/?$/)?.[1];
@@ -105,7 +114,7 @@ export class AuthStore extends DurableObject {
   }
   async issueSession(revision) {
     const raw=token();await this.storage.transaction(async tx=>{const account=await tx.get('account');if(!account||account.revision!==revision)fail('Hesap bilgileri değişti. Yeniden giriş yapın.',401);await tx.put('session:'+hash(raw),{revision,created:Date.now(),expires:Date.now()+14*DAY});});
-    await this.storage.setAlarm(Date.now()+DAY);
+    await this.scheduleMaintenance(Date.now()+DAY);
     return cookie(raw, new URL(this.env.APP_ORIGIN).protocol==='https:');
   }
   ownerSetup(raw,email,account) {
@@ -130,7 +139,7 @@ export class AuthStore extends DurableObject {
       else if(this.env.EMAIL) await this.env.EMAIL.send(message);
       else fail('Kurtarma e-postası hizmeti henüz bağlanmadı.',503);
     } catch(error) {await this.storage.delete('recovery:'+hash(raw));if(error.status)throw error;fail('E-posta gönderilemedi. E-posta bağlantısını kontrol edin.',503);}
-    await this.storage.setAlarm(Date.now()+DAY);
+    await this.scheduleMaintenance(Date.now()+DAY);
   }
   async fetch(request) {
     try {return await this.handle(request);}catch(error){return json({error:error.status?error.message:'İşlem tamamlanamadı. Lütfen yeniden deneyin.'},error.status||500);}
@@ -143,6 +152,39 @@ export class AuthStore extends DurableObject {
     if(url.origin==='https://izibiz-key.internal'&&path==='/key'&&request.method==='POST'){
       const key=await this.storage.transaction(async tx=>{let key=await tx.get('encryption-key:v1');if(!key){key=token();await tx.put('encryption-key:v1',key);}return key;});
       return json({key});
+    }
+    if(url.origin==='https://invoice-store.internal'){
+      const match=path.match(/^\/([A-Z_]+)\/([a-z-]+)$/),company=match&&COMPANIES.find(c=>c.id===match[1]);
+      if(!company)fail('Geçersiz firma.',400);
+      const assigned=await this.storage.get('automation:company');
+      if(assigned&&assigned!==company.id)fail('Firma bağlamı eşleşmiyor.',403);
+      if(!assigned)await this.storage.put('automation:company',company.id);
+      if(!this.archive)this.archive=new InvoiceArchive({storage:this.storage,company,
+        getConnection:async id=>{const owner=this.env.AUTH.get(this.env.AUTH.idFromName('single-owner-v1'));const r=await owner.fetch(new Request('https://automation.internal/connection/'+id,{method:'POST'}));if(!r.ok)fail('Firma bağlantısı alınamadı.',503);return r.json();},
+        notify:async event=>{const owner=this.env.AUTH.get(this.env.AUTH.idFromName('single-owner-v1'));const r=await owner.fetch(new Request('https://automation.internal/notify',{method:'POST',body:JSON.stringify(event)}));if(!r.ok)throw Error('Bildirim sıraya alınamadı.');}
+      });
+      const body=request.method==='GET'?{}:await readJSON(request);
+      return this.archive.handle(match[2],request.method,body,url.searchParams);
+    }
+    if(url.origin==='https://automation.internal'){
+      const account=await this.storage.get('account');if(!account)return json({error:'Hesap hazır değil.'},409);
+      if(path.startsWith('/connection/')){
+        const id=path.split('/').pop(),company=(await this.companies()).find(c=>c.id===id);if(!company)fail('Firma bulunamadı.',404);
+        return json({saved:await this.storage.get('izibiz:config:'+id)||null,key:await this.izibizKey(),active:company.active&&!company.deleted});
+      }
+      if(path==='/tick'){
+        const enabled=(await this.companies()).filter(c=>c.active&&!c.deleted);
+        await Promise.all(enabled.map(c=>this.companyArchive(c.id,'tick','POST',{})));
+        if(workHours(Date.now()))await this.flushPush(account.revision);
+        return json({ok:true});
+      }
+      if(path==='/notify'){
+        const event=await readJSON(request);if(!/^[a-f0-9]{64}$/.test(event.id||'')||!COMPANIES.some(c=>c.id===event.company))fail('Bildirim geçersiz.');
+        await enqueueNotification(this.storage,event);
+        if(workHours(Date.now()))await this.flushPush(account.revision);
+        return json({ok:true});
+      }
+      return json({error:'İşlem bulunamadı.'},404);
     }
     const account=await this.storage.get('account');
     if(path==='/api/local-mail'&&local(this.env))return json(await this.storage.get('local-mail')||{});
@@ -203,6 +245,21 @@ export class AuthStore extends DurableObject {
     }
     const session=await this.session(request);
     if(!session||!account)fail('Oturum açmanız gerekiyor.',401);
+    if(path.startsWith('/api/push/')){
+      const action=path.slice('/api/push/'.length);return pushAPI(this.storage,this.env.APP_ORIGIN,action,request.method,{...body,revision:account.revision});
+    }
+    if(path==='/api/automation'&&request.method==='GET'){
+      const companies=(await this.companies()).filter(c=>c.active&&!c.deleted);
+      const summaries=await Promise.all(companies.map(async c=>{const r=await this.companyArchive(c.id,'summary','GET');if(!r.ok)return {company:c,error:'Firma arşivi okunamadı.'};const data=await r.json();return {...data,connected:!!await this.storage.get('izibiz:config:'+c.id)};}));
+      return json({companies:summaries,events:[...(await this.storage.list({prefix:'push:event:'})).values()].sort((a,b)=>b.created-a.created).slice(0,50)});
+    }
+    if(path.startsWith('/api/automation/')){
+      const match=path.match(/^\/api\/automation\/([A-Z_]+)\/([a-z-]+)$/),company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
+      if(!company)fail('Firma bulunamadı veya etkin değil.',403);
+      if(!['summary','scan','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
+      if(['scan','excel'].includes(match[2])&&request.method==='POST')await this.rate(request,'archive-'+match[2]+':'+company.id,20,15);
+      return this.companyArchive(company.id,match[2],request.method,body,url.search);
+    }
     if(path.startsWith('/api/izibiz/')){
       const match=path.match(/^\/api\/izibiz\/([A-Z_]+)\/(status|connect|disconnect|list|download)$/);
       const company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
@@ -254,13 +311,40 @@ export class AuthStore extends DurableObject {
     }
     return json({error:'İşlem bulunamadı.'},404);
   }
+  async scheduleMaintenance(at){
+    const current=await this.storage.getAlarm();await this.storage.setAlarm(current&&current>Date.now()?Math.min(current,at):at);
+  }
+  async flushPush(revision){
+    this.pushQueue=(this.pushQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
+      await flushNotifications(this.storage,this.env.APP_ORIGIN,revision);
+      const remaining=await this.storage.list({prefix:'push:outbox:'});
+      if(remaining.size){const soon=Math.min(...[...remaining.values()].map(v=>v.nextAttempt||Date.now()+60000));await this.scheduleMaintenance(workHours(soon)?Math.max(Date.now()+1000,soon):nextCheck(soon));}
+    });
+    return this.pushQueue;
+  }
+  async izibizKey(){
+    if(this.env.IZIBIZ_ENCRYPTION_KEY)return this.env.IZIBIZ_ENCRYPTION_KEY;
+    const vault=this.env.AUTH.get(this.env.AUTH.idFromName('izibiz-encryption-key-v1'));
+    return (await(await vault.fetch(new Request('https://izibiz-key.internal/key',{method:'POST'}))).json()).key;
+  }
+  async companyArchive(company,action,method,body,search=''){
+    const object=this.env.AUTH.get(this.env.AUTH.idFromName('invoice-archive-v1:'+company));
+    return object.fetch(new Request('https://invoice-store.internal/'+company+'/'+action+search,{method,headers:{'Content-Type':'application/json'},body:method==='GET'?undefined:JSON.stringify(body||{})}));
+  }
   async takeChallenge(id,kind) {
     if(typeof id!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(id))fail('Doğrulama süresi doldu.');
     const key='challenge:'+hash(id), value=await this.storage.transaction(async tx=>{const value=await tx.get(key);await tx.delete(key);return value;});
     if(!value||value.kind!==kind||value.expires<Date.now())fail('Doğrulama süresi doldu. Yeniden deneyin.');return value;
   }
   async companies() {return Promise.all(COMPANIES.map(async c=>({...c,active:true,deleted:false,...await this.storage.get('company:'+c.id)})));}
-  async alarm() {for(const prefix of ['session:','challenge:','recovery:','rate:']){const items=await this.storage.list({prefix});const expired=[...items].filter(([,v])=>(v.expires||v.until)<Date.now()).map(([k])=>k);if(expired.length)await this.storage.delete(expired);}await this.storage.setAlarm(Date.now()+DAY);}
+  async alarm() {
+    const company=await this.storage.get('automation:company');
+    if(company){
+      if(!this.archive)await this.handle(new Request('https://invoice-store.internal/'+company+'/summary'));
+      await this.archive.advance();return;
+    }
+    const account=await this.storage.get('account');if(account&&workHours(Date.now()))await this.flushPush(account.revision);
+    for(const prefix of ['session:','challenge:','recovery:','rate:']){const items=await this.storage.list({prefix});const expired=[...items].filter(([,v])=>(v.expires||v.until)<Date.now()).map(([k])=>k);if(expired.length)await this.storage.delete(expired);}await this.scheduleMaintenance(Date.now()+DAY);}
 }
 async function readJSON(request) {
   const reader=request.body?.getReader(),chunks=[];let size=0;

@@ -59,11 +59,11 @@
     },
     {
       "file": "app/workspace.css",
-      "sha256": "5f9116f74bddadbd76d46785bca98c2297261866a252df0cdfaf9f45fafc7505"
+      "sha256": "c8e4d409695d4650f4871569e1578c07aeaeec1bc245981746fe62607fa4c861"
     },
     {
       "file": "app/workspace.js",
-      "sha256": "c0a3a30dc18135d363e9b9460ff0a45f494937590d8474d9f5e7080d2c84530f"
+      "sha256": "9f87cc1605abfc1c9cf8f2993c4284b8c393dc0ac9704c646b01a923361f4809"
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
@@ -186,16 +186,32 @@
       "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41"
     },
     {
+      "file": "automation/app.js",
+      "sha256": "88ec317e1e854efc93e3fdcb56718e475a988514f4f60e35a50e6d18b1e7c6cb"
+    },
+    {
+      "file": "automation/index.html",
+      "sha256": "533c6a9a38bef3334d4096de0705ba3a1da57db0e1d4d478924af5b0b01e44c1"
+    },
+    {
+      "file": "automation/style.css",
+      "sha256": "92b8ba10a4792b1b2d8289fa80f20874431b6785505414f4f05a8d64f017769b"
+    },
+    {
       "file": "favicon.ico",
       "sha256": "98623980de9c64da2a38b8315e5c715a70ea428854db953d743a8690e281ae46"
     },
     {
       "file": "index.html",
-      "sha256": "3d24aeeb20d7816b4d301087558a9dc51c7c87de863cf32f489ac05bc811a5e4"
+      "sha256": "58bb02d5b0dad455a50538ef4987ef02e55e61a60ccc91570116795e9c7c4833"
+    },
+    {
+      "file": "manifest.webmanifest",
+      "sha256": "ec81ac1446835f7c1d8ec5a27e55ffe04f864d3e8917997d040122a4a784ad59"
     },
     {
       "file": "portal/index.html",
-      "sha256": "8448f83a39fdc5cddd4ea5d1569aa946de0d1cf799913b62bf92e7f876126f61"
+      "sha256": "13c8784d8cadc025651020d185465c7e6fa21a93bc20d5bacc03688ec182ac78"
     },
     {
       "file": "portal/passkeys.js",
@@ -203,11 +219,15 @@
     },
     {
       "file": "portal/portal.css",
-      "sha256": "c982e14e5dddb490469b8e2936722456bcf988f1487d8eeeab75e30d2498f850"
+      "sha256": "ee4511fca7b0f2f1206d9bf3061446f54ab65395d2421513e0df812285c64496"
     },
     {
       "file": "portal/portal.js",
-      "sha256": "41ff374b1c239fdd6057806be5dfdda5c527ac29d226d8d6c240f0a461556d5a"
+      "sha256": "64c5fe1a897d24c389a23a8a07361081249717c196bc7c76a7f11b5211dbbc85"
+    },
+    {
+      "file": "push-sw.js",
+      "sha256": "06da1e022db13706297af0285521b4d93c06eacde757ee5ef9d12c52cefc9fb8"
     },
     {
       "file": "robots.txt",
