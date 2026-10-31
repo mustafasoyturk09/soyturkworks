@@ -106,21 +106,28 @@ test('Every company uses a flat folder and full legal names; duplicate PDF/Excel
   await helpers.writeUnique(target,'Pusula.xlsx',bytes);assert.equal((await helpers.writeUnique(target,'Pusula.xlsx',bytes)).name,'Pusula (2).xlsx');
   assert([...entries.keys()].every(n=>!n.includes('/')));
 });
-test('Formatted Excel retains source reply cells for new, processed and rejected invoices',async()=>{
+test('Every company export labels only fresh non-rejected invoices YENİ GELEN and keeps other replies',async()=>{
   const source=(await readFile(new URL('../src/app.html',import.meta.url),'utf8')).replace(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>[\s\S]*?<\/script>/,''),start=source.indexOf('async function buildAndDownloadExcel(options={}){');
   const formatter=source.slice(start,source.indexOf('// The connector uses the same comparison',start));
   const cells=new Map(),cell=(row,col)=>{const key=row+':'+col;if(!cells.has(key))cells.set(key,{});return cells.get(key);};
   const sheet={mergeCells(){},getCell:()=>({}),getRow:row=>({getCell:col=>cell(row,col)}),getColumn:()=>({})};
   class Workbook{addWorksheet(){return sheet;}xlsx={writeBuffer:async()=>new Uint8Array([1])};}
-  const rows=[{islendi:false,isRet:false,yanit:'Yanıt bekliyor'},{islendi:false,isRet:false,yanit:'Yanıt gerekmiyor'},{islendi:true,isRet:false,yanit:'Kanunen kabul'},{islendi:false,isRet:true,yanit:'Reddedildi'}].map((r,i)=>({...r,fatno:'TEST'+i,tarih:'30.10.2026',unvan:'TEST A.Ş.',tip:'SATIS',tutar:1,birim:'TRY'}));
+  const rows=[{islendi:false,isRet:false,yanit:'Yanıt bekliyor'},{islendi:false,isRet:false,yanit:'Yanıt gerekmiyor'},{islendi:false,isRet:false,yanit:'Kanunen kabul'},{islendi:true,isRet:false,yanit:'Kanunen kabul'},{islendi:false,isRet:true,yanit:'Reddedildi'}].map((r,i)=>({...r,fatno:'TEST'+i,tarih:'30.10.2026',unvan:'TEST A.Ş.',tip:'SATIS',tutar:1,birim:'TRY'}));
   const context=vm.createContext({ExcelJS:{Workbook},parsedRows:rows,window:{SWWorkspace:{companyName:'Pusula'}},document:{getElementById:()=>({value:'PUSULA GELEN E-FATURALAR'})},borderAll:()=>({}),HEADER_FILL:'000000',RET_FILL:'000000',YELLOW_FILL:'000000',USD_FILL:'000000',EUR_FILL:'000000',IADE_FILL:'000000'});
   vm.runInContext(formatter,context);await vm.runInContext('buildAndDownloadExcel({returnFile:true})',context);
-  rows.forEach((row,i)=>assert.equal(cell(i+3,7).value,row.yanit));
+  const checkReplies=()=>rows.forEach((row,i)=>{
+    const fresh=!row.isRet&&!row.islendi,reply=cell(i+3,7);
+    assert.equal(reply.value,fresh?'YENİ GELEN':row.yanit);
+    assert.equal(reply.fill?.fgColor.argb==='FFFFC000',fresh);
+    if(fresh)assert.equal(reply.font.bold,true);
+  });
+  checkReplies();
   class DownloadDate extends Date{constructor(){super('2026-10-30T23:30:00Z');}}
   context.Date=DownloadDate;
   for(const companyName of ['Pusula','Comed','Kendine İyi Bak','Dijital Garaj','KİB Dijital Tek']){
     context.window.SWWorkspace.companyName=companyName;
     assert.equal((await vm.runInContext('buildAndDownloadExcel({returnFile:true})',context)).name,companyName+' - Gelen Faturalar (31.10.2026).xlsx');
+    checkReplies();
   }
 });
 for(const [company,companyName] of [['PUSULA','Pusula'],['COMED','Comed'],['KIB','Kendine İyi Bak'],['DIJITAL_GARAJ','Dijital Garaj'],['KIB_DIJITAL','KİB Dijital Tek']])

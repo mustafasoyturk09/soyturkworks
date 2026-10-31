@@ -70,12 +70,15 @@ düzeltilene ya da Temizle ile kaldırılana kadar İzibiz indirmesi başlatılm
 okunamayan dosya yanlışlıkla boş referans sayılmaz. OneDrive dosyalarının yerel
 kopyası indirilmemişse önce “Her zaman bu cihazda tut” seçilmelidir.
 
-Yanıt sütunu, yeni/işlenmiş bilgisiyle değiştirilmez. Portalın yanıt durumu korunur:
+Uygulama ekranında portalın yanıt durumu korunur:
 `Yanıt bekliyor`, `Yanıt gerekmiyor`, `Kanunen kabul`, `Kabul edildi`, `Reddedildi`.
 API'nin `responseDescription` alanı serbest yanıt açıklamasıdır, teslim durumunun
-`Alındı` etiketi de yanıt değildir; bu ikisi Yanıt sütununa taşınmaz. Excel ile
-manuel yüklemede kaynak yanıt metni aynen korunur. Yeni/işlenmiş ayrımı renk ve
-uygulamanın ayrı işaretleriyle gösterilir.
+`Alındı` etiketi de yanıt değildir; bu ikisi Yanıt sütununa taşınmaz.
+İndirilen Excel'in G (Yanıt) sütununda yalnızca yeni, reddedilmemiş faturaların
+turuncu hücrelerine `YENİ GELEN` yazılır. Önceden işlenmiş ve reddedilmiş
+faturaların kaynak yanıt metni korunur. Bu çıktı kuralı manuel Excel indirmesi,
+İzibiz'in firma klasörüne kaydetmesi ve taşınabilir HTML için bütün firmalarda
+aynıdır.
 
 ## Bağlantı ve gizlilik
 
