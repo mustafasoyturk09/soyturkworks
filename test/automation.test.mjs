@@ -32,7 +32,7 @@ function fixture(){
   throw Error('Unexpected request');
  };
  const engine=new InvoiceArchive({storage:db,company,now:()=>now,getConnection:async()=>({saved,key,active:true}),notify:async e=>events.push(e)});
- return {engine,db,events,calls,fetcher,advanceTime:()=>{now+=2*3600000;},setRemote:r=>remote=r,failPdf:()=>failPdf=true};
+ return {engine,db,events,calls,fetcher,advanceTime:(hours=2)=>{now+=hours*3600000;},setRemote:r=>remote=r,failPdf:()=>failPdf=true};
 }
 async function drain(engine,db){
  for(let i=0;i<30;i++){if(!await db.get('job'))return;await engine.advance();}
@@ -77,6 +77,19 @@ test('Automatic archive catches previous-month invoices, saves only PDFs and pre
   const replacement=(await f.engine.all()).find(r=>r.uuid.endsWith('000000000003'));assert(replacement.file);assert(!replacement.deletedAt);assert.notEqual(replacement.folder,folder.id);
   assert.equal((await f.engine.all()).find(r=>r.uuid===row.uuid).deletedAt,deleted.deletedAt);
   const measured=[...f.db.data].filter(([k])=>k.startsWith('blob:')).reduce((n,[,v])=>n+v.length,0);assert.equal(await f.db.get('totalBytes'),measured);
+ }finally{globalThis.fetch=original;}
+});
+test('Monthly Excel retains unresolved invoices from earlier collection dates and all status changes invalidate it',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  await f.engine.start();await drain(f.engine,f.db);
+  f.setRemote([remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17'),remoteInvoice(3,'2026-10-25')]);f.advanceTime(24);await f.engine.start();await drain(f.engine,f.db);
+  const groups=(await(await f.engine.handle('folders','GET')).json()).folders,folder=groups.find(g=>g.month==='2026-10'&&g.date==='2026-11-18');assert(folder);
+  await f.engine.handle('excel','POST',{folder:folder.id});
+  const response=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'}));const xml=strFromU8(unzipSync(new Uint8Array(await response.arrayBuffer()))['xl/worksheets/sheet1.xml']);
+  assert(xml.includes(remoteInvoice(1,'2026-10-20').documentNo));assert(xml.includes(remoteInvoice(3,'2026-10-25').documentNo));assert(!xml.includes(remoteInvoice(2,'2026-11-17').documentNo));
+  const earlier=(await f.engine.all()).find(r=>r.uuid.endsWith('000000000001'));await f.engine.handle('mark','POST',{items:[{uuid:earlier.uuid,revision:earlier.revision}],done:true});
+  assert.equal((await(await f.engine.handle('folders','GET')).json()).folders.find(g=>g.id===folder.id).excel.current,false);
  }finally{globalThis.fetch=original;}
 });
 test('Failed PDF fetches never become successful archives or new invoice success notifications',async()=>{

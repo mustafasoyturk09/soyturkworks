@@ -44,8 +44,10 @@ göstergesi vardır. Hiçbir fatura Git'e, dist'e veya herkese açık statik dos
 yazılmaz. Arşiv dosyaları oturumla korunan API'den sunulur. ZIP dışa aktarma
 parça parça akıtılır; klasörün tamamı sunucu belleğine yüklenmez.
 
-Excel otomatik üretilmez. Kullanıcı klasörde Excel'i hazırla dediğinde o andaki
-işaretlerle Excel oluşturulur ve aynı özel klasöre eklenir. Sonraki işaretlemeler
+Excel otomatik üretilmez. Kullanıcı klasörde Ayın Excel'ini hazırla dediğinde
+aynı firmada o aya ait tüm silinmemiş faturalar o andaki işaretlerle Excel'e
+alınır; önceki günlerde alınmış fakat işlenmemiş faturalar da dahil edilir.
+Excel aynı özel klasöre eklenir. Sonraki işaretlemeler
 önceden üretilmiş Excel'i eski sürüm olarak gösterir; yeniden hazırlanabilir.
 Excel adı baş harfli, iç başlığı Türkçe büyük harflidir. Son sütun işlem
 durumudur; İzibiz yanıtı ayrı korunur.

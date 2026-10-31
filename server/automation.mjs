@@ -66,6 +66,9 @@ export class InvoiceArchive{
             const current=await tx.get(key),baseline=await tx.get('baseline:'+sha(incoming.fatno.replace(/\s/g,'').toLocaleUpperCase('tr')));
             if(current&&(current.fatno!==incoming.fatno||current.tarih!==incoming.tarih))fail('Aynı ETTN için fatura kimliği değişti.',409);
             const {ticket,...data}=incoming;
+            if(!current||['fatno','tarih','unvan','tip','tutar','birim','yanit','isRet'].some(k=>k!=='unvan'&&current[k]!==data[k])){
+              const versionKey='month-revision:'+incoming.tarih.slice(0,7);await tx.put(versionKey,(await tx.get(versionKey)||0)+1);
+            }
             await tx.put(key,{...data,unvan:current?.file?current.unvan:data.unvan,uuid,firstSeen:current?.firstSeen||this.now(),done:current?.done??!!baseline,revision:current?.revision||0,file:current?.file||null,folder:current?.folder||null,deletedAt:current?.deletedAt||null,notified:current?.notified||false,pdfError:current?.pdfError||null,pdfAttempts:current?.pdfAttempts||0,...current?.doneAt?{doneAt:current.doneAt}:{}});
           });
           job.received++;
@@ -92,7 +95,7 @@ export class InvoiceArchive{
             group=group||{id:folder,month,date,created:this.now(),revision:0};
             await tx.put('active-folder:'+baseFolder,folder);
             await tx.put('invoice:'+row.uuid,{...current,unvan:title,file,folder,pdfError:null,pdfAttempts:0});
-            await tx.put('folder:'+folder,{...group,revision:group.revision+1});await tx.put('totalBytes',used+bytes.byteLength);
+            await tx.put('folder:'+folder,{...group,revision:group.revision+1});const versionKey='month-revision:'+month;await tx.put(versionKey,(await tx.get(versionKey)||0)+1);await tx.put('totalBytes',used+bytes.byteLength);
           });
         }catch(e){
           await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);if(current&&!current.deletedAt)await tx.put('invoice:'+row.uuid,{...current,pdfAttempts:(current.pdfAttempts||0)+1,pdfError:e.message});});
@@ -150,7 +153,7 @@ export class InvoiceArchive{
           if(item.revision!==row.revision)fail('Bu fatura başka bir ekranda değişti. Listeyi yenileyin.',409);
           changes.push({key,row});
         }
-        const out=[];for(const {key,row} of changes){const updated={...row,done:body.done,doneAt:body.done?this.now():null,revision:row.revision+1};await tx.put(key,updated);if(row.folder){const group=await tx.get('folder:'+row.folder);if(group)await tx.put('folder:'+row.folder,{...group,revision:group.revision+1});}out.push({uuid:row.uuid,revision:updated.revision});}
+        const out=[];for(const {key,row} of changes){const updated={...row,done:body.done,doneAt:body.done?this.now():null,revision:row.revision+1};await tx.put(key,updated);const versionKey='month-revision:'+row.tarih.slice(0,7);await tx.put(versionKey,(await tx.get(versionKey)||0)+1);if(row.folder){const group=await tx.get('folder:'+row.folder);if(group)await tx.put('folder:'+row.folder,{...group,revision:group.revision+1});}out.push({uuid:row.uuid,revision:updated.revision});}
         const audit=await tx.get('audit')||[];audit.unshift({at:this.now(),done:body.done,invoices:changes.map(x=>x.row.fatno)});await tx.put('audit',audit.slice(0,100));return out;
       });return json({ok:true,items:result});
     }
@@ -163,22 +166,28 @@ export class InvoiceArchive{
       return json({ok:true,matched:matches.length});
     }
     if(action==='folders'&&method==='GET'){
-      const rows=await this.all(),groups=[...(await this.storage.list({prefix:'folder:'})).values()].filter(f=>!f.deletedAt).map(f=>({...f,name:folderName(this.company.name,f.month,f.date),pdfs:rows.filter(r=>r.folder===f.id&&!r.deletedAt&&r.file).length,pending:rows.filter(r=>r.folder===f.id&&!r.deletedAt&&!r.done&&!r.isRet).length,excel:f.excel?{name:f.excel.name,at:f.excelAt,current:f.excelRevision===f.revision}:null}));
+      const rows=await this.all(),storedGroups=[...(await this.storage.list({prefix:'folder:'})).values()].filter(f=>!f.deletedAt);
+      const versions=Object.fromEntries(await Promise.all([...new Set(storedGroups.map(f=>f.month))].map(async month=>[month,await this.storage.get('month-revision:'+month)||0])));
+      const groups=storedGroups.map(f=>({...f,name:folderName(this.company.name,f.month,f.date),pdfs:rows.filter(r=>r.folder===f.id&&!r.deletedAt&&r.file).length,pending:rows.filter(r=>r.folder===f.id&&!r.deletedAt&&!r.done&&!r.isRet).length,excel:f.excel?{name:f.excel.name,at:f.excelAt,current:f.excelMonthRevision===versions[f.month]}:null}));
       return json({folders:groups.sort((a,b)=>b.date.localeCompare(a.date)||b.month.localeCompare(a.month))});
     }
     if(action==='audit'&&method==='GET')return json({events:await this.storage.get('audit')||[]});
     if(action==='delete-folder'&&method==='POST'){
-      const group=await this.storage.get('folder:'+body.folder);if(!group||group.deletedAt)fail('Klasör bulunamadı.',404);
-      await this.storage.put('folder:'+group.id,{...group,deletedAt:this.now(),excel:null});
+      const group=await this.storage.transaction(async tx=>{
+        const group=await tx.get('folder:'+body.folder);if(!group||group.deletedAt)fail('Klasör bulunamadı.',404);
+        await tx.put('folder:'+group.id,{...group,deletedAt:this.now(),excel:null});
+        const versionKey='month-revision:'+group.month;await tx.put(versionKey,(await tx.get(versionKey)||0)+1);return group;
+      });
       if(group.excel){await this.removeFile(group.excel);await this.storage.transaction(async tx=>{await tx.put('totalBytes',Math.max(0,(await tx.get('totalBytes')||0)-group.excel.size));});}
       for(const row of (await this.all()).filter(r=>r.folder===group.id&&!r.deletedAt))await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);await tx.put('invoice:'+row.uuid,{...current,deletedAt:this.now()});});
       await this.storage.setAlarm(this.now()+1000);return json({ok:true});
     }
     if(action==='excel'&&method==='POST'){
       const group=await this.storage.get('folder:'+body.folder);if(!group||group.deletedAt)fail('Klasör bulunamadı.',404);
-      const rows=(await this.all()).filter(r=>r.folder===group.id&&!r.deletedAt).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.fatno.localeCompare(b.fatno));
+      const monthRevision=await this.storage.get('month-revision:'+group.month)||0;
+      const rows=(await this.all()).filter(r=>r.tarih.startsWith(group.month)&&!r.deletedAt).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.fatno.localeCompare(b.fatno));
       const bytes=makeExcel(this.company.name,group.month,localDate(this.now()),rows),name=excelName(this.company.name,group.month,localDate(this.now()));
-      await this.storage.transaction(async tx=>{const current=await tx.get('folder:'+group.id);if(current.deletedAt||current.revision!==group.revision)fail('Faturalar değişti. Excel’i yeniden hazırlayın.',409);const used=await tx.get('totalBytes')||0;if(used+bytes.length>MAX_BYTES)fail('Arşiv dolu.',507);const file=await this.saveFile('excel-'+randomUUID(),name,bytes,tx);await tx.put('folder:'+group.id,{...current,excel:file,excelAt:this.now(),excelRevision:current.revision});await tx.put('totalBytes',used+bytes.length);});
+      await this.storage.transaction(async tx=>{const current=await tx.get('folder:'+group.id);if(current.deletedAt||current.revision!==group.revision||current.excel?.id!==group.excel?.id||(await tx.get('month-revision:'+group.month)||0)!==monthRevision)fail('Faturalar değişti. Excel’i yeniden hazırlayın.',409);const used=await tx.get('totalBytes')||0;if(used+bytes.length>MAX_BYTES)fail('Arşiv dolu.',507);const file=await this.saveFile('excel-'+randomUUID(),name,bytes,tx);await tx.put('folder:'+group.id,{...current,excel:file,excelAt:this.now(),excelRevision:current.revision,excelMonthRevision:monthRevision});await tx.put('totalBytes',used+bytes.length);});
       if(group.excel){await this.removeFile(group.excel);await this.storage.transaction(async tx=>{await tx.put('totalBytes',Math.max(0,(await tx.get('totalBytes')||0)-group.excel.size));});}
       return json({ok:true,name});
     }
