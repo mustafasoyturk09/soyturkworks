@@ -14,7 +14,7 @@ let registrationPromise='serviceWorker' in navigator?navigator.serviceWorker.reg
 const date=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(ms)):'—';
 const datetime=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(ms)):'Henüz kontrol edilmedi';
 const time=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',hour:'2-digit',minute:'2-digit'}).format(new Date(ms)):'—';
-const money=(n,c)=>new Intl.NumberFormat('tr-TR',{style:'currency',currency:/^[A-Z]{3}$/.test(c)?c:'TRY',maximumFractionDigits:2}).format(n);
+const money=n=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
 const monthName=m=>m?new Intl.DateTimeFormat('tr-TR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(m+'-01T12:00:00Z')).replace(/^./,c=>c.toLocaleUpperCase('tr')):'Bütün aylar';
 const active=()=>state.companies.filter(c=>c.company.id===company);
 const info=id=>state.companies.find(c=>c.company.id===id);
@@ -76,12 +76,17 @@ async function loadInvoices(append=false){
   rows=append?[...rows,...loaded]:loaded;rows.sort((a,b)=>b.firstSeen-a.firstSeen||b.tarih.localeCompare(a.tarih));
   more=result.some(d=>d.total>offset+d.rows.length);
   const months=[...new Set(result.flatMap(d=>d.months))].sort().reverse();$('monthFilter').innerHTML='<option value="">Bütün aylar</option>'+months.map(m=>'<option value="'+m+'">'+escape(monthName(m))+'</option>').join('');$('monthFilter').value=month;
-  $('invoiceList').innerHTML=rows.length?rows.map(invoiceHTML).join(''):empty('Kutun sakin.','Faturalar kontrol edildiğinde burada görünecek. İlk ay yalnızca o ay taranır; ay değişince önceki ay ve yeni ay birlikte kontrol edilir.');
+  $('invoiceList').innerHTML=rows.length?invoiceHeader()+rows.map(invoiceHTML).join(''):empty('Kutun sakin.','Faturalar kontrol edildiğinde burada görünecek. İlk ay yalnızca o ay taranır; ay değişince önceki ay ve yeni ay birlikte kontrol edilir.');
   $('loadMore').hidden=!more;$('scanButton').disabled=!active().length||active().some(c=>c.running);$('baselineButton').disabled=false;renderSelection();
 }
+const invoiceColumns=[['number','Fatura no'],['date','Tarih'],['supplier','Firma adı'],['type','Fatura tipi'],['amount-cell','Tutar'],['currency','Birim']];
+function invoiceHeader(){return '<div class="invoice-table-head" aria-hidden="true"><span class="invoice-select-label">Seç</span><div class="invoice-fields">'+invoiceColumns.map(([,title])=>'<span class="invoice-column-heading">'+title+'</span>').join('')+'</div><span class="invoice-status-heading">Durum</span></div>';}
 function invoiceHTML(r){
   const key=r.company.id+':'+r.uuid,label=r.done?'İŞLENDİ':r.isRet?'REDDEDİLDİ':'YENİ GELEN';
-  return '<article class="invoice-row '+(r.done?'done':'')+'" style="--company:'+escape(r.company.color)+'"><input type="checkbox" data-select="'+key+'" aria-label="'+escape(r.fatno)+' faturasını seç" '+(r.isRet?'disabled':'')+'><div><div class="invoice-company">'+escape(r.company.name)+'</div><h3 class="invoice-title">'+escape(r.unvan)+'</h3><div class="invoice-meta"><span class="mono">'+escape(r.fatno)+'</span><span>'+escape(r.tarih.split('-').reverse().join('.'))+'</span><span>'+escape(r.yanit)+'</span></div><div class="invoice-actions">'+(r.pdfReady?'<a href="'+apiURL(r.company.id,'pdf')+'?id='+r.uuid+'" target="_blank" rel="noopener">PDF’i aç ↗</a>':'<span class="health error">'+escape(r.pdfError?'PDF hazırlanamadı':'PDF hazırlanıyor')+'</span>')+(!r.isRet?'<button data-mark="'+key+'" data-done="'+(!r.done)+'">'+(r.done?'İşareti geri al':'İşlendi olarak işaretle')+'</button>':'')+'</div></div><div class="invoice-right"><span class="invoice-amount">'+escape(money(r.tutar,r.birim))+'</span><span class="status-chip '+(r.done?'done':r.isRet?'ret':'')+'">'+label+'</span></div></article>';
+  const type=({SATIS:'Satış',IADE:'İade',TEVKIFAT:'Tevkifat',ISTISNA:'İstisna',OZELMATRAH:'Özel matrah',IHRACKAYITLI:'İhraç kayıtlı',SGK:'SGK'})[r.tip]||r.tip||'—';
+  const values=[r.fatno,r.tarih.split('-').reverse().join('.'),r.unvan,type,money(r.tutar),r.birim||'TRY'];
+  const fields=invoiceColumns.map(([name,title],i)=>'<div class="invoice-field invoice-'+name+'"><span class="invoice-field-label">'+title+'</span>'+(name==='supplier'?'<h3 class="invoice-title invoice-value">':'<span class="invoice-value'+(name==='amount-cell'?' invoice-amount':'')+'">')+escape(values[i])+(name==='supplier'?'</h3>':'</span>')+'</div>').join('');
+  return '<article class="invoice-row '+(r.done?'done':'')+'" style="--company:'+escape(r.company.color)+'"><input type="checkbox" data-select="'+key+'" aria-label="'+escape(r.fatno)+' faturasını seç" '+(r.isRet?'disabled':'')+'><div class="invoice-fields">'+fields+'</div><div class="invoice-right"><span class="status-chip '+(r.done?'done':r.isRet?'ret':'')+'">'+label+'</span></div><div class="invoice-actions">'+(r.pdfReady?'<a href="'+apiURL(r.company.id,'pdf')+'?id='+r.uuid+'" target="_blank" rel="noopener">PDF’i aç ↗</a>':'<span class="health error">'+escape(r.pdfError?'PDF hazırlanamadı':'PDF hazırlanıyor')+'</span>')+(!r.isRet?'<button data-mark="'+key+'" data-done="'+(!r.done)+'">'+(r.done?'İşareti geri al':'İşlendi olarak işaretle')+'</button>':'')+'<span class="invoice-reply">İzibiz yanıtı: '+escape(r.yanit||'—')+'</span></div></article>';
 }
 function renderSelection(){$('selectionBar').hidden=!selected.size;$('selectedCount').textContent=selected.size+' fatura seçili';}
 async function mark(items,done){
