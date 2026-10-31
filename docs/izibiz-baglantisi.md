@@ -1,9 +1,10 @@
 # İzibiz gelen fatura bağlantısı
 
 Gelen E-Fatura Takip modülündeki İzibiz düğmesi seçili firmaya bağlıdır. Her
-firma ilk kullanımda bir kez bağlanır ve kayıt klasörü seçilir. Daha sonra eski
+firma ilk kullanımda bir kez bağlanır. Chrome'da İndirilenler izni bütün firmalar
+için ortak olarak bir kez seçilir; firmaya özel klasör seçilmez. Daha sonra eski
 Excel yüklenip İzibiz'e basıldığında ayar ekranı açılmadan indirme başlar. Küçük
-ayar düğmesi bağlantıyı, klasörü veya tarih aralığını değiştirmek için kullanılır.
+ayar düğmesi bağlantıyı, İndirilenler iznini veya tarih aralığını değiştirmek için kullanılır.
 İlk kullanımda eski Excel zorunlu değildir; eski dosya yoksa reddedilmemiş ve
 işlenmiş olarak işaretlenmemiş faturalar yeni sayılır. Varsayılan sorgu dönemin
 ilk gününden bugüne kadardır; son faturanın tarihinde kesilmez. Ayarlarda elle
@@ -11,7 +12,8 @@ seçilen tarih aralığı indirme düğmesine basıldığında korunur.
 
 ## İndirme düzeni
 
-- Yalnızca seçilen klasöre doğrudan yazılır; ZIP ve tek tek tarayıcı indirmeleri yok.
+- Chrome masaüstünde yalnızca İndirilenler kök dizini kabul edilir. Adsız klasör,
+  başka firma klasörü veya firma alt klasörü kayıt yeri olarak kabul edilmez.
 - Örnek klasör: `İndirilenler/Pusula - Gelen E-Faturalar/`.
 - Yeni PDF'ler ve bir karşılaştırılmış Excel doğrudan bu klasördedir. PDF/XML,
   tarih/saat veya başka ara klasörler oluşturulmaz.
@@ -26,11 +28,18 @@ seçilen tarih aralığı indirme düğmesine basıldığında korunur.
   aynı adlı farklı dosyalara `(2)`, `(3)` eklenir.
 - XML yalnızca fatura numarası, ETTN, alıcı VKN/TCKN ve tam gönderen unvanını
   doğrulamak için bellekte işlenir; ayrıca XML dosyası indirilmez.
+- Safari'de, doğrudan klasöre yazma API'si bulunmadığı için firma adına tek ZIP
+  indirilir: `Pusula - Gelen E-Faturalar.zip`. ZIP içinde yalnızca PDF ve Excel
+  dosyaları vardır; ilave klasör katmanı yoktur. ZIP açıldığında işletim sisteminin
+  arşiv açma davranışı geçerlidir; web sitesi mevcut açılmış klasörleri birleştiremez.
 
-Klasör seçimi ve yazma izni firma bazlı tarayıcı veritabanında saklanır. Tarayıcı
-izni yenilemek isterse bir kez sorabilir. Doğrudan klasör kaydı desteklenmeyen
-Safari/telefon tarayıcılarında bilgisayardaki Chrome veya Edge kullanılması
-istenir; ZIP'e veya çoklu indirme istemlerine geçilmez.
+İndirilenler kök dizininin izni `sw-izibiz-download-root-v2` tarayıcı veritabanında
+bütün firmalar için ortak saklanır. Eski firmaya özel ayardan yalnızca doğrudan
+İndirilenler'i gösteren geçerli kayıt taşınır; adsız/yanlış klasör kayıtları
+kullanılmaz. Tarayıcı izni yenilemek isterse yeniden izin sorabilir. Farklı
+bilgisayar ve tarayıcıların izinleri ayrıdır. Windows Chrome'da da aynı tek firma
+klasörü düzeni kullanılır. Doğrudan klasör kaydı olmayan tarayıcılar Safari ile
+aynı tek ZIP yolunu kullanır; tek tek PDF indirme istemleri açılmaz.
 
 ## Excel karşılaştırması ve yanıtlar
 
