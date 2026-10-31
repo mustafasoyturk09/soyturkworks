@@ -7,6 +7,17 @@ const portable=JSON.parse(html.match(/<script\b[^>]*id="fc153PortableTemplate"[^
 const live=html.replace(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>[\s\S]*?<\/script>/,'');
 
 for(const [name,source] of [['web',live],['portable',portable]]){
+ test(name+': saved mixed-case company mappings and custom titles use Turkish capitals',()=>{
+  const context={ENTEGRATOR_MAP:{'pusulafinansal.com':'KİB Dijital Sağlık Tek. A.Ş.','custom.invalid':'Kendine İyi Bak A.Ş.'}};vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('function detectEntegrator('),source.indexOf('/* ============ MAP EDITOR UI')),context);
+  assert.equal(context.detectEntegrator('pusulafinansal.com'),'KİB DİJİTAL SAĞLIK TEK. A.Ş.');
+  assert.equal(context.detectEntegrator('custom.invalid'),'KENDİNE İYİ BAK A.Ş.');
+  const input={value:'KİB Dijital Sağlık Tek. A.Ş.',selectionStart:4,selectionEnd:4,setSelectionRange(a,b){assert.equal(a,4);assert.equal(b,4);},addEventListener(event,handler){this.handler=handler;}};
+  context.document={getElementById:()=>input};
+  const start=source.indexOf("document.getElementById('titleInput').addEventListener('input'");
+  vm.runInContext(source.slice(start,source.indexOf('async function buildAndDownloadExcel',start)),context);
+  input.handler.call(input);assert.equal(input.value,'KİB DİJİTAL SAĞLIK TEK. A.Ş.');
+ });
  test(name+': Excel dropzones support one picker per click, keyboard and dropped files',()=>{
   class Element extends EventTarget{
    attrs={};classList={add(){},remove(){}};clicks=0;

@@ -1,10 +1,10 @@
 # İzibiz gelen fatura bağlantısı
 
 Gelen E-Fatura Takip modülündeki İzibiz düğmesi seçili firmaya bağlıdır. Her
-firma ilk kullanımda bir kez bağlanır. Chrome'da İndirilenler izni bütün firmalar
-için ortak olarak bir kez seçilir; firmaya özel klasör seçilmez. Daha sonra eski
-Excel yüklenip İzibiz'e basıldığında ayar ekranı açılmadan indirme başlar. Küçük
-ayar düğmesi bağlantıyı, İndirilenler iznini veya tarih aralığını değiştirmek için kullanılır.
+firma ilk kullanımda bir kez bağlanır. Bütün tarayıcılarda firma adına tek ZIP
+indirilir; uygulama klasör seçtirmez veya klasöre yazma izni istemez. Daha sonra
+eski Excel yüklenip İzibiz'e basıldığında ayar ekranı açılmadan indirme başlar.
+Küçük ayar düğmesi bağlantıyı veya tarih aralığını değiştirmek için kullanılır.
 İlk kullanımda eski Excel zorunlu değildir; eski dosya yoksa reddedilmemiş ve
 işlenmiş olarak işaretlenmemiş faturalar yeni sayılır. Varsayılan sorgu dönemin
 ilk gününden bugüne kadardır; son faturanın tarihinde kesilmez. Ayarlarda elle
@@ -12,34 +12,29 @@ seçilen tarih aralığı indirme düğmesine basıldığında korunur.
 
 ## İndirme düzeni
 
-- Chrome masaüstünde yalnızca İndirilenler kök dizini kabul edilir. Adsız klasör,
-  başka firma klasörü veya firma alt klasörü kayıt yeri olarak kabul edilmez.
-- Örnek klasör: `İndirilenler/Pusula - Gelen E-Faturalar/`.
-- Yeni PDF'ler ve bir karşılaştırılmış Excel doğrudan bu klasördedir. PDF/XML,
-  tarih/saat veya başka ara klasörler oluşturulmaz.
+- Chrome, Edge, Safari ve telefonlarda aynı yol kullanılır: örneğin
+  `Pusula - Gelen E-Faturalar.zip` tek dosya olarak tarayıcının indirme yerine gider.
+- ZIP içinde yeni PDF'ler ve bir karşılaştırılmış Excel aynı seviyededir. PDF/XML,
+  tarih/saat veya başka ara klasör oluşturulmaz.
+- ZIP açıldığında firma klasörünün oluşması işletim sisteminin arşiv açma
+  davranışına bağlıdır. Site, izin almadan bilgisayarda klasör oluşturamaz veya
+  önceki açılmış klasörleri birleştiremez. Tarayıcıda her indirmede kayıt yeri sorma
+  ayarı açıksa tarayıcının kendi dosya kaydetme penceresi yine açılabilir.
+- Uygulama eski klasör izinlerini kullanmaz; eski kayıtlar tarayıcıda korunur.
 - PDF adı: `GÖNDEREN FİRMANIN TAM UNVANI A.Ş. - FATURA_NO.pdf`. Unvan, doğrulanmış
   fatura XML'indeki ticari unvandan alınır. A.Ş., LTD. ŞTİ. ve diğer yasal unvan
   bölümleri korunur. Dosya sisteminin izin vermediği karakterler temizlenir.
-- Excel adı: `Pusula - Gelen Faturalar (30.10.2026).xlsx`. Tarih, indirme işleminin
-  yapıldığı günün İstanbul tarihidir; fatura döneminden alınmaz. Aynı kural bütün
-  firmalar için geçerlidir.
-- Excel iç başlığında firma adı Türkçe kurallarla büyük harflidir: `PUSULA`.
-- Önceki dosyaların üzerine yazılmaz. Aynı PDF içeriği mevcutsa yeniden yazılmaz;
-  aynı adlı farklı dosyalara `(2)`, `(3)` eklenir.
+- Excel dosya adı baş harfleri büyük biçimde korunur:
+  `Pusula - Gelen Faturalar (31.10.2026).xlsx`,
+  `KİB Dijital Tek - Gelen Faturalar (31.10.2026).xlsx`. Tarih, indirme işleminin
+  yapıldığı günün İstanbul tarihidir; fatura döneminden alınmaz.
+- Sitedeki beyaz başlık alanı ve Excel içindeki başlık Türkçe kurallarla tamamen
+  büyük harflidir. Örnek: `01.10.2026 - 31.10.2026 KİB DİJİTAL SAĞLIK TEK. A.Ş.
+  GELEN E-FATURALAR (31.10.2026)`. Eski tarayıcı eşleşmeleri ve elle yazılan
+  başlıklar da bu kurala uyar; dosya adı bu dönüşümden etkilenmez.
+- ZIP içinde aynı adlı farklı dosyaların adlarına `(2)`, `(3)` eklenir.
 - XML yalnızca fatura numarası, ETTN, alıcı VKN/TCKN ve tam gönderen unvanını
   doğrulamak için bellekte işlenir; ayrıca XML dosyası indirilmez.
-- Safari'de, doğrudan klasöre yazma API'si bulunmadığı için firma adına tek ZIP
-  indirilir: `Pusula - Gelen E-Faturalar.zip`. ZIP içinde yalnızca PDF ve Excel
-  dosyaları vardır; ilave klasör katmanı yoktur. ZIP açıldığında işletim sisteminin
-  arşiv açma davranışı geçerlidir; web sitesi mevcut açılmış klasörleri birleştiremez.
-
-İndirilenler kök dizininin izni `sw-izibiz-download-root-v2` tarayıcı veritabanında
-bütün firmalar için ortak saklanır. Eski firmaya özel ayardan yalnızca doğrudan
-İndirilenler'i gösteren geçerli kayıt taşınır; adsız/yanlış klasör kayıtları
-kullanılmaz. Tarayıcı izni yenilemek isterse yeniden izin sorabilir. Farklı
-bilgisayar ve tarayıcıların izinleri ayrıdır. Windows Chrome'da da aynı tek firma
-klasörü düzeni kullanılır. Doğrudan klasör kaydı olmayan tarayıcılar Safari ile
-aynı tek ZIP yolunu kullanır; tek tek PDF indirme istemleri açılmaz.
 
 ## Excel karşılaştırması ve yanıtlar
 
@@ -67,10 +62,10 @@ eklenir. Bu kayıt sunucuya veya farklı tarayıcılara otomatik eşitlenmez.
 Güncel İzibiz listesi tüm sayfalarıyla alınır ve eski Excel'deki fatura numaraları
 ile karşılaştırılır. Önceden yüklenen ham listedeki elle işlenmiş işaretleri
 korunur. Yalnızca yeni, reddedilmemiş faturaların PDF'leri alınır. Tüm PDF'ler
-başarıyla kaydedildikten sonra karşılaştırılmış Excel aynı klasöre yazılır.
-İndirme yarıda kalırsa arayüz kaydedilen adetle birlikte tamamlanmadığını belirtir.
+başarıyla alındıktan sonra karşılaştırılmış Excel ile tek ZIP hazırlanır.
+İşlem yarıda kalırsa ZIP indirilmez; arayüz işlemin tamamlanmadığını belirtir.
 Yeni fatura bulunmadığında bu sonuç açıkça yazılır; PDF'ler tekrarlanmaz ve güncel
-Excel yine kaydedilir. Seçilen dönemde hiç fatura bulunmaması ayrıca belirtilir.
+Excel yine ZIP içinde indirilir. Seçilen dönemde hiç fatura bulunmaması ayrıca belirtilir.
 
 Eski Excel'in bütün çalışma sayfalarında fatura başlığı aranır; üstteki başlık ve
 boş satırlar ile `Fatura Numarası` gibi etiketler kabul edilir. Okuma hatası,
@@ -86,7 +81,7 @@ API'nin `responseDescription` alanı serbest yanıt açıklamasıdır, teslim du
 İndirilen Excel'in G (Yanıt) sütununda yalnızca yeni, reddedilmemiş faturaların
 turuncu hücrelerine `YENİ GELEN` yazılır. Önceden işlenmiş ve reddedilmiş
 faturaların kaynak yanıt metni korunur. Bu çıktı kuralı manuel Excel indirmesi,
-İzibiz'in firma klasörüne kaydetmesi ve taşınabilir HTML için bütün firmalarda
+İzibiz'in firma ZIP'i ve taşınabilir HTML için bütün firmalarda
 aynıdır.
 
 ## Bağlantı ve gizlilik

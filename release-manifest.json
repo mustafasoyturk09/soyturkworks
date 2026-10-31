@@ -27,7 +27,7 @@
     },
     {
       "file": "app/izibiz.js",
-      "sha256": "3cf011714db43387fe2adfddd67a16c22d7ed923d20d325a973ddbba461e9b4e"
+      "sha256": "58932ff98ade2256e3672354be2c0da6fd997ed97e2dc425b469031188be688a"
     },
     {
       "file": "app/mobile.css",
@@ -191,7 +191,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "4a777e7d6e3fd240a6a7c8d2c952403cfa2068ad1945b8a8148f85a50f73ded7"
+      "sha256": "137b19dd7ac26aec140168a2a0981dea46704acc54c7b3186d779300633acb03"
     },
     {
       "file": "portal/index.html",
