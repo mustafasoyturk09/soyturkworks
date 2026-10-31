@@ -79,8 +79,8 @@ async function loadInvoices(append=false){
   $('invoiceList').innerHTML=rows.length?invoiceHeader()+rows.map(invoiceHTML).join(''):empty('Kutun sakin.','Faturalar kontrol edildiğinde burada görünecek. İlk ay yalnızca o ay taranır; ay değişince önceki ay ve yeni ay birlikte kontrol edilir.');
   $('loadMore').hidden=!more;$('scanButton').disabled=!active().length||active().some(c=>c.running);$('baselineButton').disabled=false;renderSelection();
 }
-const invoiceColumns=[['number','Fatura no'],['date','Tarih'],['supplier','Firma adı'],['type','Fatura tipi'],['amount-cell','Tutar'],['currency','Birim']];
-function invoiceHeader(){return '<div class="invoice-table-head" aria-hidden="true"><span class="invoice-select-label">Seç</span><div class="invoice-fields">'+invoiceColumns.map(([,title])=>'<span class="invoice-column-heading">'+title+'</span>').join('')+'</div><span class="invoice-status-heading">Durum</span></div>';}
+const invoiceColumns=[['number','FATURA NUMARASI'],['date','TARİH'],['supplier','FİRMA ADI'],['type','FATURA TİPİ'],['amount-cell','TUTAR'],['currency','BİRİM']];
+function invoiceHeader(){return '<div class="invoice-table-head" aria-hidden="true"><span class="invoice-select-label">SEÇ</span><div class="invoice-fields">'+invoiceColumns.map(([,title])=>'<span class="invoice-column-heading">'+title+'</span>').join('')+'</div><span class="invoice-status-heading">DURUM</span></div>';}
 function invoiceHTML(r){
   const key=r.company.id+':'+r.uuid,label=r.done?'İŞLENDİ':r.isRet?'REDDEDİLDİ':'YENİ GELEN';
   const type=({SATIS:'Satış',IADE:'İade',TEVKIFAT:'Tevkifat',ISTISNA:'İstisna',OZELMATRAH:'Özel matrah',IHRACKAYITLI:'İhraç kayıtlı',SGK:'SGK'})[r.tip]||r.tip||'—';
