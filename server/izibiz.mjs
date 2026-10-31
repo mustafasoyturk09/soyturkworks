@@ -26,6 +26,12 @@ export function invoiceReply(row){
   const state=String(row.invoiceStatus||row.documentStatus?.value||'').replace(/[^a-z]/gi,'').toUpperCase();
   return ({WAITINGFORRESPONSE:'Yanıt bekliyor',RESPONSETIMEEXPIRED:'Kanunen kabul',RECEIVED:'Yanıt gerekmiyor',ACCEPTED:'Kabul edildi',REJECTED:'Reddedildi',RESPONSEUNDELIVERED:'Yanıt iletilemedi',CANCEL:'İptal',CANCELLED:'İptal'})[state]||text(row.documentStatus?.label);
 }
+export function invoiceTypeLabel(profile,type){
+  const profiles={TEMELFATURA:'Temel',TEMEL:'Temel',TICARIFATURA:'Ticari',TICARI:'Ticari',EARSIVFATURA:'E-Arşiv',IHRACAT:'İhracat',YOLCUBERABERFATURA:'Yolcu beraber',KAMU:'Kamu',ILAC_TIBBICIHAZ:'İlaç/Tıbbi cihaz',HKS:'HKS'};
+  const types={SATIS:'Satış',IADE:'İade',TEVKIFAT:'Tevkifat',TEVKIFATIADE:'Tevkifat iade',ISTISNA:'İstisna',OZELMATRAH:'Özel matrah',IHRACKAYITLI:'İhraç kayıtlı',SGK:'SGK'};
+  const p=text(profile),t=text(type);
+  return (profiles[p.toUpperCase()]||p||'—')+' - '+(types[t.toUpperCase()]||t||'—');
+}
 export function invoiceRow(row,identifier){
   if(!row||!Number.isSafeInteger(Number(row.id))||Number(row.id)<=0||!text(row.documentNo)||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(row.uuid||''))error('İzibiz eksik fatura bilgisi döndürdü. İşlem durduruldu.',502);
   if(row.direction!=='IN'||String(row.accountingCustomer?.identifier||row.customerSSN||'')!==identifier)error('Faturanın alıcısı seçili firmayla eşleşmiyor. İşlem durduruldu.',409);
@@ -37,7 +43,8 @@ export function invoiceRow(row,identifier){
     amount=/^[+-]?\d+(?:\.\d+)?$/.test(amount)?Number(amount):NaN;
   }
   if(typeof amount!=='number'||!Number.isFinite(amount)||!text(row.currency))error('İzibiz fatura tutarı veya para birimi doğrulanamadı.',502);
-  return {id:Number(row.id),uuid:row.uuid,fatno:row.documentNo,tarih:date,unvan:row.accountingSupplier?.name||[row.accountingSupplier?.person?.firstName,row.accountingSupplier?.person?.familyName].filter(Boolean).join(' '),tip:row.invoiceType||row.documentType,tutar:amount,birim:row.currency,yanit:invoiceReply(row),isRet:[row.invoiceStatus,row.documentStatus?.value].some(v=>/^(REJECTED|REJECT|RED|RET)$/i.test(v||''))};
+  const tip=text(row.invoiceType||row.documentType),profile=text(row.profile);
+  return {id:Number(row.id),uuid:row.uuid,fatno:row.documentNo,tarih:date,unvan:row.accountingSupplier?.name||[row.accountingSupplier?.person?.firstName,row.accountingSupplier?.person?.familyName].filter(Boolean).join(' '),tip,profile,tipLabel:invoiceTypeLabel(profile,tip),tutar:amount,birim:row.currency,yanit:invoiceReply(row),isRet:[row.invoiceStatus,row.documentStatus?.value].some(v=>/^(REJECTED|REJECT|RED|RET)$/i.test(v||''))};
 }
 
 // Only the official live API is reachable. Credentials are encrypted separately

@@ -1,5 +1,5 @@
 import {randomUUID,createHash} from 'node:crypto';
-import {IzibizConnector} from './izibiz.mjs';
+import {IzibizConnector,invoiceTypeLabel} from './izibiz.mjs';
 import {folderName,excelName,safeName,makeExcel,unwrapDocument,supplierFromXML,streamZip} from './invoice-files.mjs';
 
 const CHUNK=512*1024,MAX_BYTES=512*1024*1024;
@@ -53,6 +53,44 @@ export class InvoiceArchive{
     const storage={get:k=>k==='izibiz:config:'+company?Promise.resolve(saved):base.get(k),put:(k,v)=>base.put(k,v),delete:k=>base.delete(k)};
     return {connector:new IzibizConnector({storage,key,now:this.now}),identifier:saved.identifier};
   }
+  async queueTypeRefresh(rows){
+    const missing=rows.filter(r=>r.profile===undefined);
+    if(!missing.length||await this.storage.get('job'))return;
+    const state=await this.status();if(state.typeRefreshAttempt&&this.now()-state.typeRefreshAttempt<300000)return;
+    const connection=await this.getConnection(this.company.id);if(!connection.saved||!connection.active)return;
+    let queued=false;
+    await this.storage.transaction(async tx=>{
+      if(await tx.get('job'))return;
+      const scan=await tx.get('izibiz:scan:'+this.company.id);
+      await tx.put('job',{id:scan&&this.now()-scan.started<300000?scan.run:randomUUID(),metadataOnly:true,months:[...new Set(missing.map(r=>r.tarih.slice(0,7)))].sort(),monthIndex:0,page:0,seen:[],attempts:0,started:this.now()});
+      await tx.put('status',{...await tx.get('status'),typeRefreshAttempt:this.now(),typeRefreshError:null,progress:'Fatura senaryoları güncelleniyor'});queued=true;
+    });
+    if(queued)await this.storage.setAlarm(this.now()+1000);
+  }
+  async advanceTypes(job){
+    const month=job.months[job.monthIndex],startDate=month+'-01',monthEnd=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).toISOString().slice(0,10),endDate=[monthEnd,localDate(this.now())].sort()[0];
+    const {connector}=await this.connector(),result=await(await connector.handle(this.company.id,'list','POST',{run:job.id,page:job.page,startDate,endDate,dateType:'DOCUMENT'})).json();
+    if(job.total!==undefined&&job.total!==result.total)throw Error('Fatura listesi güncelleme sırasında değişti.');
+    job.total=result.total;const seen=new Set(job.seen);
+    for(const incoming of result.rows){
+      const uuid=incoming.uuid.toLowerCase();if(seen.has(uuid))throw Error('Fatura listesinde mükerrer kayıt var.');seen.add(uuid);
+      await this.storage.transaction(async tx=>{
+        const row=await tx.get('invoice:'+uuid);if(!row||row.deletedAt||!row.tarih.startsWith(month))return;
+        if(row.fatno!==incoming.fatno||row.tarih!==incoming.tarih)fail('Fatura kimliği değişti.',409);
+        if(row.profile!==incoming.profile||row.tip!==incoming.tip){const key='month-revision:'+month;await tx.put(key,(await tx.get(key)||0)+1);}
+        await tx.put('invoice:'+uuid,{...row,profile:incoming.profile,tip:incoming.tip});
+      });
+    }
+    job.page++;job.seen=[...seen];job.attempts=0;
+    if(job.page>=result.pages){
+      if(seen.size!==result.total)throw Error('Fatura listesinin tamamı alınamadı.');
+      // A record no longer returned by the portal has an unknown scenario, never an assumed one.
+      for(const row of (await this.all()).filter(r=>!r.deletedAt&&r.tarih.startsWith(month)&&r.profile===undefined))await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);if(current&&!current.deletedAt&&current.profile===undefined)await tx.put('invoice:'+row.uuid,{...current,profile:''});});
+      job.monthIndex++;job.page=0;job.seen=[];delete job.total;
+    }
+    if(job.monthIndex>=job.months.length){await this.storage.delete('job');await this.storage.put('status',{...await this.status(),progress:null,typeRefreshError:null});}
+    else{await this.storage.put('job',job);await this.storage.setAlarm(this.now()+1000);}
+  }
   async start(manual=false){
     const settings=await this.settings();if(!manual&&!settings.enabled)return {skipped:true};
     await this.connector();
@@ -82,6 +120,7 @@ export class InvoiceArchive{
       cleanupPending=!!(deleted.length||deletedGroups.length);
       for(const group of deletedGroups){await this.removeFile(group.excel);await this.storage.transaction(async tx=>{const current=await tx.get('folder:'+group.id);if(current?.excel?.id===group.excel.id){await tx.put('folder:'+group.id,{...current,excel:null});await tx.put('totalBytes',Math.max(0,(await tx.get('totalBytes')||0)-group.excel.size));}});}
       let job=await this.storage.get('job');if(!job){if(deleted.length||deletedGroups.length)await this.storage.setAlarm(this.now()+1000);return;}
+      if(job.metadataOnly){await this.advanceTypes(job);return;}
       if(!(await this.settings()).enabled&&!job.manual){await this.storage.delete('job');return;}
       if(job.periodVersion!==1||job.documentStart<period.from||job.end<period.from){
         job={id:randomUUID(),manual:job.manual,phase:'delivery',page:0,start:period.from,end:period.to,documentStart:period.from,periodVersion:1,started:this.now(),attempts:0,received:0,seen:[]};
@@ -101,8 +140,8 @@ export class InvoiceArchive{
           await this.storage.transaction(async tx=>{
             const current=await tx.get(key),baseline=await tx.get('baseline:'+sha(incoming.fatno.replace(/\s/g,'').toLocaleUpperCase('tr')));
             if(current&&(current.fatno!==incoming.fatno||current.tarih!==incoming.tarih))fail('Aynı ETTN için fatura kimliği değişti.',409);
-            const {ticket,...data}=incoming;
-            if(!current||['fatno','tarih','unvan','tip','tutar','birim','yanit','isRet'].some(k=>k!=='unvan'&&current[k]!==data[k])){
+            const {ticket,tipLabel,...data}=incoming;
+            if(!current||['fatno','tarih','unvan','tip','profile','tutar','birim','yanit','isRet'].some(k=>k!=='unvan'&&current[k]!==data[k])){
               const versionKey='month-revision:'+incoming.tarih.slice(0,7);await tx.put(versionKey,(await tx.get(versionKey)||0)+1);
             }
             await tx.put(key,{...data,unvan:current?.file?current.unvan:data.unvan,uuid,firstSeen:current?.firstSeen||this.now(),done:current?.done??!!baseline,revision:current?.revision||0,file:current?.file||null,folder:current?.folder||null,deletedAt:current?.deletedAt||null,notified:current?.notified||false,pdfError:current?.pdfError||null,pdfAttempts:current?.pdfAttempts||0,...current?.doneAt?{doneAt:current.doneAt}:{}});
@@ -151,6 +190,11 @@ export class InvoiceArchive{
       await this.storage.delete('job');
     }catch(e){
       const job=await this.storage.get('job');
+      if(job?.metadataOnly){
+        await this.storage.put('status',{...await this.status(),typeRefreshError:'Fatura senaryoları güncellenemedi. Yenile ile tekrar denenecek.',progress:null});
+        if(job.attempts<2){await this.storage.put('job',{...job,attempts:job.attempts+1});await this.storage.setAlarm(this.now()+30000);}else await this.storage.delete('job');
+        return;
+      }
       await this.storage.put('status',{...await this.status(),error:e.status?e.message:'İzibiz kontrolü tamamlanamadı. Bağlantı veya belge doğrulamasında hata oluştu.',progress:null});
       if(job&&job.attempts<2){await this.storage.put('job',{...job,attempts:job.attempts+1});await this.storage.setAlarm(this.now()+30000);}else{
         await this.storage.delete('job');
@@ -162,7 +206,8 @@ export class InvoiceArchive{
   async summary(){
     const period=await this.period();
     const rows=(await this.all()).filter(r=>!r.deletedAt),folders=[...(await this.storage.list({prefix:'folder:'})).values()].filter(f=>!f.deletedAt);
-    return {company:this.company,period,settings:await this.settings(),status:await this.status(),running:!!await this.storage.get('job'),nextCheck:nextCheck(this.now()),counts:{total:rows.length,fresh:rows.filter(r=>!r.done&&!r.isRet).length,done:rows.filter(r=>r.done).length,pdfs:rows.filter(r=>r.file).length,errors:rows.filter(r=>r.pdfError&&!r.file).length,folders:folders.length},bytes:await this.storage.get('totalBytes')||0,capacity:MAX_BYTES};
+    await this.queueTypeRefresh(rows);const job=await this.storage.get('job');
+    return {company:this.company,period,settings:await this.settings(),status:await this.status(),running:!!job,updatingTypes:!!job?.metadataOnly,nextCheck:nextCheck(this.now()),counts:{total:rows.length,fresh:rows.filter(r=>!r.done&&!r.isRet).length,done:rows.filter(r=>r.done).length,pdfs:rows.filter(r=>r.file).length,errors:rows.filter(r=>r.pdfError&&!r.file).length,folders:folders.length},bytes:await this.storage.get('totalBytes')||0,capacity:MAX_BYTES};
   }
   async handle(action,method,body={},params=new URLSearchParams()){
     await this.period(action==='baseline'&&method==='POST');
@@ -180,7 +225,7 @@ export class InvoiceArchive{
       const q=(params.get('q')||'').toLocaleUpperCase('tr');if(q)rows=rows.filter(r=>(r.fatno+' '+r.unvan).toLocaleUpperCase('tr').includes(q));
       rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));
       const offset=Math.max(0,Math.min(100000,Number(params.get('offset'))||0)),limit=100;
-      return json({total:rows.length,rows:rows.slice(offset,offset+limit).map(r=>{const {file,...data}=r;return {...data,pdfReady:!!file};}),months:[...new Set((await this.all()).filter(r=>!r.deletedAt).map(r=>r.tarih.slice(0,7)))].sort().reverse()});
+      return json({total:rows.length,rows:rows.slice(offset,offset+limit).map(r=>{const {file,...data}=r;return {...data,tipLabel:invoiceTypeLabel(r.profile,r.tip),pdfReady:!!file};}),months:[...new Set((await this.all()).filter(r=>!r.deletedAt).map(r=>r.tarih.slice(0,7)))].sort().reverse()});
     }
     if(action==='mark'&&method==='POST'){
       if(!Array.isArray(body.items)||!body.items.length||body.items.length>100||new Set(body.items.map(x=>x?.uuid)).size!==body.items.length||typeof body.done!=='boolean')fail('En fazla 100 fatura seçin.');

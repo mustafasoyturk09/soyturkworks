@@ -43,6 +43,13 @@ işaretlemeyi ezmesini engeller. Son 100 işaretleme grubu işlem geçmişinde t
 İzibiz yanıtı ayrı alandır; muhasebe işareti kabul/red anlamına gelmez.
 Fatura listesi, filtreler ve devam sayfaları fatura tarihine göre eskiden yeniye
 sıralanır. Aynı tarihli faturalar geliş sırasını korur; sonradan gelen en alta eklenir.
+FATURA TİPİ sütunu senaryo ve tipi birlikte gösterir: Temel - Satış, Ticari -
+Satış, Ticari - İade gibi. Senaryo, [İzibiz liste yanıtındaki profile alanından](https://dev.izibiz.com.tr/endpoint/einvoice-v1-api/incoming-invoice-list?lang=tr)
+alınır; eksikse Temel/Ticari tahmini yapılmaz. Eski kayıtların senaryosu sayfa
+yenilendiğinde yalnızca liste okunarak tamamlanır; PDF’ler yeniden indirilmez,
+işlendi işaretleri değişmez ve yeni fatura bildirimi gönderilmez. Ayın Excel’i
+de aynı birleşik tipi kullanır; senaryo güncellemesi eski Excel’i güncel değil
+olarak işaretler.
 
 Başlangıç için son işlenmiş Excel isteğe bağlı bir kez aktarılabilir. Tarayıcı
 dosyayı okur; sunucuya yalnızca numaralar gider. Geçmiş faturaların işlenmiş

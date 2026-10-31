@@ -15,9 +15,9 @@ function storage(){
  return db;
 }
 const company={id:'PUSULA',name:'Pusula'},identifier='7330782805';
-const remoteInvoice=(n,date)=>({id:n,uuid:'11111111-2222-4333-8444-'+String(n).padStart(12,'0'),documentNo:'TEST2026'+String(n).padStart(7,'0'),issueDate:date,direction:'IN',accountingCustomer:{identifier},accountingSupplier:{name:'Test supplier'},amount:100,currency:'TRY',invoiceType:'SATIS',invoiceStatus:'RECEIVED'});
+const remoteInvoice=(n,date)=>({id:n,uuid:'11111111-2222-4333-8444-'+String(n).padStart(12,'0'),documentNo:'TEST2026'+String(n).padStart(7,'0'),issueDate:date,direction:'IN',accountingCustomer:{identifier},accountingSupplier:{name:'Test supplier'},amount:100,currency:'TRY',profile:'TEMELFATURA',invoiceType:'SATIS',invoiceStatus:'RECEIVED'});
 function fixture({date='2026-11-17T06:00:00Z',startMonth='2026-10'}={}){
- let now=Date.parse(date),remote=[remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17')],failPdf=false;
+ let now=Date.parse(date),remote=[remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17')],failPdf=false,failList=false;
  const db=storage(),key=randomBytes(32).toString('base64url'),connector=new IzibizConnector({storage:db,key});
  if(startMonth)db.data.set('settings',{enabled:true,startMonth,periodVersion:1});
  const config={username:'synthetic-test',password:'synthetic',identifier,revision:'test-revision'},saved={...connector.seal(company.id,config),name:'Synthetic company',identifier},events=[],calls=[];
@@ -26,14 +26,14 @@ function fixture({date='2026-11-17T06:00:00Z',startMonth='2026-10'}={}){
   const answer=data=>new Response(JSON.stringify({data,error:null}),{headers:{'Content-Type':'application/json'}});
   if(url.endsWith('/auth/token'))return answer({accessToken:'synthetic'});
   if(url.endsWith('/customers/me'))return answer({identifier,commercialName:'Synthetic company'});
-  if(url.includes('/inbox?'))return answer({contents:remote,pageable:{totalElements:remote.length,totalPages:remote.length?1:0}});
+  if(url.includes('/inbox?'))return failList?new Response('Unavailable',{status:503}):answer({contents:remote,pageable:{totalElements:remote.length,totalPages:remote.length?1:0}});
   const body=JSON.parse(options.body),row=remote.find(r=>r.id===body[0].id);
   if(url.endsWith('/pdf'))return failPdf?new Response('Unavailable',{status:503}):new Response('%PDF-1.7\nSYNTHETIC',{headers:{'Content-Type':'application/pdf'}});
   if(url.endsWith('/ubl'))return new Response('<Invoice><ID>'+row.documentNo+'</ID><UUID>'+row.uuid+'</UUID><AccountingCustomerParty><Party><PartyIdentification><ID schemeID="VKN">'+identifier+'</ID></PartyIdentification></Party></AccountingCustomerParty><AccountingSupplierParty><Party><PartyLegalEntity><RegistrationName>Test &amp; Bilişim A.Ş.</RegistrationName></PartyLegalEntity></Party></AccountingSupplierParty></Invoice>',{headers:{'Content-Type':'application/xml'}});
   throw Error('Unexpected request');
  };
  const engine=new InvoiceArchive({storage:db,company,now:()=>now,getConnection:async()=>({saved,key,active:true}),notify:async e=>events.push(e)});
- return {engine,db,events,calls,fetcher,advanceTime:(hours=2)=>{now+=hours*3600000;},setRemote:r=>remote=r,failPdf:()=>failPdf=true};
+ return {engine,db,events,calls,fetcher,advanceTime:(hours=2)=>{now+=hours*3600000;},setRemote:r=>remote=r,failPdf:()=>failPdf=true,failList:()=>failList=true};
 }
 async function drain(engine,db){
  for(let i=0;i<30;i++){if(!await db.get('job'))return;await engine.advance();}
@@ -191,6 +191,36 @@ test('Failed PDF fetches never become successful archives or new invoice success
 test('Initial processed-number import is company-local and does not require recurring Excel uploads',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{await f.engine.handle('baseline','POST',{numbers:[' '+remoteInvoice(1,'2026-10-20').documentNo+' ' ]});await f.engine.start();await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.done,1);assert.equal((await f.engine.summary()).counts.fresh,1);}finally{globalThis.fetch=original;}
+});
+test('Legacy invoice scenarios refresh without downloads, new invoices, notifications or changes to accounting marks',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  await f.engine.start();await drain(f.engine,f.db);
+  const row=(await f.engine.all())[0];await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:0}],done:true});
+  const folder=(await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.month==='2026-10');await f.engine.handle('excel','POST',{folder:folder.id});
+  const before=await f.engine.all(),status=await f.engine.status(),used=await f.db.get('totalBytes'),pdfs=f.calls.filter(c=>c.url.endsWith('/pdf')).length,events=f.events.length;
+  for(const r of before){const {profile,...legacy}=r;await f.db.put('invoice:'+r.uuid,legacy);}
+  await f.db.put('settings',{...await f.engine.settings(),enabled:false});
+  f.setRemote([{...remoteInvoice(1,'2026-10-20'),profile:'TICARIFATURA'},remoteInvoice(2,'2026-11-17'),remoteInvoice(3,'2026-11-17')]);
+  const summary=await f.engine.summary();assert(summary.updatingTypes);assert(summary.running);
+  await drain(f.engine,f.db);
+  const after=await f.engine.all();assert.equal(after.length,before.length);assert.equal(f.events.length,events);assert.equal(f.calls.filter(c=>c.url.endsWith('/pdf')).length,pdfs);assert.equal(await f.db.get('totalBytes'),used);
+  for(const r of after){const old=before.find(x=>x.uuid===r.uuid);assert.deepEqual({...r,profile:old.profile},old);}
+  const displayed=(await f.engine.handle('invoices','GET').then(r=>r.json())).rows;assert(displayed.some(r=>r.tipLabel==='Ticari - Satış'));assert(displayed.some(r=>r.tipLabel==='Temel - Satış'));
+  assert.equal((await f.engine.status()).lastSuccess,status.lastSuccess);assert.equal((await f.engine.status()).lastAttempt,status.lastAttempt);assert.equal((await f.engine.settings()).enabled,false);assert.equal((await f.engine.summary()).updatingTypes,false);
+  assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,false);
+  await f.engine.handle('excel','POST',{folder:folder.id});const excel=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'}));assert(strFromU8(unzipSync(new Uint8Array(await excel.arrayBuffer()))['xl/worksheets/sheet1.xml']).includes('Ticari - Satış'));
+ }finally{globalThis.fetch=original;}
+});
+test('A failed scenario refresh leaves scan success and invoice files intact and sends no invoice alert',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  await f.engine.start();await drain(f.engine,f.db);const before=await f.engine.all(),status=await f.engine.status(),events=f.events.length;
+  for(const r of before){const {profile,...legacy}=r;await f.db.put('invoice:'+r.uuid,legacy);}
+  f.failList();await f.engine.summary();await drain(f.engine,f.db);
+  assert.equal((await f.engine.status()).lastSuccess,status.lastSuccess);assert.equal((await f.engine.status()).error,status.error);assert((await f.engine.status()).typeRefreshError);assert.equal(f.events.length,events);
+  assert.deepEqual((await f.engine.all()).map(r=>r.file),before.map(r=>r.file));assert.equal((await f.engine.summary()).updatingTypes,false);
+ }finally{globalThis.fetch=original;}
 });
 test('Document validation rejects foreign recipients, wrong identities, DTDs and non-PDF bytes',()=>{
  const row={fatno:'TEST',uuid:'11111111-2222-4333-8444-555555555555'},enc=s=>new TextEncoder().encode(s);

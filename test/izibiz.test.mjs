@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {IzibizConnector,validPeriod,invoiceRow,verifyCompany,invoiceReply} from '../server/izibiz.mjs';
+import {IzibizConnector,validPeriod,invoiceRow,verifyCompany,invoiceReply,invoiceTypeLabel} from '../server/izibiz.mjs';
 
 const identifier='7330782805',company='PUSULA';
 const invoice={id:12,uuid:'11111111-2222-4333-8444-555555555555',documentNo:'TEST202600000001',issueDate:'2026-10-01',direction:'IN',accountingCustomer:{identifier},accountingSupplier:{name:'Test supplier'},amount:'252,00',currency:'TRY',invoiceType:'SATIS',invoiceStatus:'RECEIVED'};
@@ -83,6 +83,15 @@ test('Portal reply states are preserved independently from delivery labels and r
   const states={WAITING_FOR_RESPONSE:'Yanıt bekliyor',RECEIVED:'Yanıt gerekmiyor',RESPONSE_TIME_EXPIRED:'Kanunen kabul',REJECTED:'Reddedildi',ACCEPTED:'Kabul edildi'};
   for(const [state,label] of Object.entries(states))assert.equal(invoiceReply({invoiceStatus:state,documentStatus:{label:'Alındı'},responseDescription:'Free form note'}),label);
   assert.equal(invoiceRow({...invoice,invoiceStatus:'WAITING_FOR_RESPONSE'},identifier).yanit,'Yanıt bekliyor');
+});
+test('Invoice type combines the actual profile and type without assuming a missing scenario',()=>{
+ assert.equal(invoiceRow({...invoice,profile:'TEMELFATURA'},identifier).tipLabel,'Temel - Satış');
+ assert.equal(invoiceRow({...invoice,profile:'TICARIFATURA'},identifier).tipLabel,'Ticari - Satış');
+ assert.equal(invoiceTypeLabel('TICARIFATURA','IADE'),'Ticari - İade');
+ assert.equal(invoiceTypeLabel('TEMELFATURA','ISTISNA'),'Temel - İstisna');
+ assert.equal(invoiceTypeLabel('','SATIS'),'— - Satış');
+ assert.equal(invoiceTypeLabel('NEW_PROFILE','NEW_TYPE'),'NEW_PROFILE - NEW_TYPE');
+ const row=invoiceRow({...invoice,profile:'TICARIFATURA'},identifier);assert.equal(row.profile,'TICARIFATURA');assert.equal(row.tip,'SATIS');
 });
 async function fileHelpers(name='Pusula'){
   const window={SWWorkspace:{companyId:'PUSULA',companyName:name}};
