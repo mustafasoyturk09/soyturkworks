@@ -191,7 +191,7 @@
     },
     {
       "file": "automation/index.html",
-      "sha256": "533c6a9a38bef3334d4096de0705ba3a1da57db0e1d4d478924af5b0b01e44c1"
+      "sha256": "cfea06ad38bcded43db065d1375f9bdcdc069fb8bcf0bf8775d2228c6cd9195c"
     },
     {
       "file": "automation/style.css",
@@ -227,7 +227,7 @@
     },
     {
       "file": "push-sw.js",
-      "sha256": "06da1e022db13706297af0285521b4d93c06eacde757ee5ef9d12c52cefc9fb8"
+      "sha256": "5cf14ae94a03eb5bcace56b5fea70e2b9e303cb558bfbe287ff66c66cdfaae9e"
     },
     {
       "file": "robots.txt",

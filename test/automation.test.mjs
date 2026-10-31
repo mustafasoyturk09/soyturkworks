@@ -6,7 +6,7 @@ import {unzipSync,strFromU8} from 'fflate';
 import {InvoiceArchive,nextCheck,workHours,previousMonth} from '../server/automation.mjs';
 import {folderName,makeExcel,supplierFromXML,unwrapDocument} from '../server/invoice-files.mjs';
 import {IzibizConnector} from '../server/izibiz.mjs';
-import {validateSubscription,vapidKeys,deliver,enqueueNotification,flushNotifications} from '../server/push.mjs';
+import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications} from '../server/push.mjs';
 
 function storage(){
  const data=new Map();
@@ -52,7 +52,7 @@ test('Automatic archive catches previous-month invoices, saves only PDFs and pre
   const groups=(await(await f.engine.handle('folders','GET')).json()).folders;assert.equal(groups.length,2);assert(groups.every(g=>g.excel===null));
   assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar (17.11.2026)'));
   assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar (17.11.2026)'));
-  assert.equal(f.events.length,1);assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
+  assert.equal(f.events.length,1);assert.equal(f.events[0].title,'Pusula · Yeni Gelen 2 Fatura');assert(!f.events[0].title.includes('Soyturk'));assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
   assert(f.calls.some(c=>c.url.includes('dateType=DELIVERY')));assert(f.calls.some(c=>c.url.includes('dateType=DOCUMENT')&&c.url.includes('startDate=2026-10-01')));
   const row=(await f.engine.all())[0];
   await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:0}],done:true});
@@ -130,4 +130,13 @@ test('Push outbox deduplicates events and revokes expired or old-session subscri
  await flushNotifications(db,'https://soyturkworks.com','current',async()=>new Response('',{status:410}));assert.equal((await db.list({prefix:'push:device:'})).size,0);assert.equal((await db.list({prefix:'push:outbox:'})).size,0);
  await db.put('push:device:two',{id:'two',subscription:sub.value,revision:'old'});await enqueueNotification(db,{...event,id:'event-two'});
  await flushNotifications(db,'https://soyturkworks.com','new',()=>assert.fail('Old session must not receive notifications'));
+});
+
+test('Test notification identifies the test without repeating the app name or inventing invoices',async()=>{
+ const db=storage(),sub=subscription();await db.put('push:device:test-device',{id:'test-device',subscription:sub.value,revision:'current'});
+ let payload;
+ const response=await pushAPI(db,'https://soyturkworks.com','test','POST',{id:'test-device'},async(url,options)=>{
+  payload=JSON.parse(ece.decrypt(options.body,{version:'aes128gcm',privateKey:sub.client,authSecret:sub.auth}).toString());return new Response('',{status:201});
+ });
+ assert.equal(response.status,200);assert.equal(payload.title,'Bildirim Denemesi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));
 });

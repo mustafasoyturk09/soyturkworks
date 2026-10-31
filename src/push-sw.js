@@ -6,7 +6,7 @@ self.addEventListener('push',event=>{
   event.waitUntil((async()=>{
     let data={};try{data=event.data?.json()||{};}catch{}
     const path=typeof data.url==='string'&&/^\/takip(?:[/?]|$)/.test(data.url)?data.url:'/takip';
-    await self.registration.showNotification(String(data.title||'Soyturk Works').slice(0,120),{
+    await self.registration.showNotification(String(data.title||'Fatura Takibi').slice(0,120),{
       body:String(data.body||'Fatura takibinde yeni bir gelişme var. Detayları görmek için dokun.').slice(0,500),
       icon:'/assets/brand/apple-touch-icon.png',badge:'/assets/brand/favicon-48.png',
       tag:String(data.id||'invoice-update'),renotify:false,lang:'tr',silent:false,data:{url:path},

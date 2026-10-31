@@ -107,7 +107,7 @@ export class InvoiceArchive{
         const id=sha(this.company.id+':'+fresh.map(r=>r.uuid).sort().join(','));
         const pending=rows.filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length;
         const months=[...new Set(fresh.map(r=>r.tarih.slice(0,7)))];
-        await this.notify({id,company:this.company.id,title:this.company.name+' · '+fresh.length+' yeni fatura',body:fresh.length+' yeni faturanın PDF’i hazır. İşlem bekleyen toplam: '+pending+'.'+(months.length>1?' '+months.length+' farklı aya ait fatura var.':'')+' Kontrol etmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'invoices',count:fresh.length,pending,created:this.now()});
+        await this.notify({id,company:this.company.id,title:this.company.name+' · Yeni Gelen '+fresh.length+' Fatura',body:'PDF’ler özel klasörüne eklendi. İşlem bekleyen toplam: '+pending+'.'+(months.length>1?' '+months.length+' farklı aya ait fatura var.':'')+' Kontrol etmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'invoices',count:fresh.length,pending,created:this.now()});
         }
       for(const row of unnotified)await this.storage.transaction(async tx=>{const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
       if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});

@@ -34,7 +34,7 @@ export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   }
   if(action==='test'&&method==='POST'){
     const device=await storage.get('push:device:'+body.id);if(!device)fail('Önce bu cihazın bildirimlerini açın.');
-    const result=await deliver(device.subscription,{id:'test-'+Date.now(),title:'Soyturk Works',body:'Bildirimlerin hazır. Yeni faturalar geldiğinde firma adı ve adetleri burada göreceksin.',url:'/takip?view=notifications',kind:'test'},keys,origin,fetcher);
+    const result=await deliver(device.subscription,{id:'test-'+Date.now(),title:'Bildirim Denemesi',body:'Bildirimlerin açık. Yeni fatura geldiğinde firma adı, fatura sayısı ve işlem bekleyen toplamı burada görünecek.',url:'/takip?view=notifications',kind:'test'},keys,origin,fetcher);
     if(result==='expired'){await storage.delete('push:device:'+device.id);fail('Bildirim iznini bu cihazda yeniden açın.',409);}
     await storage.put('push:device:'+device.id,{...device,lastSent:Date.now()});return json({ok:true});
   }
