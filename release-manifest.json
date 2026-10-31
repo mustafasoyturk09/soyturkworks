@@ -187,7 +187,7 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "5db43807bee47271478b65c5af88748df71660c33e2f4a9247ce013c51da8e79"
+      "sha256": "96193c073b2e563d48e7fc0df55b305f6348526a362a32443be02f774d1c8877"
     },
     {
       "file": "automation/index.html",
@@ -195,7 +195,7 @@
     },
     {
       "file": "automation/style.css",
-      "sha256": "815e3fe982a4c556b44e622bb7a92ca8e5ddfa31cade13cee5e51e2f6cd04072"
+      "sha256": "db5e5a0ed2c2806a4b7a8b8cbde3c3c30a34eabf212eaa06d5b21a1c5c375ff9"
     },
     {
       "file": "favicon.ico",

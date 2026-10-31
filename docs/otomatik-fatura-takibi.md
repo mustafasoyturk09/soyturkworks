@@ -18,10 +18,18 @@ sunucu kontrolüne uygulanmaz.
 - Her etkin firma kendi kalıcı işi ve dosya alanında işlenir. Tarayıcı veya
   bilgisayarın açık kalması gerekmez. İşin adımları Durable Object alarmında
   devam eder; geçici hatalar sınırlı sayıda yeniden denenir.
-- İlk taramada önceki ay başından başlanır. Her kontrolde geliş tarihi
-  sorgusu ile önceki/güncel ayın belge tarihi sorgusu birlikte kullanılır.
-  Geliş sorgusu son başarılı kontrolün iki gün öncesinden tekrar taranır.
-  Bu sayede sonraki aya geç gelen, hatta daha eski tarihli faturalar yakalanır.
+- Başlangıç ayı firma kapsamında ilk kontrol veya başlangıç Excel aktarımı
+  sırasında kaydedilir. İlk ay yalnızca o ay taranır. Örneğin Ekim başlangıcında
+  yalnızca Ekim; Kasım’a geçince Ekim–Kasım; Aralık’ta Kasım–Aralık taranır.
+- Geliş tarihi ve belge tarihi sorguları aynı dönemle sınırlıdır. Geliş sorgusu
+  son başarılı kontrolün iki gün öncesinden, en erken bu dönemin başından başlar.
+  Yakın zamanda teslim edilse bile dönemden eski belge indirilmez.
+- Eski sürümden geçişte başlangıç ayı, Excel aktarım/kayıt alma zamanlarından
+  belirlenir; fatura tarihleri başlangıç olarak kullanılmaz. Başlangıç ayından
+  önce yanlışlıkla alınmış kayıtlar ilk yenilemede listeden ve sayaçlardan
+  kaldırılır; PDF/Excel dosyaları arka planda temizlenir. İşlendi işaretleri,
+  başlangıç Excel numaraları ve başlangıç ayından itibaren geçerli arşiv korunur.
+  Ay değişmesi geçerli geçmiş arşivi silmez.
 - Ayın 17'sinde taramayı durduran bir sınır yoktur.
 - ETTN firma kapsamında benzersizdir. Sayfalar, toplam sayılar, belge kimliği ve
   XML alıcı vergi numarası doğrulanır. İzibiz'e kabul/red/işlendi komutu verilmez.
@@ -62,7 +70,7 @@ durumudur; İzibiz yanıtı ayrı korunur.
 Klasörü dışa aktar, PDF'leri ve varsa son Excel'i klasör adı altında ZIP olarak
 verir. Dışa aktarma kullanıcının isteğiyle gerçekleşir.
 
-Klasörü sil dosyaları kaldırır. Yeniden aynı faturaları indirmemek için ETTN,
+Klasör kartındaki Temizle veya klasör içindeki Klasörü sil dosyaları kaldırır. Yeniden aynı faturaları indirmemek için ETTN,
 fatura bilgileri, silinme bilgisi ve işlem durumu kalır. Otomatik süreli silme yoktur.
 
 ## Telefon bildirimleri
@@ -95,7 +103,8 @@ zamanını ve görünümü etkiler.
 ## Doğrulama
 
 npm run build, npm run check, npm test.
-Otomasyon testleri ay/yıl geçişi, eski aya geç gelen fatura, PDF doğrulama,
+Otomasyon testleri ilk ay sınırı, ay/yıl geçişi, önceki aya geç gelen fatura,
+başlangıçtan eski kayıtların temizliği ve yeniden alınmaması, PDF doğrulama,
 mükerrer tarama, ilk referans aktarımı, işaretleme/geri alma, eski kayıt
 çatışması, Excel sürümü, klasör silme ve gerçek şifreli push isteğini kapsar.
 Kimlik doğrulama testi arşiv/API/manifest/service worker erişimlerini de sınar.

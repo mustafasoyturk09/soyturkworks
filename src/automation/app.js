@@ -56,7 +56,8 @@ function renderDashboard(){
   const running=items.some(c=>c.running),errors=items.filter(c=>c.status?.error||!c.connected),enabled=items.some(c=>c.settings?.enabled);
   const next=Math.min(...items.filter(c=>c.settings?.enabled).map(c=>c.nextCheck));
   const title=running?'Faturaların kontrol ediliyor':!items.length?'Henüz etkin firma yok':!enabled?'Otomasyon duraklatıldı':errors.length?'Kontrol edilmesi gereken bir bağlantı var':'Otomatik takip hazır';
-  const note=running?'PDF’ler özel arşivine hazırlanıyor. Bu ekranı açık tutman gerekmez.':!enabled?'Firma kartından otomatik takibi yeniden açabilirsin.':'Hafta içi iki saatte bir. Önceki aya geç gelen faturalar da kontrol edilir.';
+  const period=items[0]?.period,periodText=period?(period.from.slice(0,7)===period.to.slice(0,7)?monthName(period.to.slice(0,7)):monthName(period.from.slice(0,7))+' ve '+monthName(period.to.slice(0,7))):'';
+  const note=running?'PDF’ler özel arşivine hazırlanıyor. Bu ekranı açık tutman gerekmez.':!enabled?'Firma kartından otomatik takibi yeniden açabilirsin.':'Kontrol dönemi: '+periodText+'. Hafta içi 09 · 11 · 13 · 15 · 17.';
   $('dashboardView').innerHTML='<div class="summary-grid">'+[
     ['fresh','Yeni gelen','İşaretlemediğin faturalar','invoices'],['done','İşlendi','Geri alabilirsin','check'],['pdfs','PDF arşivde','Cihazına otomatik indirilmez','file'],['folders','Özel klasör','Firma ve aya göre ayrılır','folders']
   ].map(([key,label,caption,symbol],i)=>'<article class="stat-card '+(!i?'primary':'')+'"><div class="stat-top"><span>'+label+'</span>'+icon(symbol)+'</div><div class="stat-number">'+totals[key]+'</div><div class="stat-note">'+caption+'</div></article>').join('')+'</div><div class="schedule-panel"><div class="schedule-symbol">'+icon(running?'clock':errors.length?'alert':'check')+'</div><div class="schedule-copy"><strong>'+title+'</strong><p>'+note+'</p></div><div class="schedule-time">'+(Number.isFinite(next)?time(next):'—')+'<small>'+(Number.isFinite(next)?date(next)+' · sonraki kontrol':'Otomatik kontrol kapalı')+'</small></div></div><div class="section-head"><div><p class="eyebrow">SEÇİLİ FİRMA</p><h2>Bir bakışta durum</h2></div><span class="subtle">İşlenmeyen faturalar yeni olarak kalır.</span></div><div class="company-grid">'+items.map(c=>{
@@ -75,7 +76,7 @@ async function loadInvoices(append=false){
   rows=append?[...rows,...loaded]:loaded;rows.sort((a,b)=>b.firstSeen-a.firstSeen||b.tarih.localeCompare(a.tarih));
   more=result.some(d=>d.total>offset+d.rows.length);
   const months=[...new Set(result.flatMap(d=>d.months))].sort().reverse();$('monthFilter').innerHTML='<option value="">Bütün aylar</option>'+months.map(m=>'<option value="'+m+'">'+escape(monthName(m))+'</option>').join('');$('monthFilter').value=month;
-  $('invoiceList').innerHTML=rows.length?rows.map(invoiceHTML).join(''):empty('Kutun sakin.','Faturalar kontrol edildiğinde burada görünecek. İlk kontrolde önceki ay ve güncel ay birlikte taranır.');
+  $('invoiceList').innerHTML=rows.length?rows.map(invoiceHTML).join(''):empty('Kutun sakin.','Faturalar kontrol edildiğinde burada görünecek. İlk ay yalnızca o ay taranır; ay değişince önceki ay ve yeni ay birlikte kontrol edilir.');
   $('loadMore').hidden=!more;$('scanButton').disabled=!active().length||active().some(c=>c.running);$('baselineButton').disabled=false;renderSelection();
 }
 function invoiceHTML(r){
@@ -93,7 +94,7 @@ async function loadFolders(){
   const result=await Promise.all(active().map(async c=>({...await api(apiURL(c.company.id,'folders')),company:c.company})));
   if(request!==folderRequest)return;
   const folders=result.flatMap(d=>d.folders.map(f=>({...f,company:d.company}))).sort((a,b)=>b.date.localeCompare(a.date)||b.month.localeCompare(a.month));
-  $('folderList').innerHTML=folders.length?folders.map(f=>'<article class="folder-card"><div class="folder-top"><span class="folder-icon">'+icon('folders')+'</span><span class="folder-month">'+escape(monthName(f.month))+'</span></div><h3>'+escape(f.name)+'</h3><div class="folder-detail"><span>'+f.pdfs+' PDF</span><span>'+f.pending+' yeni gelen</span><span>'+(f.excel?(f.excel.current?'Excel hazır':'Excel güncellenebilir'):'Excel henüz oluşturulmadı')+'</span></div><div class="folder-action"><button class="text-button" data-folder="'+f.id+'" data-company-id="'+f.company.id+'">Klasörü aç ↗</button><a class="text-button muted" href="'+apiURL(f.company.id,'export')+'?folder='+f.id+'" download>Mac / Windows’a aktar</a></div></article>').join(''):empty('Arşivin burada oluşacak.','PDF’ler geldiğinde firması, fatura ayı ve siteye alındığı tarih ile klasörlenir. Excel yalnızca sen istediğinde oluşturulur.','folders');
+  $('folderList').innerHTML=folders.length?folders.map(f=>'<article class="folder-card"><div class="folder-top"><span class="folder-icon">'+icon('folders')+'</span><span class="folder-month">'+escape(monthName(f.month))+'</span></div><h3>'+escape(f.name)+'</h3><div class="folder-detail"><span>'+f.pdfs+' PDF</span><span>'+f.pending+' yeni gelen</span><span>'+(f.excel?(f.excel.current?'Excel hazır':'Excel güncellenebilir'):'Excel henüz oluşturulmadı')+'</span></div><div class="folder-action"><button class="text-button" data-folder="'+f.id+'" data-company-id="'+f.company.id+'">Klasörü aç ↗</button><a class="text-button muted" href="'+apiURL(f.company.id,'export')+'?folder='+f.id+'" download>Mac / Windows’a aktar</a><button class="text-button folder-clear" data-clear-folder="'+f.id+'" data-company-id="'+f.company.id+'">Temizle</button></div></article>').join(''):empty('Arşivin burada oluşacak.','PDF’ler geldiğinde firması, fatura ayı ve siteye alındığı tarih ile klasörlenir. Excel yalnızca sen istediğinde oluşturulur.','folders');
 }
 async function openFolder(id,folder){
   currentFolder={id,folder};const c=info(id);if(!c)throw Error('Firma bulunamadı.');
@@ -146,11 +147,15 @@ $('invoiceList').onclick=e=>{const b=e.target.closest('[data-mark]');if(b)busy(b
 $('selectionBar').onclick=e=>{const b=e.target.closest('[data-bulk]');if(b)busy(b,()=>mark([...selected.values()],b.dataset.bulk==='true'));};
 $('clearSelection').onclick=()=>{selected.clear();$('invoiceList').querySelectorAll('input[type=checkbox]').forEach(n=>n.checked=false);renderSelection();};
 $('scanButton').onclick=()=>busy($('scanButton'),async()=>{await api(apiURL(company,'scan'),{});toast(companyContext.name+' için kontrol başlatıldı.');await refresh();});
-$('folderList').onclick=e=>{const b=e.target.closest('[data-folder]');if(b)busy(b,()=>openFolder(b.dataset.companyId,b.dataset.folder));};
+async function clearFolder(id,folder){
+  if(!confirm('Bu klasördeki PDF ve Excel dosyaları temizlensin mi? İşlem durumları korunur; aynı dosyalar tekrar alınmaz.'))return;
+  await api(apiURL(id,'delete-folder'),{folder});if($('folderDialog').open)$('folderDialog').close();toast('Klasör temizlendi. İşlem durumları korundu.');await refresh();
+}
+$('folderList').onclick=e=>{const clear=e.target.closest('[data-clear-folder]');if(clear){busy(clear,()=>clearFolder(clear.dataset.companyId,clear.dataset.clearFolder));return;}const b=e.target.closest('[data-folder]');if(b)busy(b,()=>openFolder(b.dataset.companyId,b.dataset.folder));};
 $('closeFolder').onclick=()=>$('folderDialog').close();
 $('folderDialog').addEventListener('click',e=>{if(e.target===$('folderDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
 $('folderContent').onclick=e=>{const b=e.target.closest('[data-folder-action]');if(!b||!currentFolder)return;const {id,folder}=currentFolder;busy(b,async()=>{
-  if(b.dataset.folderAction==='delete'){if(!confirm('Bu klasördeki PDF ve Excel dosyaları silinsin mi? İşlem durumları korunur.'))return;await api(apiURL(id,'delete-folder'),{folder});$('folderDialog').close();toast('Klasör silindi. İşlem durumları korundu.');await refresh();}
+  if(b.dataset.folderAction==='delete'){await clearFolder(id,folder);}
   else{await api(apiURL(id,'excel'),{folder});await openFolder(id,folder);toast('Güncel Excel bu klasöre eklendi.');}
 });};
 $('deviceList').onclick=e=>{const b=e.target.closest('[data-remove-device]');if(b)busy(b,async()=>{const result=await api(pushURL('unsubscribe'),{id:b.dataset.removeDevice});if(!result.remaining&&b.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager.getSubscription())?.unsubscribe();}await renderNotifications();toast('Bu firma için bildirimler kapatıldı.');});};

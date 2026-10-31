@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomBytes,createECDH,verify,createPublicKey} from 'node:crypto';
 import ece from 'http_ece';
 import {unzipSync,strFromU8} from 'fflate';
-import {InvoiceArchive,nextCheck,workHours,previousMonth} from '../server/automation.mjs';
+import {InvoiceArchive,nextCheck,workHours,previousMonth,trackingPeriod} from '../server/automation.mjs';
 import {folderName,makeExcel,supplierFromXML,unwrapDocument} from '../server/invoice-files.mjs';
 import {IzibizConnector} from '../server/izibiz.mjs';
 import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications} from '../server/push.mjs';
@@ -16,9 +16,10 @@ function storage(){
 }
 const company={id:'PUSULA',name:'Pusula'},identifier='7330782805';
 const remoteInvoice=(n,date)=>({id:n,uuid:'11111111-2222-4333-8444-'+String(n).padStart(12,'0'),documentNo:'TEST2026'+String(n).padStart(7,'0'),issueDate:date,direction:'IN',accountingCustomer:{identifier},accountingSupplier:{name:'Test supplier'},amount:100,currency:'TRY',invoiceType:'SATIS',invoiceStatus:'RECEIVED'});
-function fixture(){
- let now=Date.parse('2026-11-17T06:00:00Z'),remote=[remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17')],failPdf=false;
+function fixture({date='2026-11-17T06:00:00Z',startMonth='2026-10'}={}){
+ let now=Date.parse(date),remote=[remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17')],failPdf=false;
  const db=storage(),key=randomBytes(32).toString('base64url'),connector=new IzibizConnector({storage:db,key});
+ if(startMonth)db.data.set('settings',{enabled:true,startMonth,periodVersion:1});
  const config={username:'synthetic-test',password:'synthetic',identifier,revision:'test-revision'},saved={...connector.seal(company.id,config),name:'Synthetic company',identifier},events=[],calls=[];
  const fetcher=async(url,options={})=>{
   calls.push({url,body:options.body?JSON.parse(options.body):null});
@@ -43,6 +44,80 @@ test('Istanbul weekday schedule includes month/year changes and never runs on we
  assert.equal(new Date(nextCheck(Date.parse('2026-12-31T14:00:00Z'))).toISOString(),'2027-01-01T06:00:00.000Z');
  assert.equal(previousMonth('2027-01-02'),'2026-12-01');
  assert(workHours(Date.parse('2026-11-17T06:00:00Z')));assert(!workHours(Date.parse('2026-11-17T15:00:00Z')));assert(!workHours(Date.parse('2026-10-31T06:00:00Z')));
+});
+test('Tracking starts with one month, then checks only the previous and current months across year boundaries',async()=>{
+ assert.deepEqual(trackingPeriod('2026-10-31','2026-10'),{startMonth:'2026-10',from:'2026-10-01',to:'2026-10-31'});
+ assert.equal(trackingPeriod('2026-11-01','2026-10').from,'2026-10-01');
+ assert.equal(trackingPeriod('2026-12-01','2026-10').from,'2026-11-01');
+ assert.equal(trackingPeriod('2027-01-01','2026-10').from,'2026-12-01');
+ const f=fixture({date:'2026-10-31T06:00:00Z',startMonth:null}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  const old=remoteInvoice(1,'2026-08-20'),september=remoteInvoice(2,'2026-09-27'),processed=remoteInvoice(3,'2026-10-27'),fresh=remoteInvoice(4,'2026-10-30');
+  f.setRemote([old,september,processed,fresh,remoteInvoice(5,'2026-11-01')]);
+  await f.engine.handle('baseline','POST',{numbers:[processed.documentNo]});
+  await f.engine.start(true);await drain(f.engine,f.db);
+  assert.equal((await f.db.get('settings')).startMonth,'2026-10');
+  assert.equal((await f.engine.summary()).counts.total,2);assert.equal((await f.engine.summary()).counts.done,1);
+  assert.equal(f.calls.filter(c=>c.url.endsWith('/pdf')).length,2);assert.equal(f.events[0].count,1);assert.equal(f.events[0].pending,1);
+  assert(f.calls.filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-01')));
+  const before=f.calls.length;f.advanceTime(24);f.setRemote([september,remoteInvoice(6,'2026-10-31'),remoteInvoice(7,'2026-11-01')]);
+  await f.engine.start(true);await drain(f.engine,f.db);
+  assert(f.calls.slice(before).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-')));
+  assert.equal((await f.engine.summary()).counts.total,4);
+  const december=f.calls.length;f.advanceTime(30*24);f.setRemote([remoteInvoice(8,'2026-10-25'),remoteInvoice(9,'2026-11-30'),remoteInvoice(10,'2026-12-01')]);
+  await f.engine.start(true);await drain(f.engine,f.db);
+  assert(f.calls.slice(december).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-11-01')));
+  assert.equal((await f.engine.all()).some(r=>r.uuid===remoteInvoice(8,'2026-10-25').uuid),false);
+  assert.equal((await f.engine.summary()).counts.total,6);assert.equal((await f.engine.summary()).counts.done,1);
+  assert((await f.engine.handle('folders','GET').then(r=>r.json())).folders.some(g=>g.month==='2026-10'),'Valid October archive remains available in December');
+ }finally{globalThis.fetch=original;}
+});
+test('A first scan in November does not import October without an earlier tracking start',async()=>{
+ const f=fixture({startMonth:null}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,1);assert.equal((await f.db.get('settings')).startMonth,'2026-11');assert((await f.engine.all()).every(r=>r.tarih.startsWith('2026-11')));}finally{globalThis.fetch=original;}
+});
+test('An unconnected or paused company does not fix its first tracking month prematurely',async()=>{
+ const f=fixture({date:'2026-10-31T06:00:00Z',startMonth:null}),connection=f.engine.getConnection;
+ f.engine.getConnection=async()=>({saved:null,active:true});
+ await assert.rejects(()=>f.engine.start(true),e=>e.status===409);assert.equal(await f.db.get('settings'),undefined);
+ await f.db.put('settings',{enabled:false});assert((await f.engine.start()).skipped);assert.equal((await f.db.get('settings')).startMonth,undefined);
+ f.advanceTime(24);await f.db.put('settings',{enabled:true});f.engine.getConnection=connection;
+ const original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.db.get('settings')).startMonth,'2026-11');}finally{globalThis.fetch=original;}
+});
+test('A running legacy job restarts within the new period instead of continuing its old PDF queue',async()=>{
+ const f=fixture({date:'2026-10-31T06:00:00Z',startMonth:null}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  f.setRemote([remoteInvoice(1,'2026-09-20'),remoteInvoice(2,'2026-10-27')]);
+  await f.db.put('job',{id:'11111111-2222-4333-8444-555555555555',phase:'pdf',documentStart:'2026-09-01',end:'2026-10-31',manual:true});
+  await f.engine.advance();assert(f.calls.some(c=>c.url.includes('/inbox?')&&c.url.includes('startDate=2026-10-01')));assert(!f.calls.some(c=>c.url.endsWith('/pdf')));
+  await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,1);assert.equal((await f.engine.summary()).counts.pdfs,1);
+ }finally{globalThis.fetch=original;}
+});
+test('Refreshing legacy archives removes pre-start months, reclaims files and preserves imported numbers and current-month status',async()=>{
+ const f=fixture({date:'2026-10-31T06:00:00Z',startMonth:null}),at=Date.parse('2026-10-31T06:00:00Z');
+ await f.db.put('settings',{enabled:false});await f.db.put('baseline:synthetic',{at:Date.parse('2026-10-27T06:00:00Z')});
+ let used=0;
+ for(const [i,date] of ['2026-08-20','2026-09-27','2026-10-27'].entries()){
+  const uuid=remoteInvoice(i+1,date).uuid,folder=date.slice(0,7)+'_2026-10-31';
+  const file=await f.engine.saveFile('pdf-'+uuid,'synthetic.pdf',new TextEncoder().encode('%PDF-1.7 synthetic'));
+  const excel=await f.engine.saveFile('excel-'+uuid,'synthetic.xlsx',new TextEncoder().encode('synthetic XLSX'));
+  used+=file.size+excel.size;
+  await f.db.put('invoice:'+uuid,{uuid,tarih:date,fatno:'TEST'+i,firstSeen:at,revision:7,done:true,doneAt:at,file,folder});
+  await f.db.put('folder:'+folder,{id:folder,month:date.slice(0,7),date:'2026-10-31',revision:0,excel});
+ }
+ await f.db.put('totalBytes',used);
+ // Existing jobs must not continue the old September query/PDF queue after deployment.
+ await f.db.put('job',{id:'11111111-2222-4333-8444-555555555555',phase:'pdf',documentStart:'2026-09-01',end:'2026-10-31',manual:false});
+ const summary=await f.engine.summary();assert.equal(summary.period.startMonth,'2026-10');assert.equal(summary.counts.total,1);assert.equal(summary.counts.done,1);assert.equal(summary.counts.folders,1);assert.equal(summary.settings.enabled,false);
+ const groups=(await f.engine.handle('folders','GET').then(r=>r.json())).folders;assert.deepEqual(groups.map(g=>g.month),['2026-10']);
+ assert.equal((await f.engine.handle('invoices','GET').then(r=>r.json())).total,1);
+ await assert.rejects(()=>f.engine.handle('pdf','GET',{},new URLSearchParams({id:remoteInvoice(1,'2026-08-20').uuid})),e=>e.status===404);
+ await assert.rejects(()=>f.engine.handle('export','GET',{},new URLSearchParams({folder:'2026-09_2026-10-31'})),e=>e.status===404);
+ for(let i=0;i<4;i++)await f.engine.advance();
+ assert(await f.db.get('baseline:synthetic'));const current=await f.db.get('invoice:'+remoteInvoice(3,'2026-10-27').uuid);assert(current.file);assert.equal(current.revision,7);assert(current.done);assert(!current.deletedAt);
+ assert((await f.engine.all()).filter(r=>r.tarih<'2026-10-01').every(r=>r.deletedAt&&r.excludedBeforeStart&&!r.file));
+ const measured=[...f.db.data].filter(([k])=>k.startsWith('blob:')).reduce((n,[,v])=>n+v.length,0);assert.equal(await f.db.get('totalBytes'),measured);assert.equal(measured,current.file.size+(await f.db.get('folder:'+current.folder)).excel.size);
 });
 test('Automatic archive catches previous-month invoices, saves only PDFs and preserves done/undo through rescans',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
