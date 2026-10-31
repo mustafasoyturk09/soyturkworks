@@ -159,7 +159,7 @@
   function boot(){
     bootDialog();setDates();const button=document.createElement('button');button.type='button';button.id='swIziButton';button.textContent='İzibiz';button.onclick=activate;
     const settings=document.createElement('button');settings.type='button';settings.id='swIziSettings';settings.textContent='⚙';settings.setAttribute('aria-label','İzibiz ayarları');settings.title='İzibiz ayarları';settings.onclick=open;
-    const top=$('ef115Top');if(top){top.prepend(button,settings);const progress=document.createElement('div');progress.id='swIziProgress';progress.hidden=true;progress.innerHTML='<p id="swIziInlineStatus" role="status" aria-live="polite"></p><button type="button" id="swIziInlineCancel" hidden>Durdur</button>';top.after(progress);$('swIziInlineCancel').onclick=()=>controller?.abort();}
+    const top=$('ef115Top');if(top){if(window.SW_CONTEXT?.company?.id){const follow=document.createElement('a');follow.id='swAutoFollow';follow.className='sw-auto-follow';follow.href='/workspace/'+company+'/takip/';follow.textContent='Otomatik Fatura Takibi';top.prepend(follow,button,settings);}else top.prepend(button,settings);const progress=document.createElement('div');progress.id='swIziProgress';progress.hidden=true;progress.innerHTML='<p id="swIziInlineStatus" role="status" aria-live="polite"></p><button type="button" id="swIziInlineCancel" hidden>Durdur</button>';top.after(progress);$('swIziInlineCancel').onclick=()=>controller?.abort();}
     ready=connection().then(destination);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

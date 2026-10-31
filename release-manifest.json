@@ -23,15 +23,15 @@
     },
     {
       "file": "app/izibiz.css",
-      "sha256": "ef888c61ca2d45dea30dcac8c6dbf4b39e432fcac439beb3a22a6c27feb458d3"
+      "sha256": "ac4ad94d19c8df83e1f8b6b2a0348216221a686cbaa9ae3e330a8dfd2c58123e"
     },
     {
       "file": "app/izibiz.js",
-      "sha256": "d5892267d3c6b9455f3b338a08af0a801efc9877008cc99a724e479a6d59db4b"
+      "sha256": "c01bf6657c392d9d709f4e722a26da40b90cbf28847504da497f2c2fd4d80bfa"
     },
     {
       "file": "app/mobile.css",
-      "sha256": "d5da8f7922d4ec9fc3a5e10081826bbfd8677787563d6638526dc1a39bf2ab43"
+      "sha256": "f6bacf9a40bc051327178d33247e911123b1e438c3e6e16a9600223dfd0f0570"
     },
     {
       "file": "app/mobile.js",
@@ -59,11 +59,11 @@
     },
     {
       "file": "app/workspace.css",
-      "sha256": "c8e4d409695d4650f4871569e1578c07aeaeec1bc245981746fe62607fa4c861"
+      "sha256": "5f9116f74bddadbd76d46785bca98c2297261866a252df0cdfaf9f45fafc7505"
     },
     {
       "file": "app/workspace.js",
-      "sha256": "9f87cc1605abfc1c9cf8f2993c4284b8c393dc0ac9704c646b01a923361f4809"
+      "sha256": "c0a3a30dc18135d363e9b9460ff0a45f494937590d8474d9f5e7080d2c84530f"
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
@@ -187,15 +187,15 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "507755c7eeaa2fbc77aaab335a860bbd82d3a5c40cf9687ff20f8620bf11c44c"
+      "sha256": "5db43807bee47271478b65c5af88748df71660c33e2f4a9247ce013c51da8e79"
     },
     {
       "file": "automation/index.html",
-      "sha256": "cfea06ad38bcded43db065d1375f9bdcdc069fb8bcf0bf8775d2228c6cd9195c"
+      "sha256": "74f48a736e0727cbf7fd260bb7ec3960fa668df899c0f0860efc237ea062676a"
     },
     {
       "file": "automation/style.css",
-      "sha256": "92b8ba10a4792b1b2d8289fa80f20874431b6785505414f4f05a8d64f017769b"
+      "sha256": "815e3fe982a4c556b44e622bb7a92ca8e5ddfa31cade13cee5e51e2f6cd04072"
     },
     {
       "file": "favicon.ico",
@@ -203,15 +203,15 @@
     },
     {
       "file": "index.html",
-      "sha256": "58bb02d5b0dad455a50538ef4987ef02e55e61a60ccc91570116795e9c7c4833"
+      "sha256": "989d1696fff3dc6014bd9cfeb7407560664be39059701c117eee72e93acf5b08"
     },
     {
       "file": "manifest.webmanifest",
-      "sha256": "ec81ac1446835f7c1d8ec5a27e55ffe04f864d3e8917997d040122a4a784ad59"
+      "sha256": "e947b1842444eda03d2d1cca7956569589f14717b106b246958d1d17c2adb4c4"
     },
     {
       "file": "portal/index.html",
-      "sha256": "13c8784d8cadc025651020d185465c7e6fa21a93bc20d5bacc03688ec182ac78"
+      "sha256": "a72c5aff62ed7cef8a7da71e06c3dd54340025ee8245e2a03103c3fdb2508cb1"
     },
     {
       "file": "portal/passkeys.js",
@@ -219,15 +219,15 @@
     },
     {
       "file": "portal/portal.css",
-      "sha256": "ee4511fca7b0f2f1206d9bf3061446f54ab65395d2421513e0df812285c64496"
+      "sha256": "c982e14e5dddb490469b8e2936722456bcf988f1487d8eeeab75e30d2498f850"
     },
     {
       "file": "portal/portal.js",
-      "sha256": "64c5fe1a897d24c389a23a8a07361081249717c196bc7c76a7f11b5211dbbc85"
+      "sha256": "6d8972bef0835d8eb1f6a8bc26d548b6d8d8ca47a41529d8f3f5464d8e769309"
     },
     {
       "file": "push-sw.js",
-      "sha256": "5cf14ae94a03eb5bcace56b5fea70e2b9e303cb558bfbe287ff66c66cdfaae9e"
+      "sha256": "53bf84f2221517ca50eef02dad8b06c1cddae87bf23cd12284029de8eae9760f"
     },
     {
       "file": "robots.txt",

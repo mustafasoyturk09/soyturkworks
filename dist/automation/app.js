@@ -5,7 +5,10 @@ const paths={home:'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',i
 const icon=(name)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(paths[name]||paths.file)+'"/></svg>';
 const labels={dashboard:'Genel bakış',invoices:'Faturalar',folders:'Klasörler',notifications:'Bildirimler'},navIcons={dashboard:'home',invoices:'invoices',folders:'folders',notifications:'notifications'};
 const params=new URLSearchParams(location.search);
-let state={companies:[],events:[]},view=params.get('view')||'dashboard',company=params.get('company')||'all',status='all',month='',query='',rows=[],offset=0,more=false,selected=new Map(),currentFolder=null,devices=[],pushId=null,loading=false,noticeTimer,toastTimer,searchTimer;
+const companyContext=window.SW_CONTEXT?.company;
+if(!companyContext?.id){location.replace('/companies');return;}
+const company=companyContext.id,base='/workspace/'+company+'/takip/';
+let state={companies:[],events:[]},view=params.get('view')||'dashboard',status='all',month='',query='',rows=[],offset=0,more=false,selected=new Map(),currentFolder=null,devices=[],pushId=null,loading=false,noticeTimer,toastTimer,searchTimer;
 let invoiceRequest=0,folderRequest=0;
 let registrationPromise='serviceWorker' in navigator?navigator.serviceWorker.register('/push-sw.js',{scope:'/'}).catch(()=>null):Promise.resolve(null);
 const date=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(ms)):'—';
@@ -13,12 +16,13 @@ const datetime=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul
 const time=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',hour:'2-digit',minute:'2-digit'}).format(new Date(ms)):'—';
 const money=(n,c)=>new Intl.NumberFormat('tr-TR',{style:'currency',currency:/^[A-Z]{3}$/.test(c)?c:'TRY',maximumFractionDigits:2}).format(n);
 const monthName=m=>m?new Intl.DateTimeFormat('tr-TR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(m+'-01T12:00:00Z')).replace(/^./,c=>c.toLocaleUpperCase('tr')):'Bütün aylar';
-const active=()=>state.companies.filter(c=>company==='all'||c.company.id===company);
+const active=()=>state.companies.filter(c=>c.company.id===company);
 const info=id=>state.companies.find(c=>c.company.id===id);
-const apiURL=(id,action)=>'/api/automation/'+encodeURIComponent(id)+'/'+action;
+const apiURL=(id,action)=>{if(id!==company)throw Error('Bu işlem yalnızca seçili firmada yapılabilir.');return '/api/automation/'+encodeURIComponent(company)+'/'+action;};
+const pushURL=action=>'/api/push/'+action+'?company='+encodeURIComponent(company);
 async function api(path,body){
   const response=await fetch(path,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
-  if(response.status===401){location.href='/login';throw Error('Oturumunu yeniden aç.');}
+  if(response.status===401){location.href='/login?next='+encodeURIComponent(base+location.search);throw Error('Oturumunu yeniden aç.');}
   let data;try{data=await response.json();}catch{throw Error('Sunucudan yanıt alınamadı.');}
   if(!response.ok)throw Error(data.error||'İşlem tamamlanamadı.');return data;
 }
@@ -32,7 +36,7 @@ function initNav(){
   $('openNotifications').innerHTML=icon('notifications');$('bellIllustration').innerHTML=icon('notifications');$('dialogFolderIcon').innerHTML=icon('folders');
   $('todayLabel').textContent=new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'numeric',month:'long',weekday:'long'}).format(new Date()).toLocaleUpperCase('tr-TR');
 }
-function updateAddress(){const p=new URLSearchParams();if(company!=='all')p.set('company',company);if(view!=='dashboard')p.set('view',view);history.replaceState(null,'','/takip'+(p.size?'?'+p:''));}
+function updateAddress(){const p=new URLSearchParams();if(view!=='dashboard')p.set('view',view);history.replaceState(null,'',base+(p.size?'?'+p:''));}
 async function changeView(next){
   if(!labels[next])next='dashboard';view=next;updateAddress();
   document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==next+'View');
@@ -40,8 +44,12 @@ async function changeView(next){
   if(next==='dashboard')renderDashboard();
   try{if(next==='invoices')await loadInvoices();if(next==='folders')await loadFolders();if(next==='notifications')await renderNotifications();}catch(e){notice(e.message);}
 }
-function renderCompanies(){
-  $('companyStrip').innerHTML='<button class="company-pill '+(company==='all'?'active':'')+'" data-company="all">Tüm firmalar</button>'+state.companies.map(c=>'<button class="company-pill '+(company===c.company.id?'active':'')+'" data-company="'+c.company.id+'" style="--company:'+escape(c.company.color)+'"><i></i>'+escape(c.company.name)+'</button>').join('');
+function renderIdentity(){
+  $('systemTitle').textContent='İzibiz - '+companyContext.name+' Gelen E-Fatura Takip Sistemi';
+  $('notificationExample').textContent=companyContext.name+' · Yeni Gelen 3 Fatura';
+  $('workspaceBack').href='/workspace/'+company+'/';$('workspaceBack').textContent=companyContext.name+' çalışma alanına dön ↗';
+  document.querySelectorAll('.brand,.mobile-brand').forEach(a=>a.href='/workspace/'+company+'/');
+  document.title=companyContext.name+' · Gelen E-Fatura Takibi · Soyturk Works';
 }
 function renderDashboard(){
   const items=active(),totals=items.reduce((t,c)=>{for(const k of ['fresh','done','pdfs','folders'])t[k]+=(c.counts?.[k]||0);return t;},{fresh:0,done:0,pdfs:0,folders:0});
@@ -51,13 +59,13 @@ function renderDashboard(){
   const note=running?'PDF’ler özel arşivine hazırlanıyor. Bu ekranı açık tutman gerekmez.':!enabled?'Firma kartından otomatik takibi yeniden açabilirsin.':'Hafta içi iki saatte bir. Önceki aya geç gelen faturalar da kontrol edilir.';
   $('dashboardView').innerHTML='<div class="summary-grid">'+[
     ['fresh','Yeni gelen','İşaretlemediğin faturalar','invoices'],['done','İşlendi','Geri alabilirsin','check'],['pdfs','PDF arşivde','Cihazına otomatik indirilmez','file'],['folders','Özel klasör','Firma ve aya göre ayrılır','folders']
-  ].map(([key,label,caption,symbol],i)=>'<article class="stat-card '+(!i?'primary':'')+'"><div class="stat-top"><span>'+label+'</span>'+icon(symbol)+'</div><div class="stat-number">'+totals[key]+'</div><div class="stat-note">'+caption+'</div></article>').join('')+'</div><div class="schedule-panel"><div class="schedule-symbol">'+icon(running?'clock':errors.length?'alert':'check')+'</div><div class="schedule-copy"><strong>'+title+'</strong><p>'+note+'</p></div><div class="schedule-time">'+(Number.isFinite(next)?time(next):'—')+'<small>'+(Number.isFinite(next)?date(next)+' · sonraki kontrol':'Otomatik kontrol kapalı')+'</small></div></div><div class="section-head"><div><p class="eyebrow">FİRMALARIN</p><h2>Bir bakışta durum</h2></div><span class="subtle">İşlenmeyen faturalar yeni olarak kalır.</span></div><div class="company-grid">'+items.map(c=>{
+  ].map(([key,label,caption,symbol],i)=>'<article class="stat-card '+(!i?'primary':'')+'"><div class="stat-top"><span>'+label+'</span>'+icon(symbol)+'</div><div class="stat-number">'+totals[key]+'</div><div class="stat-note">'+caption+'</div></article>').join('')+'</div><div class="schedule-panel"><div class="schedule-symbol">'+icon(running?'clock':errors.length?'alert':'check')+'</div><div class="schedule-copy"><strong>'+title+'</strong><p>'+note+'</p></div><div class="schedule-time">'+(Number.isFinite(next)?time(next):'—')+'<small>'+(Number.isFinite(next)?date(next)+' · sonraki kontrol':'Otomatik kontrol kapalı')+'</small></div></div><div class="section-head"><div><p class="eyebrow">SEÇİLİ FİRMA</p><h2>Bir bakışta durum</h2></div><span class="subtle">İşlenmeyen faturalar yeni olarak kalır.</span></div><div class="company-grid">'+items.map(c=>{
     const health=c.error||c.status?.error||(!c.connected?'İzibiz bağlantısı eksik':c.running?c.status?.progress||'Kontrol devam ediyor':c.status?.lastSuccess?'Son kontrol · '+datetime(c.status.lastSuccess):'İlk kontrol · '+datetime(c.nextCheck));
     return '<article class="company-card" style="--company:'+escape(c.company.color)+'"><div class="company-card-head"><span class="company-initial">'+escape(c.company.initials)+'</span><div><h3>'+escape(c.company.name)+'</h3><div class="health '+(c.status?.error||!c.connected?'error':'')+'">'+escape(health)+'</div></div></div><div class="company-stats"><strong>'+(c.counts?.fresh||0)+'</strong><span>yeni gelen</span><span>· '+(c.counts?.done||0)+' işlendi</span></div><div class="company-card-actions"><button class="text-button" data-open-company="'+c.company.id+'">Faturaları gör ↗</button><span>'+((c.bytes||0)/1024/1024).toFixed(1)+' / '+Math.round((c.capacity||536870912)/1024/1024)+' MB</span><button class="text-button muted" data-toggle="'+c.company.id+'" data-enabled="'+(!c.settings?.enabled)+'">'+(c.settings?.enabled?'Duraklat':'Takibi aç')+'</button></div></article>';
   }).join('')+'</div>';
 }
 async function refresh(){
-  if(loading)return;loading=true;try{state=await api('/api/automation');if(company!=='all'&&!info(company))company='all';renderCompanies();await changeView(view);}catch(e){notice(e.message);}finally{loading=false;}
+  if(loading)return;loading=true;try{const [summary,events]=await Promise.all([api(apiURL(company,'summary')),api(apiURL(company,'events'))]);if(summary.company.id!==company)throw Error('Firma bilgisi doğrulanamadı.');state={companies:[summary],events:events.events};await changeView(view);}catch(e){notice(e.message);}finally{loading=false;}
 }
 async function loadInvoices(append=false){
   const request=++invoiceRequest;
@@ -68,7 +76,7 @@ async function loadInvoices(append=false){
   more=result.some(d=>d.total>offset+d.rows.length);
   const months=[...new Set(result.flatMap(d=>d.months))].sort().reverse();$('monthFilter').innerHTML='<option value="">Bütün aylar</option>'+months.map(m=>'<option value="'+m+'">'+escape(monthName(m))+'</option>').join('');$('monthFilter').value=month;
   $('invoiceList').innerHTML=rows.length?rows.map(invoiceHTML).join(''):empty('Kutun sakin.','Faturalar kontrol edildiğinde burada görünecek. İlk kontrolde önceki ay ve güncel ay birlikte taranır.');
-  $('loadMore').hidden=!more;$('scanButton').disabled=!active().length||active().some(c=>c.running);$('baselineButton').disabled=company==='all';renderSelection();
+  $('loadMore').hidden=!more;$('scanButton').disabled=!active().length||active().some(c=>c.running);$('baselineButton').disabled=false;renderSelection();
 }
 function invoiceHTML(r){
   const key=r.company.id+':'+r.uuid,label=r.done?'İŞLENDİ':r.isRet?'REDDEDİLDİ':'YENİ GELEN';
@@ -100,15 +108,15 @@ async function renderNotifications(){
   const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
   const supported='Notification' in window&&'PushManager' in window&&'serviceWorker' in navigator;
   const registration=await registrationPromise,subscription=registration?await registration.pushManager.getSubscription():null;
-  const data=await api('/api/push/devices');devices=data.devices;
+  const data=await api(pushURL('devices'));devices=data.devices;
   pushId=subscription?await subscriptionId(subscription.endpoint):null;
   const saved=devices.find(d=>d.id===pushId);
   const ready=!!saved&&saved.active!==false&&supported&&Notification.permission==='granted';
-  $('pushStatus').textContent=ready?'● Bu cihaz bağlı. Bildirimler açık.':ios&&!standalone?'iPhone’da önce Ana Ekrana Ekle adımını tamamla.':!supported?'Bu tarayıcı bildirimleri desteklemiyor.':Notification.permission==='denied'?'Bildirim izni kapalı. Cihazın bildirim ayarlarından açabilirsin.':'Bu cihaz henüz bağlı değil.';
+  $('pushStatus').textContent=ready?'● '+companyContext.name+' için bu cihazın bildirimleri açık.':ios&&!standalone?'iPhone’da önce Ana Ekrana Ekle adımını tamamla.':!supported?'Bu tarayıcı bildirimleri desteklemiyor.':Notification.permission==='denied'?'Bildirim izni kapalı. Cihazın bildirim ayarlarından açabilirsin.':'Bu cihaz henüz bağlı değil.';
   $('enablePush').hidden=ready;$('enablePush').disabled=!supported||(ios&&!standalone)||(supported&&Notification.permission==='denied');
   $('testPush').hidden=!ready;
   $('pushHelp').textContent=ios&&!standalone?'Safari’de Paylaş menüsünü aç → Ana Ekrana Ekle. Soyturk Works simgesinden uygulamayı aç ve burada bildirimlere izin ver.':'Bildirimler yeni PDF’ler hazır olduğunda gelir. Otomatik bildirimler hafta içi 09.00–18.00 arasındadır. Deneme bildirimini istediğin zaman gönderebilirsin.';
-  $('deviceList').innerHTML=devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span>'+escape(d.name)+'<small class="subtle"> · '+datetime(d.lastSent||d.created)+'</small></span><button data-remove-device="'+d.id+'">Kaldır</button></div>').join('');
+  $('deviceList').innerHTML=devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span>'+escape(d.name)+'<small class="subtle"> · '+datetime(d.lastSent||d.created)+'</small></span><button data-remove-device="'+d.id+'">Bu firmada kapat</button></div>').join('');
   $('eventList').innerHTML=state.events.length?state.events.map(e=>'<article class="event">'+icon(e.kind==='error'?'alert':'notifications')+'<div><strong>'+escape(e.title)+'</strong><p>'+escape(e.body)+'</p><time>'+datetime(e.created)+'</time><a class="text-button" href="'+escape(e.url)+'">İlgili firmayı aç ↗</a></div></article>').join(''):empty('Henüz bildirim yok.','Yeni bir fatura bulunduğunda hem telefonunda hem burada görebilirsin.','notifications');
 }
 async function subscriptionId(endpoint){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(endpoint));return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('');}
@@ -116,18 +124,17 @@ function publicBytes(value){return Uint8Array.from(atob(value.replace(/-/g,'+').
 $('enablePush').onclick=()=>busy($('enablePush'),async()=>{
   const permission=await Notification.requestPermission();if(permission!=='granted'){toast('Bildirim izni verilmedi. İstediğinde ayarlardan açabilirsin.');await renderNotifications();return;}
   const registration=await registrationPromise;if(!registration)throw Error('Bildirim hizmeti açılamadı. Sayfayı yenileyip yeniden dene.');
-  await navigator.serviceWorker.ready;const config=await api('/api/push/config');
+  await navigator.serviceWorker.ready;const config=await api(pushURL('config'));
   const sub=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicBytes(config.publicKey)});
   const name=/iPhone/.test(navigator.userAgent)?'iPhone’um':/Mac/.test(navigator.platform)?'Mac’im':/Win/.test(navigator.platform)?'Windows bilgisayarım':'Cihazım';
-  await api('/api/push/subscribe',{subscription:sub.toJSON(),name});await renderNotifications();toast('Bu cihazın bildirimleri açıldı.');
+  await api(pushURL('subscribe'),{subscription:sub.toJSON(),name});await renderNotifications();toast(companyContext.name+' için bu cihazın bildirimleri açıldı.');
 });
-$('testPush').onclick=()=>busy($('testPush'),async()=>{await api('/api/push/test',{id:pushId});toast('Deneme bildirimi gönderildi. Telefonunun bildirimlerini kontrol et.');});
-$('companyStrip').onclick=async e=>{const button=e.target.closest('[data-company]');if(!button)return;company=button.dataset.company;selected.clear();renderCompanies();await changeView(view);};
+$('testPush').onclick=()=>busy($('testPush'),async()=>{await api(pushURL('test'),{id:pushId});toast('Deneme bildirimi gönderildi. Telefonunun bildirimlerini kontrol et.');});
 $('openNotifications').onclick=()=>changeView('notifications');
 $('refreshButton').onclick=()=>busy($('refreshButton'),refresh);
 $('dashboardView').onclick=e=>{
   const open=e.target.closest('[data-open-company]'),toggle=e.target.closest('[data-toggle]');
-  if(open){company=open.dataset.openCompany;renderCompanies();changeView('invoices');}
+  if(open&&open.dataset.openCompany===company)changeView('invoices');
   if(toggle)busy(toggle,async()=>{await api(apiURL(toggle.dataset.toggle,'settings'),{enabled:toggle.dataset.enabled==='true'});await refresh();});
 };
 $('statusFilters').onclick=e=>{const b=e.target.closest('[data-status]');if(!b)return;status=b.dataset.status;$('statusFilters').querySelectorAll('button').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));loadInvoices().catch(e=>notice(e.message));};
@@ -138,7 +145,7 @@ $('invoiceList').onchange=e=>{const key=e.target.dataset.select;if(!key)return;c
 $('invoiceList').onclick=e=>{const b=e.target.closest('[data-mark]');if(b)busy(b,async()=>{const row=rows.find(r=>r.company.id+':'+r.uuid===b.dataset.mark);if(row)await mark([row],b.dataset.done==='true');});};
 $('selectionBar').onclick=e=>{const b=e.target.closest('[data-bulk]');if(b)busy(b,()=>mark([...selected.values()],b.dataset.bulk==='true'));};
 $('clearSelection').onclick=()=>{selected.clear();$('invoiceList').querySelectorAll('input[type=checkbox]').forEach(n=>n.checked=false);renderSelection();};
-$('scanButton').onclick=()=>busy($('scanButton'),async()=>{let count=0;for(const c of active()){await api(apiURL(c.company.id,'scan'),{});count++;}toast(count+' firma için kontrol başlatıldı.');await refresh();});
+$('scanButton').onclick=()=>busy($('scanButton'),async()=>{await api(apiURL(company,'scan'),{});toast(companyContext.name+' için kontrol başlatıldı.');await refresh();});
 $('folderList').onclick=e=>{const b=e.target.closest('[data-folder]');if(b)busy(b,()=>openFolder(b.dataset.companyId,b.dataset.folder));};
 $('closeFolder').onclick=()=>$('folderDialog').close();
 $('folderDialog').addEventListener('click',e=>{if(e.target===$('folderDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
@@ -146,10 +153,10 @@ $('folderContent').onclick=e=>{const b=e.target.closest('[data-folder-action]');
   if(b.dataset.folderAction==='delete'){if(!confirm('Bu klasördeki PDF ve Excel dosyaları silinsin mi? İşlem durumları korunur.'))return;await api(apiURL(id,'delete-folder'),{folder});$('folderDialog').close();toast('Klasör silindi. İşlem durumları korundu.');await refresh();}
   else{await api(apiURL(id,'excel'),{folder});await openFolder(id,folder);toast('Güncel Excel bu klasöre eklendi.');}
 });};
-$('deviceList').onclick=e=>{const b=e.target.closest('[data-remove-device]');if(b)busy(b,async()=>{await api('/api/push/unsubscribe',{id:b.dataset.removeDevice});if(b.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager.getSubscription())?.unsubscribe();}await renderNotifications();toast('Cihazın bildirim bağlantısı kaldırıldı.');});};
+$('deviceList').onclick=e=>{const b=e.target.closest('[data-remove-device]');if(b)busy(b,async()=>{const result=await api(pushURL('unsubscribe'),{id:b.dataset.removeDevice});if(!result.remaining&&b.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager.getSubscription())?.unsubscribe();}await renderNotifications();toast('Bu firma için bildirimler kapatıldı.');});};
 $('baselineButton').onclick=()=>$('baselineFile').click();
 $('baselineFile').onchange=async e=>{
-  const file=e.target.files[0];e.target.value='';if(!file||company==='all')return;
+  const file=e.target.files[0];e.target.value='';if(!file)return;
   busy($('baselineButton'),async()=>{
     const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'}),numbers=new Set(),normalize=v=>String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');
     let found=false;for(const name of workbook.SheetNames){const grid=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1,defval:''});const header=grid.findIndex(row=>row.some(v=>['faturano','faturanumarasi','invoicenumber','belgeno'].includes(normalize(v))));if(header<0)continue;found=true;const col=grid[header].findIndex(v=>['faturano','faturanumarasi','invoicenumber','belgeno'].includes(normalize(v)));for(const row of grid.slice(header+1)){const n=String(row[col]||'').trim();if(n&&n.length<100&&!/toplam/i.test(n))numbers.add(n);}}
@@ -161,5 +168,5 @@ $('baselineFile').onchange=async e=>{
 };
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
 setInterval(()=>{if(!document.hidden&&!$('folderDialog').open&&!selected.size)refresh();},30000);
-initNav();refresh();
+initNav();renderIdentity();refresh();
 })();

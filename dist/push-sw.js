@@ -5,7 +5,7 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('push',event=>{
   event.waitUntil((async()=>{
     let data={};try{data=event.data?.json()||{};}catch{}
-    const path=typeof data.url==='string'&&/^\/takip(?:[/?]|$)/.test(data.url)?data.url:'/takip';
+    const path=typeof data.url==='string'&&/^(?:\/takip(?:[/?]|$)|\/workspace\/[A-Z_]+\/takip\/(?:[?]|$))/.test(data.url)?data.url:'/companies';
     await self.registration.showNotification(String(data.title||'Fatura Takibi').slice(0,120),{
       body:String(data.body||'Fatura takibinde yeni bir gelişme var. Detayları görmek için dokun.').slice(0,500),
       icon:'/assets/brand/apple-touch-icon.png',badge:'/assets/brand/favicon-48.png',
@@ -18,10 +18,12 @@ self.addEventListener('push',event=>{
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
   event.waitUntil((async()=>{
-    const url=new URL(event.notification.data?.url||'/takip',self.location.origin);
-    if(url.origin!==self.location.origin||!url.pathname.startsWith('/takip'))return;
+    const url=new URL(event.notification.data?.url||'/companies',self.location.origin);
+    if(url.origin!==self.location.origin)return;
+    if(/^\/takip\/?$/.test(url.pathname)){const id=url.searchParams.get('company');if(id&&/^[A-Z_]+$/.test(id)){url.pathname='/workspace/'+id+'/takip/';url.searchParams.delete('company');}else url.pathname='/companies';}
+    if(url.pathname!=='/companies'&&!/^\/workspace\/[A-Z_]+\/takip\/$/.test(url.pathname))return;
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    const target=windows.find(c=>new URL(c.url).pathname.startsWith('/takip'));
+    const target=windows.find(c=>new URL(c.url).pathname===url.pathname);
     if(target){await target.navigate(url.href);await target.focus();}else await self.clients.openWindow(url.href);
   })());
 });

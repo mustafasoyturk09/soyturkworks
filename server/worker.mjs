@@ -65,13 +65,16 @@ export default {
             response=await asset(env,request,'/portal/index.html');
           } else if(url.pathname==='/takip'||url.pathname==='/takip/'){
             if(!auth.account)return Response.redirect(origin+'/login?next='+encodeURIComponent(url.pathname+url.search),303);
-            response=await asset(env,request,'/automation/index.html');
+            const company=auth.companies.find(c=>c.id===url.searchParams.get('company')&&c.active&&!c.deleted);
+            const view=url.searchParams.get('view');
+            return Response.redirect(origin+(company?'/workspace/'+company.id+'/takip/'+(['invoices','folders','notifications'].includes(view)?'?view='+view:''):'/companies'),303);
           } else if(url.pathname.startsWith('/workspace/')) {
-            if(!auth.account) return Response.redirect(origin+'/login',303);
-            const id=url.pathname.match(/^\/workspace\/([A-Z_]+)\/?$/)?.[1];
+            if(!auth.account) return Response.redirect(origin+'/login?next='+encodeURIComponent(url.pathname+url.search),303);
+            const route=url.pathname.match(/^\/workspace\/([A-Z_]+)(\/takip)?\/?$/);
+            const id=route?.[1];
             const company=auth.companies.find(c=>c.id===id&&c.active&&!c.deleted);
             if(!company) return Response.redirect(origin+'/companies',303);
-            response=await asset(env,request,'/index.html');
+            response=await asset(env,request,route[2]?'/automation/index.html':'/index.html');
             const context=JSON.stringify({company,account:auth.account,origin}).replace(/</g,'\\u003c');
             response=new HTMLRewriter().on('head',{element(element){element.prepend('<base href="/"><script>window.SW_CONTEXT='+context+';</script>',{html:true});}}).transform(response);
           } else if(!auth.account) response=json({error:'Oturum açmanız gerekiyor.'},401);
@@ -246,16 +249,18 @@ export class AuthStore extends DurableObject {
     const session=await this.session(request);
     if(!session||!account)fail('Oturum açmanız gerekiyor.',401);
     if(path.startsWith('/api/push/')){
-      const action=path.slice('/api/push/'.length);return pushAPI(this.storage,this.env.APP_ORIGIN,action,request.method,{...body,revision:account.revision});
+      const company=(await this.companies()).find(c=>c.id===url.searchParams.get('company')&&c.active&&!c.deleted);
+      if(!company)fail('Bildirim işlemi için etkin bir firma seçin.',400);
+      const action=path.slice('/api/push/'.length);return pushAPI(this.storage,this.env.APP_ORIGIN,action,request.method,{...body,company:company.id,companyName:company.name,revision:account.revision});
     }
     if(path==='/api/automation'&&request.method==='GET'){
-      const companies=(await this.companies()).filter(c=>c.active&&!c.deleted);
-      const summaries=await Promise.all(companies.map(async c=>{const r=await this.companyArchive(c.id,'summary','GET');if(!r.ok)return {company:c,error:'Firma arşivi okunamadı.'};const data=await r.json();return {...data,connected:!!await this.storage.get('izibiz:config:'+c.id)};}));
-      return json({companies:summaries,events:[...(await this.storage.list({prefix:'push:event:'})).values()].sort((a,b)=>b.created-a.created).slice(0,50)});
+      fail('Önce bir firma seçin. Toplu takip ekranı kullanılmıyor.',400);
     }
     if(path.startsWith('/api/automation/')){
       const match=path.match(/^\/api\/automation\/([A-Z_]+)\/([a-z-]+)$/),company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
       if(!company)fail('Firma bulunamadı veya etkin değil.',403);
+      if(match[2]==='events'&&request.method==='GET')return json({events:[...(await this.storage.list({prefix:'push:event:'})).values()].filter(e=>e.company===company.id).sort((a,b)=>b.created-a.created).slice(0,50)});
+      if(match[2]==='summary'&&request.method==='GET'){const r=await this.companyArchive(company.id,'summary','GET');if(!r.ok)return r;return json({...await r.json(),connected:!!await this.storage.get('izibiz:config:'+company.id)});}
       if(!['summary','scan','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
       if(['scan','excel'].includes(match[2])&&request.method==='POST')await this.rate(request,'archive-'+match[2]+':'+company.id,20,15);
       return this.companyArchive(company.id,match[2],request.method,body,url.search);

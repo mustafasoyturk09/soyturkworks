@@ -125,7 +125,7 @@ test('Push requests use real encrypted Web Push payloads and VAPID signatures wi
 });
 test('Push outbox deduplicates events and revokes expired or old-session subscriptions',async()=>{
  const db=storage(),sub=subscription();await db.put('push:device:one',{id:'one',subscription:sub.value,revision:'current'});
- const event={id:'event-one',title:'Pusula',body:'Yeni fatura var',created:Date.now()};await enqueueNotification(db,event);await enqueueNotification(db,event);
+ const event={id:'event-one',company:'PUSULA',title:'Pusula',body:'Yeni fatura var',created:Date.now()};await enqueueNotification(db,event);await enqueueNotification(db,event);
  assert.equal((await db.list({prefix:'push:outbox:'})).size,1);
  await flushNotifications(db,'https://soyturkworks.com','current',async()=>new Response('',{status:410}));assert.equal((await db.list({prefix:'push:device:'})).size,0);assert.equal((await db.list({prefix:'push:outbox:'})).size,0);
  await db.put('push:device:two',{id:'two',subscription:sub.value,revision:'old'});await enqueueNotification(db,{...event,id:'event-two'});
@@ -135,8 +135,45 @@ test('Push outbox deduplicates events and revokes expired or old-session subscri
 test('Test notification identifies the test without repeating the app name or inventing invoices',async()=>{
  const db=storage(),sub=subscription();await db.put('push:device:test-device',{id:'test-device',subscription:sub.value,revision:'current'});
  let payload;
- const response=await pushAPI(db,'https://soyturkworks.com','test','POST',{id:'test-device'},async(url,options)=>{
+ const response=await pushAPI(db,'https://soyturkworks.com','test','POST',{id:'test-device',company:'PUSULA',companyName:'Pusula',revision:'current'},async(url,options)=>{
   payload=JSON.parse(ece.decrypt(options.body,{version:'aes128gcm',privateKey:sub.client,authSecret:sub.auth}).toString());return new Response('',{status:201});
  });
  assert.equal(response.status,200);assert.equal(payload.title,'Bildirim Denemesi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));
+});
+
+
+test('Company notification preferences preserve other firms on the same device and filter queued delivery',async()=>{
+ const db=storage(),sub=subscription(),call=(action,company,body={})=>pushAPI(db,'https://soyturkworks.com',action,action==='devices'?'GET':'POST',{...body,company,companyName:company,revision:'current'});
+ const first=await (await call('subscribe','PUSULA',{subscription:sub.value})).json(),id=first.id;
+ assert.equal((await (await call('devices','COMED')).json()).devices.length,0);
+ await call('subscribe','COMED',{subscription:sub.value});
+ assert.equal((await (await call('devices','PUSULA')).json()).devices.length,1);
+ assert.equal((await (await call('devices','COMED')).json()).devices.length,1);
+ const event={id:'scoped',company:'PUSULA',title:'Pusula',body:'PDF hazır',created:Date.now()};
+ await enqueueNotification(db,event);assert.equal((await db.list({prefix:'push:outbox:'})).size,1);
+ const removed=await (await call('unsubscribe','PUSULA',{id})).json();assert.equal(removed.remaining,1);
+ assert.equal((await (await call('devices','PUSULA')).json()).devices.length,0);
+ assert.equal((await (await call('devices','COMED')).json()).devices.length,1);
+ await flushNotifications(db,'https://soyturkworks.com','current',()=>assert.fail('Disabled company must not deliver queued events'));
+ await enqueueNotification(db,{...event,id:'disabled-new'});assert.equal((await db.list({prefix:'push:outbox:'})).size,0);
+ await enqueueNotification(db,{...event,id:'comed',company:'COMED'});assert.equal((await db.list({prefix:'push:outbox:'})).size,1);
+ await assert.rejects(()=>call('test','PUSULA',{id}),/bu firma/);
+ assert.equal((await (await call('unsubscribe','COMED',{id})).json()).remaining,0);assert.equal(await db.get('push:device:'+id),undefined);
+});
+
+test('Existing phone subscriptions keep their prior firms when one firm is disabled',async()=>{
+ const db=storage(),sub=subscription(),id='a'.repeat(64);await db.put('push:device:'+id,{id,subscription:sub.value,revision:'current'});
+ const response=await pushAPI(db,'https://soyturkworks.com','unsubscribe','POST',{id,company:'PUSULA',revision:'current'});
+ assert.equal((await response.json()).remaining,4);const device=await db.get('push:device:'+id);assert(!device.companies.includes('PUSULA'));assert(device.companies.includes('KIB_DIJITAL'));
+});
+
+
+test('Completing a push delivery preserves company preferences changed while the request was in flight',async()=>{
+ const db=storage(),sub=subscription(),id='b'.repeat(64);await db.put('push:device:'+id,{id,subscription:sub.value,revision:'current',companies:['PUSULA','COMED']});
+ await enqueueNotification(db,{id:'in-flight',company:'COMED',title:'Comed',body:'PDF hazır',created:Date.now()});
+ await flushNotifications(db,'https://soyturkworks.com','current',async()=>{
+  await pushAPI(db,'https://soyturkworks.com','unsubscribe','POST',{id,company:'PUSULA',revision:'current'});
+  return new Response('',{status:201});
+ });
+ assert.deepEqual((await db.get('push:device:'+id)).companies,['COMED']);
 });

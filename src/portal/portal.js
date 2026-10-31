@@ -17,7 +17,7 @@
   async function busy(button,action){if(button.disabled)return;button.disabled=true;try{await action();}catch(error){message(error.message);}finally{button.disabled=false;}}
   function template(id){main.replaceChildren($(id).content.cloneNode(true));}
   const field=(name,label,autocomplete='new-password')=>{const l=document.createElement('label');l.textContent=label;const i=document.createElement('input');i.name=name;i.type='password';i.autocomplete=autocomplete;i.required=true;i.minLength=7;i.maxLength=128;l.append(i);return l;};
-  function loginDestination(){const next=new URLSearchParams(location.search).get('next');return next&&/^\/takip(?:\?|$)/.test(next)?next:'/companies';}
+  function loginDestination(){const next=new URLSearchParams(location.search).get('next');return next&&/^(?:\/takip(?:\?|$)|\/workspace\/[A-Z_]+\/takip\/(?:\?|$))/.test(next)?next:'/companies';}
   function login() {
     template('loginTemplate');
     const form=$('loginForm');

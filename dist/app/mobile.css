@@ -220,3 +220,5 @@ html { -webkit-text-size-adjust: 100%; }
 @media (prefers-reduced-motion: reduce) {
   body > aside { transition: none; }
 }
+
+@media(max-width:600px){#ef115Top .sw-auto-follow{font-size:11px;padding:8px 10px;min-height:40px;max-width:100%}}

@@ -61,16 +61,26 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/session',null,cookie)).value.account.username,'qa-user');
     });
     await t.test('Private archive and real push configuration require a session and stay company scoped',async()=>{
-      assert.equal((await request('/takip',null,cookie)).status,200);
-      const dashboard=(await request('/api/automation',null,cookie)).value;
-      assert.equal(dashboard.companies.length,5);assert(dashboard.companies.every(c=>c.counts.total===0&&c.settings.enabled));
+      assert.equal((await request('/takip',null,cookie)).headers.get('location'),origin+'/companies');
+      const firms=(await request('/api/companies',null,cookie)).value.companies;
+      for(const company of firms){
+        const page=await request('/workspace/'+company.id+'/takip/',null,cookie);assert.equal(page.status,200);
+        const context=JSON.parse(page.value.match(/window.SW_CONTEXT=(.*?);<\/script>/)[1]);assert.equal(context.company.id,company.id);assert.equal(context.companies,undefined);
+        const old=await request('/takip?company='+company.id+'&view=invoices',null,cookie);assert.equal(old.headers.get('location'),origin+'/workspace/'+company.id+'/takip/?view=invoices');
+        const summary=(await request('/api/automation/'+company.id+'/summary',null,cookie)).value;assert.equal(summary.company.id,company.id);assert.equal(summary.counts.total,0);assert.equal(summary.connected,false);
+        assert.deepEqual((await request('/api/automation/'+company.id+'/events',null,cookie)).value.events,[]);
+      }
+      assert.equal((await request('/api/automation',null,cookie)).status,400);
+      assert.equal((await request('/workspace/UNKNOWN/takip/',null,cookie)).headers.get('location'),origin+'/companies');
       assert.equal((await request('/api/automation/UNKNOWN/invoices',null,cookie)).status,403);
       assert.equal((await request('/api/automation/PUSULA/invoices',null,cookie)).value.rows.length,0);
       assert.equal((await request('/api/automation/PUSULA/pdf?id=not-an-invoice',null,cookie)).status,404);
       assert.equal((await request('/api/automation/PUSULA/mark',{items:[{uuid:'11111111-2222-4333-8444-555555555555',revision:0}],done:true},cookie)).status,404);
-      const config=await request('/api/push/config',null,cookie);assert.equal(config.status,200);assert.equal(Buffer.from(config.value.publicKey,'base64url').length,65);assert.equal(config.value.privateKey,undefined);
-      assert.equal((await request('/api/push/devices',null,cookie)).value.devices.length,0);
-      assert.equal((await request('/api/push/subscribe',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);
+      assert.equal((await request('/api/push/devices',null,cookie)).status,400);
+      assert.equal((await request('/api/push/devices?company=UNKNOWN',null,cookie)).status,400);
+      const config=await request('/api/push/config?company=PUSULA',null,cookie);assert.equal(config.status,200);assert.equal(Buffer.from(config.value.publicKey,'base64url').length,65);assert.equal(config.value.privateKey,undefined);
+      assert.equal((await request('/api/push/devices?company=PUSULA',null,cookie)).value.devices.length,0);
+      assert.equal((await request('/api/push/subscribe?company=PUSULA',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);
       assert.equal((await request('/api/automation/PUSULA/settings',{enabled:false},cookie)).status,200);
       assert.equal((await request('/api/automation/PUSULA/summary',null,cookie)).value.settings.enabled,false);
       assert.equal((await request('/api/automation/COMED/summary',null,cookie)).value.settings.enabled,true);
@@ -80,6 +90,8 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       const companies=(await request('/api/companies',null,cookie)).value.companies;assert.equal(companies.length,5);
       for(const company of companies){const app=await request('/workspace/'+company.id+'/',null,cookie);assert.equal(app.status,200);assert(app.value.includes('"id":"'+company.id+'"'));assert(app.value.includes('<base href="/">'));}
       assert.equal((await request('/api/companies',{id:'PUSULA',active:false,deleted:false},cookie,'PATCH')).status,200);
+      assert.equal((await request('/workspace/PUSULA/takip/',null,cookie)).headers.get('location'),origin+'/companies');
+      assert.equal((await request('/api/automation/PUSULA/events',null,cookie)).status,403);
       assert.equal((await request('/workspace/PUSULA/',null,cookie)).status,303);
       assert.equal((await request('/api/izibiz/PUSULA/status',null,cookie)).status,403);
       assert.equal((await request('/api/companies',{id:'PUSULA',active:false,deleted:true},cookie,'PATCH')).status,200);

@@ -8,5 +8,3 @@
 
 /* Customer welcome uses the existing mint accent and white heading. */
 .intro h1{color:#fff}.company-heading h1{text-wrap:balance}
-
-.automation-entry{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;margin:0 0 24px;border:1px solid #54d2b03b;border-radius:16px;background:#54d2b00b;color:#daf5ec}.automation-entry strong{display:block;font-size:15px;font-weight:500}.automation-entry small{display:block;margin-top:6px;color:#9fb5bd;font-size:11px;line-height:1.6}.automation-entry>b{font-size:24px;color:#54d2b0}.automation-entry:hover{background:#54d2b014}@media(max-width:650px){.automation-entry{padding:16px;border-radius:12px;gap:12px}.automation-entry strong{font-size:13px}.automation-entry small{font-size:10px}}

@@ -1,6 +1,13 @@
 # Otomatik Fatura Takibi
 
-/takip oturumla korunan otomatik takip ekranıdır. Mevcut manuel Excel/İzibiz
+Her firmanın oturumla korunan takip ekranı /workspace/FIRMA/takip/ adresindedir.
+Giriş düğmesi, o firmanın Gelen E-Fatura Takip ekranında İzibiz düğmesinin
+hemen solundadır. Başlık, özet, faturalar, klasörler, bildirim geçmişi ve
+bütün işlemler sunucunun sayfaya verdiği tek firma bağlamını kullanır.
+Ekranın içinden başka firma seçilemez; kendi çalışma alanına geri dönülür.
+Eski /takip?company=FIRMA bağlantıları ilgili firma ekranına yönlenir.
+Firmasız /takip firma seçimine yönlenir; toplu özet API'si veri döndürmez.
+ Mevcut manuel Excel/İzibiz
 modülü ayrı çalışmaya devam eder. Manuel düğmenin iki Excel koşulu otomatik
 sunucu kontrolüne uygulanmaz.
 
@@ -63,6 +70,10 @@ fatura bilgileri, silinme bilgisi ve işlem durumu kalır. Otomatik süreli silm
 Standart Web Push, gerçek VAPID imzası ve aes128gcm şifrelemesi kullanılır.
 Üçüncü taraf bildirim aboneliği hizmeti veya Apple geliştirici üyeliği gerekmez.
 Bildirim aboneliği yalnızca oturum açmış sahibin kullanıcı hareketiyle eklenir.
+Aynı fiziksel cihaz birden fazla firma için bağlanabilir; bildirim tercihleri
+firma kapsamında tutulur. Bir firmada kapatma diğer firmaların bildirimlerini
+kapatmaz. Önceden kaydedilmiş cihazların mevcut kapsamı korunur; VAPID veya
+telefon aboneliği sıfırlanmaz. Gönderim kuyruğu da firma tercihini yeniden denetler.
 VAPID özel anahtarı sunucuda tutulur. Bilinen HTTPS push sağlayıcıları dışındaki
 abonelik adresleri kabul edilmez.
 
@@ -71,7 +82,8 @@ açılan uygulamada Bildirimler bölümünden izni verir. Bu adım telefon üzer
 kullanıcının işlemini gerektirir. Deneme bildirimi düğmesi gerçek push gönderir.
 
 Bildirim firma, hazır yeni PDF sayısı ve işlem bekleyen toplamı belirtir;
-dokununca firma listesi açılır. Sessiz arka plan mesajı yerine görünür bildirim
+dokununca yalnızca ilgili firmanın fatura listesi açılır. Başka firmada açık
+pencere varsa o pencerenin firması değiştirilmez. Sessiz arka plan mesajı yerine görünür bildirim
 gösterilir. Fatura içeriği ve tutarlar kilit ekranına gönderilmez.
 Yeni fatura yoksa tekrar bildirim yoktur. Olaylar benzersiz kimlikle sıraya alınır;
 geçersiz abonelikler temizlenir. Parola kurtarma/değiştirme eski cihaz
