@@ -122,8 +122,8 @@ test('Every company export labels only fresh non-rejected invoices YENİ GELEN a
   }
 });
 for(const [company,companyName] of [['PUSULA','Pusula'],['COMED','Comed'],['KIB','Kendine İyi Bak'],['DIJITAL_GARAJ','Dijital Garaj'],['KIB_DIJITAL','KİB Dijital Tek']])
-test(companyName+': Izibiz distinguishes existing invoices, first use, read errors and custom dates',async()=>{
-  const nodes=new Map(),events={},files=new Map(),calls=[],downloads=[];let modals=0,loaded=[{fatno:'TEST202600000001',tarih:'01.10.2026',islendi:false}],reference=['TEST202600000001'],referenceError='',loading=false,remoteRows=[{...invoiceRow(invoice,identifier),ticket:'test'}];
+test(companyName+': Izibiz requires both readable Excel files, blocks missing files and keeps custom dates',async()=>{
+  const nodes=new Map(),events={},files=new Map(),calls=[],downloads=[];let modals=0,loaded=[{fatno:'TEST202600000001',tarih:'01.10.2026',islendi:false}],reference=['TEST202600000001'],referenceError='',rawError='',loading=false,remoteRows=[{...invoiceRow(invoice,identifier),ticket:'test'}];
   class Node{
     constructor(tag){this.tag=tag;this.hidden=false;this.disabled=false;this.inert=false;this.open=false;}
     set id(value){this._id=value;nodes.set(value,this);}get id(){return this._id;}
@@ -136,11 +136,24 @@ test(companyName+': Izibiz distinguishes existing invoices, first use, read erro
   const document={readyState:'loading',body:new Node('body'),createElement:tag=>new Node(tag),getElementById:id=>nodes.get(id),addEventListener:(name,callback)=>{events[name]=callback;}};
   class JSZip{file(name,bytes){if(bytes===undefined)return files.get(name);files.set(name,bytes);}async generateAsync(){return {};}}
   const indexedDB={open:()=>assert.fail('No folder database should be opened')};
-  const window={SW_CONTEXT:{},SWWorkspace:{companyId:company,companyName,databaseName:name=>company+':'+name},showDirectoryPicker:()=>assert.fail('Folder selection must never be requested'),SWInvoiceBridge:{snapshot:()=>({reference,rows:loaded,referenceError,loading}),load:grid=>{loaded=grid.slice(1).map(r=>({fatno:r[0],tarih:r[1],islendi:true,isRet:false}));},excel:async()=>({name:companyName+' - Gelen Faturalar (31.10.2026).xlsx',bytes:new Uint8Array([1])})}};
+  const window={SW_CONTEXT:{},SWWorkspace:{companyId:company,companyName,databaseName:name=>company+':'+name},showDirectoryPicker:()=>assert.fail('Folder selection must never be requested'),SWInvoiceBridge:{snapshot:()=>({reference,rows:loaded,referenceError,rawError,loading}),load:grid=>{loaded=grid.slice(1).map(r=>({fatno:r[0],tarih:r[1],islendi:true,isRet:false}));},excel:async()=>({name:companyName+' - Gelen Faturalar (31.10.2026).xlsx',bytes:new Uint8Array([1])})}};
   vm.runInNewContext(await readFile(new URL('../src/izibiz.js',import.meta.url),'utf8'),{window,document,indexedDB,JSZip,setTimeout(){},URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},AbortController,crypto:{randomUUID:()=>scan.run},Date:class extends Date{constructor(...args){super(...(args.length?args:['2026-10-30T23:30:00Z']));}},fetch:async(url,options)=>{
     calls.push({url,body:options.body?JSON.parse(options.body):null});return new Response(JSON.stringify(url.endsWith('/status')?{connected:true,configured:true,name:companyName,identifier}:{rows:remoteRows,total:remoteRows.length,pages:1,company,identifier}));
   }});
-  events.DOMContentLoaded();await new Promise(resolve=>setImmediate(resolve));await nodes.get('swIziButton').onclick();
+  events.DOMContentLoaded();await new Promise(resolve=>setImmediate(resolve));
+  const baseline=calls.length;
+  const blocked=async()=>{
+    await nodes.get('swIziButton').onclick();assert.equal(calls.length,baseline);assert.equal(downloads.length,0);assert.equal(modals,0);
+    await nodes.get('swIziRun').onclick();assert.equal(calls.length,baseline);assert.equal(downloads.length,0);
+  };
+  const initialRows=loaded,initialReference=reference;
+  reference=null;loaded=[];await blocked();assert.match(nodes.get('swIziInlineStatus').textContent,/ikisini de yükleyin/);
+  reference=initialReference;await blocked();
+  reference=null;loaded=initialRows;await blocked();
+  reference=initialReference;rawError='Yeni Excel okunamadı';await blocked();assert.match(nodes.get('swIziInlineStatus').textContent,/Yeni Excel okunamadı/);
+  rawError='';referenceError='Eski Excel okunamadı';await blocked();
+  referenceError='';loading=true;await blocked();
+  loading=false;await nodes.get('swIziButton').onclick();
   assert.equal(modals,0);assert.deepEqual(downloads,[companyName+' - Gelen E-Faturalar.zip']);assert.deepEqual([...files.keys()],[companyName+' - Gelen Faturalar (31.10.2026).xlsx']);
   assert(!nodes.has('swIziFolder'));
   assert.equal(nodes.get('swIziProgress').hidden,false);assert.match(nodes.get('swIziInlineStatus').textContent,/Yeni fatura yok/);
@@ -149,9 +162,10 @@ test(companyName+': Izibiz distinguishes existing invoices, first use, read erro
   assert.equal(first.startDate,'2026-10-01');assert.equal(first.endDate,'2026-10-31');
   const before=calls.length;referenceError='Eski Excel okunamadı';await nodes.get('swIziButton').onclick();assert.equal(calls.length,before);assert.match(nodes.get('swIziInlineStatus').textContent,/Eski Excel okunamadı/);
   referenceError='';loading=true;await nodes.get('swIziButton').onclick();assert.equal(calls.length,before);assert.match(nodes.get('swIziInlineStatus').textContent,/okunuyor/);
-  loading=false;reference=null;loaded=[];remoteRows=[];await nodes.get('swIziButton').onclick();
+  loading=false;reference=['OLD'];loaded=[{fatno:'TEST',tarih:'01.10.2026'}];remoteRows=[];await nodes.get('swIziButton').onclick();
   assert(calls.length>before);assert.match(nodes.get('swIziInlineStatus').textContent,/tarih aralığında gelen fatura yok/);
   nodes.get('swIziFrom').value='2026-09-01';nodes.get('swIziFrom').onchange();nodes.get('swIziTo').value='2026-09-30';await nodes.get('swIziButton').onclick();
   const custom=calls.filter(c=>c.url.endsWith('/list')).at(-1).body;assert.equal(custom.startDate,'2026-09-01');assert.equal(custom.endDate,'2026-09-30');
-  events['sw-efatura-reset']();assert.equal(nodes.get('swIziInlineStatus').textContent,'');assert.equal(nodes.get('swIziProgress').hidden,true);assert.equal(nodes.get('swIziTo').value,'2026-10-31');
+  reference=null;loaded=[];events['sw-efatura-reset']();assert.equal(nodes.get('swIziInlineStatus').textContent,'');assert.equal(nodes.get('swIziProgress').hidden,true);assert.equal(nodes.get('swIziTo').value,'2026-10-31');
+  const afterReset=calls.length;await nodes.get('swIziButton').onclick();assert.equal(calls.length,afterReset);assert.match(nodes.get('swIziInlineStatus').textContent,/ikisini de yükleyin/);
 });

@@ -3,10 +3,13 @@
 Gelen E-Fatura Takip modülündeki İzibiz düğmesi seçili firmaya bağlıdır. Her
 firma ilk kullanımda bir kez bağlanır. Bütün tarayıcılarda firma adına tek ZIP
 indirilir; uygulama klasör seçtirmez veya klasöre yazma izni istemez. Daha sonra
-eski Excel yüklenip İzibiz'e basıldığında ayar ekranı açılmadan indirme başlar.
+eski ve yeni Excel dosyaları yüklenip İzibiz'e basıldığında ayar ekranı açılmadan indirme başlar.
 Küçük ayar düğmesi bağlantıyı veya tarih aralığını değiştirmek için kullanılır.
-İlk kullanımda eski Excel zorunlu değildir; eski dosya yoksa reddedilmemiş ve
-işlenmiş olarak işaretlenmemiş faturalar yeni sayılır. Varsayılan sorgu dönemin
+İzibiz indirmesi için Eski (İşlenmiş) Excel ve Yeni Gelen Excel dosyalarının
+ikisi de başarıyla okunmuş olmalıdır. Dosyalardan biri eksikse, okunuyorsa veya
+okuma hatası varsa liste/PDF sorgusu ve ZIP indirmesi başlatılmaz. Temizle veya
+dosya kaldırma sonrasında bu koşul yeniden kontrol edilir. Bağlantı ayarları
+Excel yüklemeden de açılabilir. Varsayılan sorgu dönemin
 ilk gününden bugüne kadardır; son faturanın tarihinde kesilmez. Ayarlarda elle
 seçilen tarih aralığı indirme düğmesine basıldığında korunur.
 

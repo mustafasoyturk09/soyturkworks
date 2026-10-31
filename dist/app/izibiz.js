@@ -44,15 +44,24 @@
     if(running)return;await ready;setDates();dialog.showModal();$('swIziProgress').hidden=true;
     status('PDF’ler ve güncel Excel firma adına tek ZIP olarak indirilecek.');await connection();destination();
   }
+  function filesReady(snapshot){
+    if(snapshot.loading){status('Excel dosyaları okunuyor. Okuma tamamlanınca yeniden deneyin.');return false;}
+    if(snapshot.referenceError){status(snapshot.referenceError+' Eski Excel dosyasını yeniden seçin.');return false;}
+    if(snapshot.rawError){status(snapshot.rawError+' Yeni Excel dosyasını yeniden seçin.');return false;}
+    if(!snapshot.reference||!snapshot.rows.length){status('İndirme için önce Eski (İşlenmiş) Excel ve Yeni Gelen Excel dosyalarının ikisini de yükleyin.');return false;}
+    return true;
+  }
   async function activate(){
-    if(running)return;await ready;setDates();
+    if(running)return;await ready;
+    if(!filesReady(window.SWInvoiceBridge.snapshot()))return;
+    setDates();
     if(!connected){await open();return;}
     await run();
   }
   function bootDialog(){
     dialog=document.createElement('dialog');dialog.id='swIziDialog';dialog.className='sw-izi-dialog';dialog.setAttribute('aria-labelledby','swIziTitle');
     dialog.innerHTML=`<div class="sw-izi-heading"><div><small>GELEN E-FATURA</small><h2 id="swIziTitle">İzibiz · <span></span></h2></div><button type="button" id="swIziClose" aria-label="Kapat">×</button></div>
-      <p>İzibiz’e basmanız yeterli. Yeni PDF’ler ve güncel Excel, firma adına tek ZIP olarak indirilir. ZIP’i açarak dosyaları firma klasörüne çıkarabilirsiniz.</p>
+      <p>Eski (İşlenmiş) Excel ve Yeni Gelen Excel dosyalarını yükledikten sonra İzibiz’e basın. Yeni PDF’ler ve güncel Excel, firma adına tek ZIP olarak indirilir. ZIP’i açarak dosyaları firma klasörüne çıkarabilirsiniz.</p>
       <p id="swIziConnection"></p>
       <details id="swIziSetup"><summary>Firma bağlantısı</summary><p>Bu firmanın mevcut İzibiz hesabını bir kez bağla. Bilgiler sunucuda şifreli tutulur; dışa aktardığın HTML ve Excel dosyalarına eklenmez.</p>
       <form id="swIziForm"><label>Firmanın VKN / TCKN bilgisi<input id="swIziTax" name="identifier" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" required autocomplete="off"></label>
@@ -99,10 +108,9 @@
   function gridFor(rows){return [headers,...rows.map(r=>[r.fatno,String(r.tarih||'').slice(0,10).split('-').reverse().join('.'),r.unvan,'',r.tip==='IADE'?'İade':r.tip,r.tutar,r.birim,r.yanit,r.isRet?'RET':'',''])];}
   async function run(){
     if(running)return;
-    if(!connected){$('swIziSetup').open=true;status('Önce bu firmanın bağlantısını bir kez doğrulayın.');return;}
     const snapshot=window.SWInvoiceBridge.snapshot();
-    if(snapshot.loading){status('Excel dosyası okunuyor. Okuma tamamlanınca yeniden deneyin.');return;}
-    if(snapshot.referenceError){status(snapshot.referenceError+' Eski dosyayı yeniden seçin veya ilk kullanım için Temizle ile kaldırın.');return;}
+    if(!filesReady(snapshot))return;
+    if(!connected){$('swIziSetup').open=true;status('Önce bu firmanın bağlantısını bir kez doğrulayın.');return;}
     const startDate=$('swIziFrom').value,endDate=$('swIziTo').value;
     if(!startDate||!endDate||startDate>endDate){status('Geçerli başlangıç ve bitiş tarihlerini seçin.');return;}
     running=true;controller=new AbortController();const signal=controller.signal;
@@ -141,8 +149,8 @@
       signal.throwIfAborted();
       status('Firma ZIP’i hazırlanıyor…');const blob=await archive.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});signal.throwIfAborted();downloadZip(blob,folder+'.zip');
       const result='Tek ZIP indirmesi başlatıldı: '+folder+'.zip';
-      if(!fresh.length)status('Yeni fatura yok. '+rows.length+' fatura kontrol edildi; '+(snapshot.reference?'eski Excel’de bulunan veya işlenmiş/reddedilmiş faturalar tekrar indirilmedi.':'işlenmiş veya reddedilmiş faturalar indirilmedi.')+' Güncel Excel hazır. '+result);
-      else status((snapshot.reference?'Tamamlandı. ':'İlk liste alındı. Eski Excel olmadığı için işlenmemiş faturalar yeni sayıldı. ')+stored+' yeni PDF ve güncel Excel hazır. '+result);
+      if(!fresh.length)status('Yeni fatura yok. '+rows.length+' fatura kontrol edildi; '+'eski Excel’de bulunan veya işlenmiş/reddedilmiş faturalar tekrar indirilmedi.'+' Güncel Excel hazır. '+result);
+      else status('Tamamlandı. '+stored+' yeni PDF ve güncel Excel hazır. '+result);
     }catch(e){
       const message=e.name==='AbortError'?'İşlem durduruldu.':e.message;
       status(message+' İşlem tamamlanmadı. ZIP indirilmedi.');
