@@ -16,14 +16,19 @@ anlatır. `Güncel excel listesini ekle` ve `Önceki ayın PDF'lerini ekle` kutu
 dosya seçiminin yanında sürükle-bırak da destekler. Satır ayrıntısındaki
 `Seçili PDF’i aç` referansı ayrı sekmede açar; doldurulan hazırlık alanları açık kalır.
 
-- XLS/XLSX dosyası tarayıcıda okunur. Sayfa ve sütun eşleştirmesi görünürdür;
-  `2025-2026` sayfası varsa önerilir. En son dolu dönem sütunu önerilir, yeni dönem
-  tutarları olarak onaylanmaz. Excel satır sırası ve hücre adresleri korunur.
-- Varsayılan seçim sarı matrah hücrelerini ve kırmızı ay sonu kayıtlarını kapsar.
-  E-Arşiv ve sıfır matrahlar hariç tutulur. SS NO alanı tek başına E-Fatura
-  mükellefiyetini kanıtlamaz. Aynı unvana sahip şubeler birleştirilmez.
-- Kırmızı kaynak rengi ay sonu grubuna alınır; kullanıcı satır ayrıntısından
-  grubu düzeltebilir. Ortak tarih ay başı içindir; ay sonuna kopyalanmaz.
+- Fatura tarihi tek dönem kaynağıdır. 2 Kasım 2026 seçimi Kasım 2026 sütununu,
+  Aralık tarihi Aralık sütununu bağlar. Dönem alanı salt okunurdur. Aynı ayın
+  `Bakım-Kira` sütunu tercih edilir; `LİS-Diğer` bu akışa dahil edilmez. Eksik
+  veya birden fazla eşleşen sütunda işlem durur; önceki aydan tutar alınmaz.
+- Renk seçimi kaldırılmıştır. Boyasız satırlar da okunur; E-Arşiv, Biruni ve
+  Sentez Sağlık şirket kayıtları alınmaz. Başka tüzel kişiliğe ait bir şubenin
+  adında Sentez bulunması tek başına o şirketi Sentez Sağlık yapmaz. Sıfır matrah
+  dışarıda kalır. SS NO tek başına E-Fatura mükellefiyeti kanıtı değildir.
+- Seçilen ayın tutarı önceki ayın aynı Bakım-Kira sütunuyla karşılaştırılır.
+  Önceki ay yoksa başka ayla karşılaştırma yapılmaz. Fark varsa eski/yeni tutar
+  ve fark gösterilir; ilk fark inceleme penceresinde açılır. Aynı tutara düzeltme
+  veya açık fark onayı karşılaştırmayı yeşile çevirir. Bu renk İzibiz doğrulaması
+  veya gönderime hazır olma anlamına gelmez. Para birimi değişiminde çevrim yapılmaz.
 - Tutarlar kuruş olarak saklanır. Açıkça iki ondalıklı Excel gösterimi varsa o
   gösterim kullanılır ve ayrıntıda belirtilir. Bunun dışındaki fazladan hassasiyet
   veya sonuç değeri olmayan formül kontrol sorunu olarak kalır. Para birimi
@@ -34,9 +39,18 @@ dosya seçiminin yanında sürükle-bırak da destekler. Satır ayrıntısındak
 - Hazırlık listesi firma kapsamlı `pusula_sales_preparation_v1` anahtarındadır.
   JSON yedeği satırları içerir; PDF dosyalarını içermez. Başka cihazda PDF'ler yeniden
   eklenmelidir. Gerçek çalışma dosyaları dağıtıma veya Git deposuna dahil edilmez.
+- Excel dosyası da firma kapsamlı IndexedDB içinde tutulur; yenilemeden sonra tarih
+  değişince yeni ayın hücreleri tekrar okunabilir. Yeni dönem sütunu bulunamazsa
+  eski tutarlar boşaltılıp işlem bekletilir. Benzersiz şube/cari/SS NO eşleşmesinde
+  referans bilgileri korunur; tutar ve onaylar taşınmaz.
 - Dönem değişimi matrah ve referans onaylarını sıfırlar. Tutar/para birimi değişimi
   matrah onayını, referans alanı değişimi inceleme onayını sıfırlar.
-- Listeyi temizleme yalnızca bu modülün hazırlığını ve yerel PDF kopyalarını siler.
+- Her satırın Sil düğmesi yalnızca o satırı Silinenler bölümüne taşır. Satırın
+  kendi Geri al düğmesi geri getirir. İşlem yenileme, yeniden içe alma ve ay
+  değişiminde korunur; diğer satırlar ve kaynak Excel değişmez.
+- Listeyi temizleme hazırlığı sıfırlar; saklanan Excel ve referans PDF kopyalarını
+  korur. JSON yedeği ham Excel/PDF dosyalarını içermez; farklı cihazda kaynaklar
+  yeniden eklenmelidir. Otomatik İzibiz PDF indirme henüz bağlı değildir.
 
 ## Sonraki aşamanın koşulları
 

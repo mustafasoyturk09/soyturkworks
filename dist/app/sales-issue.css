@@ -175,3 +175,12 @@ body.sw-issue-active:has(#page-satis-kesme[data-theme="light"]){background:#f3f6
 #page-satis-kesme .si-help strong{font-weight:500;color:var(--si-text)}
 #page-satis-kesme .si-upload.si-dragover{outline:3px solid var(--si-mint);outline-offset:3px;background:var(--si-input)}
 @media(max-width:700px){#page-satis-kesme .si-help{padding:16px 18px}#page-satis-kesme .si-help ol{font-size:13px}}
+#page-satis-kesme .si-row-tools{flex-direction:column;gap:0}
+#page-satis-kesme .si-row-tools .si-text-btn{min-height:33px;padding:5px 0}
+#page-satis-kesme .si-amount-comparison{padding:16px 18px;margin-top:20px;border:1px solid var(--si-border);border-radius:10px;font-size:13px}
+#page-satis-kesme .si-amount-comparison p{font-size:13px;margin-top:7px}
+#page-satis-kesme .si-amount-comparison[data-state="changed"]{border-color:var(--si-danger);background:#e86c6c0b;color:var(--si-danger)}
+#page-satis-kesme .si-amount-comparison:is([data-state="matched"],[data-state="checked"]){border-color:var(--si-mint);background:#67bf9f10;color:var(--si-mint-text)}
+#page-satis-kesme #siChangeConfirmLabel{margin:18px 0 0}
+#page-satis-kesme #siPeriod{opacity:.8;cursor:default}
+@media(max-width:700px){body #page-satis-kesme .si-row>.si-row-tools{flex-direction:row;justify-content:space-evenly;grid-column:1/-1;gap:16px}}

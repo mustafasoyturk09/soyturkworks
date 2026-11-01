@@ -47,11 +47,11 @@
     },
     {
       "file": "app/sales-issue.css",
-      "sha256": "5bce07300332ab16421dcb9fead00ae65be34daeac585b956a89eade13b63086"
+      "sha256": "46dbf071bf33a0f2921333208d919ec766dcaef15866ed93dccdcb8f6d11008f"
     },
     {
       "file": "app/sales-issue.js",
-      "sha256": "54889961c53667619bd295ba72d976d2b3f8b13c3941971fe3c56c12dc803db1"
+      "sha256": "bd6263018e21dd4c5477cb9a06fbc9a33a9f50c1b0a7c22586511fb937ab1a3c"
     },
     {
       "file": "app/sfOcrCoreData.js",
@@ -211,7 +211,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "240605d84ff6a1546e09da27767122e8cbaaf882adab89d5f13390afe684f881"
+      "sha256": "4d8f35f5ae62f9eda58da8408b7d6feda2997150b7a12bd3439c86e9927239c5"
     },
     {
       "file": "manifest.webmanifest",
