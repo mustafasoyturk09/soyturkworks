@@ -154,7 +154,7 @@
       $('siPeriodTitle').textContent=periodTitle(project.period);$('siArchiveFolder').textContent='Pusula - '+periodTitle(project.period);
     }
     function renderReferences(){
-      $('siReferences').hidden=!pdfs.length;$('siReferenceCount').textContent=pdfs.length+' PDF';$('siPdfNote').textContent=pdfs.length?pdfs.length+' referans PDF bu tarayıcıda saklanıyor.':'Birden fazla PDF seçebilirsin.';
+      $('siReferences').hidden=!pdfs.length;$('siReferenceCount').textContent=pdfs.length+' PDF';$('siPdfNote').textContent=pdfs.length?pdfs.length+' referans PDF bu tarayıcıda saklanıyor.':'Birden fazla PDF seçebilir veya bu kutuya sürükleyebilirsin.';
       $('siReferenceList').innerHTML=pdfs.map((f,i)=>'<div class="si-reference"><span>'+escape(f.name)+'</span><button type="button" class="si-text-btn" data-si-pdf="'+i+'">İncele ↗</button></div>').join('');
     }
     function renderChecks(){
@@ -175,7 +175,7 @@
       if(rows.length&&!shown.length){$('siEmpty').querySelector('h3').textContent='Bu görünümde satır yok';$('siEmpty').querySelector('p').textContent='Farklı bir grup seç veya aramayı temizle.';$('siEmptyImport').hidden=true;}
       else{$('siEmpty').querySelector('h3').textContent='Yeni döneme temiz bir başlangıç';$('siEmpty').querySelector('p').textContent='Matrah Excel’ini eklediğinde faturaların burada, kaynak dosyandaki sırayla görünecek.';$('siEmptyImport').hidden=false;}
       $('siClear').disabled=!rows.length&&!pdfs.length;$('siSaveBackup').disabled=!rows.length;
-      $('siWorkbookNote').textContent=project.source?[project.source.name,project.source.sheet,project.source.column+' · '+project.source.header].filter(Boolean).join(' / '):'.xls veya .xlsx';
+      $('siWorkbookNote').textContent=project.source?[project.source.name,project.source.sheet,project.source.column+' · '+project.source.header].filter(Boolean).join(' / '):'.xls veya .xlsx · Bu kutuya sürükleyebilirsin.';
       $('siListFoot').textContent=project.source?'Kaynak: '+project.source.sheet+' · '+project.source.column+' · '+project.source.header+' | Matrahların bu döneme uygunluğunu kontrol et.':'Yalnızca Pusula · Ticari E-Fatura · Hazırlık aşaması';
       const selected=$('siPreviewRow').value;$('siPreviewRow').innerHTML='<option value="">Bir satır seç</option>'+rows.map(r=>'<option value="'+r.id+'">'+r.sourceRow+' · '+escape(r.branch)+'</option>').join('');if(rows.some(r=>r.id===selected))$('siPreviewRow').value=selected;
       renderChecks();renderPreview();
@@ -197,13 +197,14 @@
     $('siInvoiceDate').onchange=()=>{const next=$('siInvoiceDate').value;if(next&&!validDate(next,project.period)){notice('Fatura tarihi seçili çalışma döneminin içinde olmalı.',true);renderPeriod();return;}project.invoiceDate=next;save();renderRows();};
     function pickWorkbook(){setView('sources');$('siWorkbookFile').click();}
     $('siPickWorkbook').onclick=pickWorkbook;$('siEmptyImport').onclick=pickWorkbook;
-    $('siWorkbookFile').onchange=async e=>{
-      const file=e.target.files[0];e.target.value='';if(!file)return;
+    async function loadWorkbook(file){
+      if(!file)return;
       if(!/\.(xlsx|xls)$/i.test(file.name)||file.size>25*1024*1024){notice('25 MB’tan küçük bir .xls veya .xlsx dosyası seç.',true);return;}
       try{workbook=window.XLSX.read(await file.arrayBuffer(),{type:'array',cellStyles:true,cellFormula:true});workbookName=file.name;
         $('siSheet').replaceChildren(...workbook.SheetNames.map(name=>new Option(name,name)));$('siSheet').value=workbook.SheetNames.includes('2025-2026')?'2025-2026':workbook.SheetNames[0];$('siMapping').hidden=false;mapColumns();notice('Excel okundu. Sayfa ve matrah sütununu kontrol edip Listeyi hazırla’ya bas.');
       }catch{workbook=null;notice('Excel okunamadı. Dosyanın .xls veya .xlsx biçiminde olduğundan emin ol.',true);}
     };
+    $('siWorkbookFile').onchange=e=>{const file=e.target.files[0];e.target.value='';loadWorkbook(file);};
     function sheetHeader(sheet,c){
       for(let r=0;r<8;r++){const cell=sheet[window.XLSX.utils.encode_cell({r,c})];if(cell?.v!==undefined&&typeof cell.v==='string')return clean(cell.v,75);}
       return '';
@@ -242,8 +243,8 @@
       }catch(error){notice(error.message,true);}
     };
     $('siPickPdfs').onclick=()=>$('siPdfFiles').click();
-    $('siPdfFiles').onchange=async e=>{
-      const files=[...e.target.files];e.target.value='';if(!files.length)return;if(busy)return;
+    async function loadPdfs(files){
+      if(!files.length)return;if(busy)return;
       if(files.some(f=>!/\.pdf$/i.test(f.name)||f.size>25*1024*1024)){notice('Her dosya PDF biçiminde ve en fazla 25 MB olmalı.',true);return;}
       if(pdfs.length+files.length>500){notice('En fazla 500 referans PDF ekleyebilirsin.',true);return;}
       busy=true;$('siPickPdfs').disabled=true;
@@ -259,12 +260,33 @@
         const next=[...map.values()];if(next.reduce((sum,f)=>sum+f.size,0)>150*1024*1024)throw Error('Referans PDF’lerin toplam boyutu 150 MB’ı aşamaz.');await pdfStore('write',next);pdfs=next;render();notice(pdfs.length+' PDF eklendi. Satır ayrıntısından doğru referansı seçip içeriğini karşılaştır.');
       }catch(error){notice(error.message||'PDF’ler saklanamadı.',true);}finally{busy=false;$('siPickPdfs').disabled=false;}
     };
-    $('siReferenceList').onclick=e=>{const b=e.target.closest('[data-si-pdf]');if(!b)return;const file=pdfs[Number(b.dataset.siPdf)];if(!file)return;const url=URL.createObjectURL(file);const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);};
+    $('siPdfFiles').onchange=e=>{const files=[...e.target.files];e.target.value='';loadPdfs(files);};
+    for(const target of page.querySelectorAll('[data-si-drop]')){
+      for(const name of ['dragenter','dragover'])target.addEventListener(name,event=>{
+        if(![...event.dataTransfer.types].includes('Files'))return;
+        event.preventDefault();event.dataTransfer.dropEffect='copy';target.classList.add('si-dragover');
+      });
+      target.addEventListener('dragleave',event=>{if(!target.contains(event.relatedTarget))target.classList.remove('si-dragover');});
+      target.addEventListener('drop',event=>{
+        event.preventDefault();event.stopPropagation();target.classList.remove('si-dragover');
+        const files=[...event.dataTransfer.files];if(!files.length)return;
+        if(target.dataset.siDrop==='workbook'){
+          if(files.length!==1){notice('Excel kutusuna tek bir güncel Excel dosyası bırak.',true);return;}
+          setView('sources');loadWorkbook(files[0]);
+        }else loadPdfs(files);
+      });
+    }
+    page.addEventListener('dragover',event=>{if([...event.dataTransfer.types].includes('Files'))event.preventDefault();});
+    page.addEventListener('drop',event=>{if(event.dataTransfer.files.length){event.preventDefault();notice('Excel’i mavi kutuya, önceki ayın PDF’lerini mor kutuya bırak.',true);}});
+    function openReference(file){if(!file){notice('Önce bu satırın referans PDF’ini seç.',true);return;}const url=URL.createObjectURL(file);const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+    $('siReferenceList').onclick=e=>{const b=e.target.closest('[data-si-pdf]');if(b)openReference(pdfs[Number(b.dataset.siPdf)]);};
+    $('siOpenReference').onclick=()=>openReference(pdfs.find(f=>f.name===$('siDetailForm').elements.referencePdf.value));
     function openDetail(id){
       const row=project.rows.find(r=>r.id===id);if(!row)return;editId=id;const form=$('siDetailForm');
       $('siDetailTitle').textContent=row.branch;$('siDetailSource').textContent='EXCEL SATIRI '+row.sourceRow+' · '+row.sourceCell+(row.displayRounded?' · Excel’in iki ondalıklı gösterimi alındı':'');
       form.elements.referencePdf.replaceChildren(new Option('Referans seç',''),...pdfs.map(f=>new Option(f.name,f.name)));
       for(const el of form.elements){if(!el.name)continue;if(el.name==='amount')el.value=money(row.amountCents);else if(el.type==='checkbox')el.checked=row[el.name]===true;else el.value=row[el.name]??'';}
+      $('siOpenReference').disabled=!refNames().has(form.elements.referencePdf.value);
       $('siDetailIssues').innerHTML='<ul>'+issues(row,project,refNames()).map(text=>'<li>'+escape(text)+'</li>').join('')+'</ul>';$('siDetail').showModal();
     }
     $('siRows').onclick=e=>{const button=e.target.closest('[data-si-detail]');if(button)openDetail(button.dataset.siDetail);};
@@ -282,6 +304,7 @@
     function refreshDetailIssues(){
       const row=project.rows.find(r=>r.id===editId);if(!row||!$('siDetail').open)return;
       const form=$('siDetailForm'),draft={...row,amountCents:cents(form.elements.amount.value),amountConfirmed:form.elements.amountConfirmed.checked,referenceReviewed:form.elements.referenceReviewed.checked};
+      $('siOpenReference').disabled=!refNames().has(form.elements.referencePdf.value);
       for(const name of ['branch','customer','vkn','address','description','notes','ssno','withholdingCode','withholdingRate','referencePdf','schedule','taxType'])draft[name]=clean(form.elements[name].value,4000);
       $('siDetailIssues').innerHTML='<ul>'+issues(draft,project,refNames()).map(text=>'<li>'+escape(text)+'</li>').join('')+'</ul>';
     }

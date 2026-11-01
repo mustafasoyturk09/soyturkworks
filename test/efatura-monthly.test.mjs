@@ -17,6 +17,24 @@ function fixture(source,company='PUSULA',saved=new Map(),seed=null){
  return {context,nodes,saved,storage};
 }
 for(const [name,source] of [['web',live],['portable',portable]]){
+ test(name+': closing month stays visible through Istanbul day 15, including empty periods and December/January rollover',()=>{
+  for(const company of companies){
+   const monthly=fixture(source,company).context.monthly;
+   for(const [at,previous,open] of [['2026-10-31T21:00:00Z','2026-10',true],['2026-11-15T20:59:59Z','2026-10',true],['2026-11-15T21:00:00Z','2026-10',false],['2026-12-01T00:00:00Z','2026-11',true],['2026-12-31T21:00:00Z','2026-12',true]]){
+    const now=new Date(at),closing=monthly.closingPeriod(now);assert.equal(closing.previous,previous);assert.equal(closing.open,open);assert.equal(monthly.summary(now).months.includes(previous),open);
+   }
+   monthly.record([{fatno:'OCT',tarih:'31.10.2026'},{fatno:'NOV',tarih:'01.11.2026'}]);
+   const after=new Date('2026-11-16T12:00:00Z');assert.equal(monthly.closingPeriod(after).open,false);assert.equal(monthly.summary(after).total,1);assert.equal(monthly.summary(after,'2026-10').total,1,'Closing the card must not erase history');
+  }
+ });
+ test(name+': current and previous cards show separate totals; selecting history never replaces the current month',()=>{
+  const {context,nodes}=fixture(source);context.monthly.record([{fatno:'OCT1',tarih:'31.10.2026'},{fatno:'OCT2',tarih:'30.10.2026'},{fatno:'NOV1',tarih:'01.11.2026'},{fatno:'SEP1',tarih:'30.09.2026'}]);
+  context.Date=class extends Date{constructor(...args){super(...(args.length?args:['2026-11-01T12:00:00Z']));}};
+  vm.runInContext(source.slice(source.indexOf('function updateCounts(){'),source.indexOf('function renderNewInvoiceBanner(){')),context);context.updateCounts();
+  assert.equal(nodes.get('efClosingMonth').hidden,false);assert.equal(nodes.get('cntPreviousProcessed').textContent,'2');assert.equal(nodes.get('cntIslenmis').textContent,'1');assert.match(nodes.get('cntPreviousTitle').textContent,/EKİM 2026/);assert.match(nodes.get('cntMonthlyTitle').textContent,/KASIM 2026/);
+  vm.runInContext("efMonthlySelected='2026-09'",context);context.updateCounts();assert.match(nodes.get('cntPreviousTitle').textContent,/EYLÜL 2026/);assert.equal(nodes.get('cntPreviousProcessed').textContent,'1');assert.match(nodes.get('cntMonthlyTitle').textContent,/KASIM 2026/);
+  vm.runInContext("efMonthlySelected=''",context);context.Date=class extends Date{constructor(...args){super(...(args.length?args:['2026-11-16T12:00:00Z']));}};context.updateCounts();assert.equal(nodes.get('efClosingMonth').hidden,true);assert.equal(nodes.get('cntIslenmis').textContent,'1');assert.equal(context.monthly.summary(new Date('2026-11-16T12:00:00Z'),'2026-10').total,2);
+ });
  test(name+': all companies retain unique monthly invoice totals across reloads and Istanbul month/year boundaries',()=>{
   const saved=new Map(),october=new Date('2026-10-31T20:59:59Z'),november=new Date('2026-10-31T21:00:00Z'),january=new Date('2026-12-31T21:00:00Z');
   for(const company of companies){

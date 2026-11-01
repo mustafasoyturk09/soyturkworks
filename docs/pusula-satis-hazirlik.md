@@ -11,6 +11,11 @@ Yerel kontrol tamamlanması, cari veya posta kutusu doğrulaması anlamına gelm
 
 ## Kaynaklar ve çalışma durumu
 
+Ekrandaki `Nasıl kullanacağım?` rehberi kaynak ekleme, satır inceleme ve önizlemeyi
+anlatır. `Güncel excel listesini ekle` ve `Önceki ayın PDF'lerini ekle` kutuları
+dosya seçiminin yanında sürükle-bırak da destekler. Satır ayrıntısındaki
+`Seçili PDF’i aç` referansı ayrı sekmede açar; doldurulan hazırlık alanları açık kalır.
+
 - XLS/XLSX dosyası tarayıcıda okunur. Sayfa ve sütun eşleştirmesi görünürdür;
   `2025-2026` sayfası varsa önerilir. En son dolu dönem sütunu önerilir, yeni dönem
   tutarları olarak onaylanmaz. Excel satır sırası ve hücre adresleri korunur.
