@@ -7,7 +7,7 @@ Ayrı bir kolon eşleme, üçüncü Excel yükleme veya arşiv/gönderim adımı
 
 ## Otomatik hazırlama
 
-- Fatura tarihi ekranda ve önizlemede GG-AA-YYYY biçimindedir (ör. 03-11-2026); içeride ISO tarih olarak saklanır. Tarih tüm satırlara ve önizlemelere uygulanır. Tarihin ay/yılına ait
+- Fatura tarihi ekranda ve önizlemede GG.AA.YYYY biçimindedir (ör. 03.11.2026); içeride ISO tarih olarak saklanır. Tarih tüm satırlara ve önizlemelere uygulanır. Tarihin ay/yılına ait
   Bakım-Kira sütunu ve TİCARİ UNVAN başlığı otomatik bulunur. LİS-Diğer, E-Arşiv,
   Biruni, ay sonu Sentez ve sıfır matrah kayıtları bu akışa alınmaz. Yeni ay sütunu
   eksikse eski tutarla devam edilmez; renkli Excel hücresi gerekmez.

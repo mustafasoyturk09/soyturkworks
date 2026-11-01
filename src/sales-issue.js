@@ -207,7 +207,7 @@
     if(!ref.title||!ref.vkn||!ref.address)ref.warnings.push('Alıcı unvanı, vergi no veya adres PDF’de tam okunamadı.');if(!ref.lineItems.length)ref.warnings.push('PDF’nin hizmet satırları okunamadı.');if(!ref.invoiceDate)ref.warnings.push('PDF’nin tarihi okunamadı.');if(ref.amountCents===null)ref.warnings.push('PDF matrahı okunamadı.');
     return ref;
   }
-  function displayDate(value){const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'-'+m[2]+'-'+m[1]:'';}
+  function displayDate(value){const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'.'+m[2]+'.'+m[1]:'';}
   function inputDate(value){let v=clean(value,20);if(/^\d{8}$/.test(v))v=v.slice(0,2)+'-'+v.slice(2,4)+'-'+v.slice(4);const m=v.match(/^(\d{2})[-./](\d{2})[-./](\d{4})$/);if(m)v=m[3]+'-'+m[2]+'-'+m[1];return validDate(v,v.slice(0,7))?v:'';}
   const previewInvoiceNo=(row,project)=>'XXX'+project.invoiceDate.slice(0,4)+String(row.sourceRow||1).padStart(9,'0');
   function titleKey(value){
