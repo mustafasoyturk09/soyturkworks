@@ -47,7 +47,7 @@
     },
     {
       "file": "app/sales-issue.css",
-      "sha256": "c99032580fa0afc85984eaf40acc4ab715d5ddde745e53635a7d80597cf1f074"
+      "sha256": "bb610f11fc4891f4aebd65d331b12fb7362161288ef8c062bb70b1ec023a4d35"
     },
     {
       "file": "app/sales-issue.js",
@@ -211,7 +211,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "49b8491bf32a03bd595217036e64bea6fe4fada93c3484145df470f691ec9bcf"
+      "sha256": "45d52614018dcbd82635e553a22626ce87b25284c6c1fc71f26cb379fb024722"
     },
     {
       "file": "manifest.webmanifest",

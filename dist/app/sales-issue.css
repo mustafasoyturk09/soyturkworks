@@ -39,7 +39,8 @@ body.sw-issue-active:has(#page-satis-kesme[data-theme="light"]){background:#f3f6
 #page-satis-kesme .si-overline{display:block;font-size:10px;font-weight:600;letter-spacing:1.6px;color:var(--si-muted);margin-bottom:7px}
 #page-satis-kesme .si-period-fields{display:flex;gap:20px;align-items:start;min-width:0;max-width:100%}
 #page-satis-kesme .si-period-fields label{width:190px;grid-template-columns:minmax(0,1fr)}
-#page-satis-kesme .si-period-fields input{display:block;max-width:100%;min-inline-size:0}
+/* iOS native date/month styling forces content-box and adds padding to 100% width (WebKit 301648). Keep the picker, but use our border-box styling. */
+#page-satis-kesme .si-period-fields input{display:block;-webkit-appearance:none;appearance:none;box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-inline-size:0}
 #page-satis-kesme .si-period-fields input::-webkit-date-and-time-value{min-width:0;text-align:left}
 #page-satis-kesme .si-period-title h2{font-size:27px}
 #page-satis-kesme .si-icon{width:47px;height:47px;display:inline-flex;align-items:center;justify-content:center;border-radius:13px;flex-shrink:0}
