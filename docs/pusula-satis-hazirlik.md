@@ -1,68 +1,77 @@
 # Pusula satış faturası hazırlığı
 
-`Satış Faturası Kesme` yalnızca PUSULA çalışma alanında görünür. Diğer firmalarda
-menü ve sayfa kaldırılır; merkezi sayfa yönlendiricisi de bu kısıtı uygular.
-Mevcut Satış Faturaları ve Gelen E-Fatura Takip modülleri bağımsızdır.
+`Satış Faturası Kesme` yalnızca PUSULA çalışma alanındadır. Tek ekranda bir
+fatura tarihi, bir güncel Excel alanı ve önceki ay PDF’leri için bir alan vardır.
+Ayrı bir kolon eşleme, üçüncü Excel yükleme veya arşiv/gönderim adımı yoktur.
+`Ne yapacağım?` rehberi ilk açılışta açıktır; kullanıcının kapatma tercihi saklanır.
 
-Bu sürüm **yalnızca hazırlıktır**. Modülün JavaScript kodunda ağ isteği bulunmaz.
-İzibiz taslak, gönderim ve Logo kayıt işlemleri uygulanmamıştır. Arşiv indirme ve
-Logo XML düğmeleri devre dışıdır. Önizleme resmi fatura veya vergi hesabı değildir.
-Yerel kontrol tamamlanması, cari veya posta kutusu doğrulaması anlamına gelmez.
+## Otomatik hazırlama
 
-## Kaynaklar ve çalışma durumu
+- Fatura tarihi tüm satırlara ve önizlemelere uygulanır. Tarihin ay/yılına ait
+  Bakım-Kira sütunu ve TİCARİ UNVAN başlığı otomatik bulunur. LİS-Diğer, E-Arşiv,
+  Biruni, ay sonu Sentez ve sıfır matrah kayıtları bu akışa alınmaz. Yeni ay sütunu
+  eksikse eski tutarla devam edilmez; renkli Excel hücresi gerekmez.
+- Eşleştirme PDF’nin SAYIN alıcı bloğundaki ticari unvanı Excel ticari unvanıyla
+  karşılaştırır. Satıcının vergi numarası alıcı yerine alınmaz. Yasal unvanların
+  yaygın kısaltmaları normalleştirilir; benzer veya birden fazla sonuç kullanıcıya
+  öneri olarak gösterilir. Vergi numarası tek başına şube seçtirmez.
+- SS NO varsa önce tam SS NO eşleşmesi aranır. Aynı unvan/VKN’de farklı adres,
+  SS NO, hizmet veya matrah bulunan PDF’ler birleştirilmez. Belirsiz sonuçta
+  adres, SS NO, matrah, fatura türü ve açıklamalar gösterilir; kullanıcı bir PDF
+  seçer. Aynı PDF’nin birden fazla Excel satırına bağlanması ayrıca işaretlenir.
+- Alıcı unvanı, VKN/TCKN, vergi dairesi, adres, SS NO, satır açıklamaları,
+  miktar/birim, KDV, senaryo, tevkifat kodu/oranı, alt notlar ve banka bilgileri
+  PDF metninin konumlarından okunur. Varsayılan Ticari - Satış’tır; PDF’deki
+  Temel - Satış ve Tevkifat bilgileri korunur ve değiştirilebilir.
+- Yeni matrah **her zaman güncel Excel’den** gelir. Karşılaştırma önceki ayın
+  Excel sütunuyla değil eşleşen PDF matrahıyla yapılır. Farklı tutar turuncu
+  satırla gösterilir; `Fark doğru` veya ayrıntıyı kaydetme kontrolü tamamlar.
+  Aynı tutar ve tam bilgilerde satır doğrudan `Bilgiler hazır` görünür.
+- Tek hizmette Excel tutarı o hizmete uygulanır. Çok hizmetli faturada eski
+  satırlar aynen korunur; toplam yeni Excel matrahına uymuyorsa kontrol bekler.
+  Kullanıcı `Excel tutarını aynı oranla dağıt` seçeneğini açıkça kullanabilir
+  veya hizmetleri düzenleyebilir; dağılım sessizce tahmin edilmez.
+- YALNIZ bölümündeki eski yazıyla tutar ayrı tutulur. Yeni yazıyla tutar yeni
+  hizmet toplamı, PDF’deki KDV ve varsa tevkifat oranından hesaplanır. Yanındaki
+  ek metinler ve diğer alt notlar ayrı düzenlenebilir satırlardır. Her notta
+  Sil / Geri al bulunur. Banka alanı notlardan ayrı taşınır.
+- PDF’den okunamayan alanlar ve görüntü olarak taranmış PDF’ler açıkça
+  işaretlenir; veri veya vergi numarası uydurulmaz. Kaynak metnin tamamı ve
+  özgün PDF ayrıntıda açılabilir. Otomatik OCR bu modülde bağlı değildir.
 
-Ekrandaki `Nasıl kullanacağım?` rehberi kaynak ekleme, satır inceleme ve önizlemeyi
-anlatır. `Güncel excel listesini ekle` ve `Önceki ayın PDF'lerini ekle` kutuları
-dosya seçiminin yanında sürükle-bırak da destekler. Satır ayrıntısındaki
-`Seçili PDF’i aç` referansı ayrı sekmede açar; doldurulan hazırlık alanları açık kalır.
+## Yan yana PDF önizlemesi
 
-- Fatura tarihi tek dönem kaynağıdır. 2 Kasım 2026 seçimi Kasım 2026 sütununu,
-  Aralık tarihi Aralık sütununu bağlar. Dönem alanı salt okunurdur. Aynı ayın
-  `Bakım-Kira` sütunu tercih edilir; `LİS-Diğer` bu akışa dahil edilmez. Eksik
-  veya birden fazla eşleşen sütunda işlem durur; önceki aydan tutar alınmaz.
-- Renk seçimi kaldırılmıştır. Boyasız satırlar da okunur; E-Arşiv, Biruni ve
-  Sentez Sağlık şirket kayıtları alınmaz. Başka tüzel kişiliğe ait bir şubenin
-  adında Sentez bulunması tek başına o şirketi Sentez Sağlık yapmaz. Sıfır matrah
-  dışarıda kalır. SS NO tek başına E-Fatura mükellefiyeti kanıtı değildir.
-- Seçilen ayın tutarı önceki ayın aynı Bakım-Kira sütunuyla karşılaştırılır.
-  Önceki ay yoksa başka ayla karşılaştırma yapılmaz. Fark varsa eski/yeni tutar
-  ve fark gösterilir; ilk fark inceleme penceresinde açılır. Aynı tutara düzeltme
-  veya açık fark onayı karşılaştırmayı yeşile çevirir. Bu renk İzibiz doğrulaması
-  veya gönderime hazır olma anlamına gelmez. Para birimi değişiminde çevrim yapılmaz.
-- Tutarlar kuruş olarak saklanır. Açıkça iki ondalıklı Excel gösterimi varsa o
-  gösterim kullanılır ve ayrıntıda belirtilir. Bunun dışındaki fazladan hassasiyet
-  veya sonuç değeri olmayan formül kontrol sorunu olarak kalır. Para birimi
-  biçimden okunur; kullanıcı tutarı ve para birimini ayrıca onaylar.
-- Kaynak PDF'ler bu tarayıcıdaki firma kapsamlı IndexedDB alanında saklanır.
-  PDF içeriği otomatik cari eşleşmesi olarak kullanılmaz; kullanıcı satıra referans
-  seçebilir ve dosyayı açabilir. Dosya adına dayanarak doğrulanmış müşteri üretilmez.
-- Hazırlık listesi firma kapsamlı `pusula_sales_preparation_v1` anahtarındadır.
-  JSON yedeği satırları içerir; PDF dosyalarını içermez. Başka cihazda PDF'ler yeniden
-  eklenmelidir. Gerçek çalışma dosyaları dağıtıma veya Git deposuna dahil edilmez.
-- Excel dosyası da firma kapsamlı IndexedDB içinde tutulur; yenilemeden sonra tarih
-  değişince yeni ayın hücreleri tekrar okunabilir. Yeni dönem sütunu bulunamazsa
-  eski tutarlar boşaltılıp işlem bekletilir. Benzersiz şube/cari/SS NO eşleşmesinde
-  referans bilgileri korunur; tutar ve onaylar taşınmaz.
-- Dönem değişimi matrah ve referans onaylarını sıfırlar. Tutar/para birimi değişimi
-  matrah onayını, referans alanı değişimi inceleme onayını sıfırlar.
-- Her satırın Sil düğmesi yalnızca o satırı Silinenler bölümüne taşır. Satırın
-  kendi Geri al düğmesi geri getirir. İşlem yenileme, yeniden içe alma ve ay
-  değişiminde korunur; diğer satırlar ve kaynak Excel değişmez.
-- Listeyi temizleme hazırlığı sıfırlar; saklanan Excel ve referans PDF kopyalarını
-  korur. JSON yedeği ham Excel/PDF dosyalarını içermez; farklı cihazda kaynaklar
-  yeniden eklenmelidir. Otomatik İzibiz PDF indirme henüz bağlı değildir.
+Her satırın `Önizle` düğmesi aynı pencerede solda özgün önceki ay PDF’ini,
+sağda yeni tarih/Excel tutarıyla oluşturulan gerçek bir PDF önizlemesini gösterir.
+Telefonlarda iki belge arasında geçiş, tüm ekranlarda yakınlaştırma vardır.
+Belgeler ayrı kaydırılabilir; tüm sayfalar gösterilir. Yeni belge Türkçe gömülü
+font kullanır, açıklama ve notları satır satır taşır, uzun içerikte sayfa ekler.
 
-## Sonraki aşamanın koşulları
+Yeni PDF belirgin `KONTROL ÖNİZLEMESİ / GÖNDERİLMEDİ` işaretlidir; yeni fatura no,
+ETTN veya resmi gönderim sonucu üretilmez. Düzenleme alanları önizlemenin
+altındaki açılır bölümde yer alır. Değişiklik önizlemeye otomatik yansır.
 
-Canlı işlem ayrıca yetkilendirilmeden bağlanmamalıdır. İzibiz cari kimliği,
-VKN, şube adresi, posta kutusu, satır açıklamaları ve tutarları, SS NO/sipariş
-bilgileri, özel notlar ve tevkifat bilgileri doğrulanmalıdır. Çok satırlı
-faturalarda yeni dönem tutar dağılımı ayrıca belirlenmelidir.
+## Kayıt ve izolasyon
 
-İlk gerçek deneme tek faturadır. Gönderim, sonuç sorgulama, özgün UBL/PDF arşivi
-ve Logo aktarımı ayrı aşamalardır. Mevcut Logo XML modülünün varlığı, yeni
-modülde aktarımın bağlandığı veya Logo'da kaydın oluştuğu anlamına gelmez.
+Hazırlık eski `pusula_sales_preparation_v1` anahtarında, kaynak Excel ve PDF’ler
+eski firma kapsamlı IndexedDB alanında saklanır. Mevcut kayıtlar silinmez.
+Eski JSON yedekleri okunur; yeni yedeklerde hizmetler, not silme tercihleri,
+referans bilgileri ve şube seçimleri korunur. Yedek ham Excel/PDF içermez.
+Başka cihazda bulunmayan kaynak dosyalar yeniden eklenmelidir.
 
-Arayüz `src/sales-issue.html`, `src/sales-issue.css`, `src/sales-issue.js`
-dosyalarındadır. HTML parçası ve taşınabilir sürüm `node scripts/sync-portable.mjs`
-ile `src/app.html` içine eşitlenir. Sonra standart build/check/test çalıştırılır.
+Her fatura satırının Sil / Geri al işlemi yalnızca o satırı etkiler; yenileme,
+yeniden içe alma ve dönem değişiminde korunur. Listeyi temizleme kaynak PDF/Excel
+kopyalarını ve diğer modülleri silmez. Gerçek çalışma dosyaları dağıtıma ve
+Git’e dahil edilmez. Dosyalar yalnızca kullanıcının tarayıcısında işlenir.
+
+## Gönderim kapalı
+
+Modül İzibiz taslak/gönderim, müşteri/posta kutusu doğrulama veya Logo kaydı
+servislerini çağırmaz. `Bilgiler hazır` yalnızca yerel hazırlık kontrolüdür.
+PDF önizlemesi resmi fatura değildir. Canlı işlem ayrı bir kullanıcı talebi
+olmadan bağlanmamalıdır. Gelen E-Fatura bağlantıları ve telefon bildirim
+abonelikleri bu modülün dışında kalır; güncellemeyle sıfırlanmaz.
+
+HTML/CSS/JS kaynakları `src/sales-issue.*` içindedir. Taşınabilir şablon
+`node scripts/sync-portable.mjs` ile eşitlenir; build/check/test ve tarayıcı
+kontrolleri sonrasında `dist/` birlikte yayınlanır.
