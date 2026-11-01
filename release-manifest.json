@@ -11,7 +11,7 @@
     },
     {
       "file": "app/branding.css",
-      "sha256": "c0851fa0dd784b8c51ba3f5d200a212c6304cf32fd749530eac299bf101e819a"
+      "sha256": "c494c7f88238ce0049b99b9def3ddd211682c145bda17504e1b571d2c66b9914"
     },
     {
       "file": "app/calculator-ui.css",
@@ -31,7 +31,7 @@
     },
     {
       "file": "app/mobile.css",
-      "sha256": "8b2e89b17a6eb953fb7097a7023cb5d933a72f0b416abc777d3fdfd446403284"
+      "sha256": "98e0781a799078d7435d7bcde8f34becd19606a9730ad8d1b3b283ef2a1f14ed"
     },
     {
       "file": "app/mobile.js",
@@ -199,11 +199,11 @@
     },
     {
       "file": "automation/index.html",
-      "sha256": "db700d4bef36b61c42b42f9b6954213d8d07e705bf07a0620b6f3c954ec49807"
+      "sha256": "cbe8062e01bb945210ed2fc386cdda9d9cf0d9dc44a124e4f12bc0d3047bf4cc"
     },
     {
       "file": "automation/style.css",
-      "sha256": "92d97ab43ab9859359a9e5e6417fec4d3099523d54536f2b6ef848a46c21e633"
+      "sha256": "8ed1d4c8f2a4fea043cbaa20f8b534f8ec522e0cc75e3860e00f49d374164753"
     },
     {
       "file": "favicon.ico",
@@ -211,7 +211,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "4d8f35f5ae62f9eda58da8408b7d6feda2997150b7a12bd3439c86e9927239c5"
+      "sha256": "2e36069cbcec6dcf5a35a74f2dc5672a5c3dce97b331898b64813e3b929c1c94"
     },
     {
       "file": "manifest.webmanifest",
@@ -219,7 +219,7 @@
     },
     {
       "file": "portal/index.html",
-      "sha256": "f130fc94b12dffda8b966bd0595b8601197515d7b870c41bb0ddec48650b7589"
+      "sha256": "15553d5391c538abf808264bbbfaee8522c3b6be1b80e0dfb60bcb3f8f781dbc"
     },
     {
       "file": "portal/passkeys.js",
@@ -227,7 +227,7 @@
     },
     {
       "file": "portal/portal.css",
-      "sha256": "d74263e059fc5509199b239d98f30c006e56def33226c67ba63d10eea4766771"
+      "sha256": "a3b6a8e817bd37df4744b12d797d5c2e63686a5651fd920e9b0f9d12f0bd1d46"
     },
     {
       "file": "portal/portal.js",

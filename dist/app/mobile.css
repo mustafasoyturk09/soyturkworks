@@ -210,7 +210,7 @@ html { -webkit-text-size-adjust: 100%; }
   body > aside .brand { margin-top: 0; min-height: 44px; padding-right: 44px; }
   body > aside .brand-mark { width: 32px; height: 40px; }
   body > aside .brand-mark-photo { width: 50px; }
-  body > aside .brand-text { font-size: 17px; }
+  body > aside .brand-text { font-size: 12px; }
   body > aside .brand-sub { margin: 4px 0 8px 44px; font-size: 9px; }
   body > aside .nav-label { margin-top: 6px; }
   body > aside .nav-item { min-height: 40px; padding-top: 7px; padding-bottom: 7px; }

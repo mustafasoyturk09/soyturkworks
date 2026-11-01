@@ -10,7 +10,7 @@ body > aside .brand-mark-photo {
   display: block; width: 100%; height: 100%; max-width: 100%; object-fit: contain;
   filter: drop-shadow(0 6px 6px #0005) drop-shadow(0 0 6px #c1d9f21a);
 }
-body > aside .brand-text { color: #edf3fc; font-size: 20px; line-height: 1.18; letter-spacing: .01em; text-transform: uppercase; }
+body > aside .brand-text { color: #edf3fc; font-size: 14px; line-height: 1.18; letter-spacing: .01em; text-transform: uppercase; }
 body > aside .brand-text > span { display: block; }
 body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5px; letter-spacing: .13em; }
 .sw-header-logo { width: 36px; height: 36px; flex: 0 0 36px; object-fit: contain; filter: drop-shadow(0 2px 3px #0004); }
@@ -119,7 +119,7 @@ body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 540px) {
   body > aside .brand { min-height: 44px; }
   body > aside .brand-mark { width: 40px; height: 40px; }
-  body > aside .brand-text { font-size: 17px; }
+  body > aside .brand-text { font-size: 12px; }
   body > aside .brand-sub { margin: 4px 0 8px 44px; text-align: left; font-size: 9px; }
   .sw-header-logo { width: 32px; height: 32px; flex-basis: 32px; }
 }
