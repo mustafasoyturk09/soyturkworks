@@ -66,7 +66,12 @@ geçerli dönemden eski arşiv otomatik olarak yeniden indirilmez.
 
 Yeni faturalar kullanıcı işaretleyene kadar YENİ GELEN olarak kalır.
 Zaman geçmesi bunları BEKLENİYOR veya İŞLENDİ yapmaz. İşlendi işareti geri
-alınabilir. Kayıt sürümü telefon/bilgisayar arasında eski bir ekranın yeni
+alınabilir. Her durum değişikliğinden sonra listenin üstünde süreyle kaybolmayan
+Geri al çubuğu görünür; fatura etkin filtreden çıksa da son işlem geri alınabilir.
+İşlenmiş faturaların altında ayrıca belirgin Geri al düğmesi vardır. Kutucuk
+seçimi Seçimi kaldır ile kaldırılır; seçim tek başına işlem durumunu değiştirmez.
+Son işlemi geri alma, değişen kayıtların önceki durumunu ve güncel kayıt sürümünü
+kullanır; başka cihazdan yapılan daha yeni bir değişikliği ezmez. Kayıt sürümü telefon/bilgisayar arasında eski bir ekranın yeni
 işaretlemeyi ezmesini engeller. Son 100 işaretleme grubu işlem geçmişinde tutulur.
 İzibiz yanıtı ayrı alandır; muhasebe işareti kabul/red anlamına gelmez.
 Reddedilmiş faturalar ayrı REDDEDİLDİ durumunda ve filtresinde gösterilir;
