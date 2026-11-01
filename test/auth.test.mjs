@@ -31,7 +31,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
     const sessionCookie=response=>response.headers.get('set-cookie').split(';')[0];
     const password='Qa2026!';
     await t.test('Unauthenticated requests cannot bypass login through HTML or app assets',async()=>{
-      for(const path of ['/automation/app.js','/api/automation','/api/automation/PUSULA/clear-all','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
+      for(const path of ['/automation/app.js','/api/automation','/api/automation/PUSULA/clear-all','/api/automation/PUSULA/month-excel?month=2026-10','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
       assert.equal((await request('/workspace/PUSULA/')).status,303);
       assert.equal((await request('/takip')).status,303);
       assert.equal((await request('/push-sw.js')).status,200);
@@ -75,6 +75,9 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/automation/UNKNOWN/invoices',null,cookie)).status,403);
       assert.equal((await request('/api/automation/PUSULA/invoices',null,cookie)).value.rows.length,0);
       assert.equal((await request('/api/automation/PUSULA/pdf?id=not-an-invoice',null,cookie)).status,404);
+      assert.equal((await request('/api/automation/PUSULA/month-excel?month=2026-10',null,cookie)).status,404);
+      assert.equal((await request('/api/automation/PUSULA/month-excel?month=bad',null,cookie)).status,400);
+      assert.equal((await request('/api/automation/UNKNOWN/month-excel?month=2026-10',null,cookie)).status,403);
       assert.equal((await request('/api/automation/PUSULA/mark',{items:[{uuid:'11111111-2222-4333-8444-555555555555',revision:0}],done:true},cookie)).status,404);
       assert.equal((await request('/api/push/devices',null,cookie)).status,400);
       assert.equal((await request('/api/push/devices?company=UNKNOWN',null,cookie)).status,400);

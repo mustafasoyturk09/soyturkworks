@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomBytes,createECDH,verify,createPublicKey} from 'node:crypto';
+import {randomBytes,createECDH,verify,createPublicKey,createHash} from 'node:crypto';
 import ece from 'http_ece';
 import {unzipSync,strFromU8} from 'fflate';
 import {InvoiceArchive,nextCheck,workHours,previousMonth,trackingPeriod} from '../server/automation.mjs';
@@ -16,8 +16,8 @@ function storage(){
 }
 const company={id:'PUSULA',name:'Pusula'},identifier='7330782805';
 const remoteInvoice=(n,date)=>({id:n,uuid:'11111111-2222-4333-8444-'+String(n).padStart(12,'0'),documentNo:'TEST2026'+String(n).padStart(7,'0'),issueDate:date,direction:'IN',accountingCustomer:{identifier},accountingSupplier:{name:'Test supplier'},amount:100,currency:'TRY',profile:'TEMELFATURA',invoiceType:'SATIS',invoiceStatus:'RECEIVED'});
-function fixture({date='2026-11-17T06:00:00Z',startMonth='2026-10'}={}){
- let now=Date.parse(date),remote=[remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17')],failPdf=false,failList=false;
+function fixture({date='2026-11-01T06:00:00Z',startMonth='2026-10'}={}){
+ let now=Date.parse(date),remote=[remoteInvoice(1,'2026-10-27'),remoteInvoice(2,'2026-11-01')],failPdf=false,failList=false;
  const db=storage(),key=randomBytes(32).toString('base64url'),connector=new IzibizConnector({storage:db,key});
  if(startMonth)db.data.set('settings',{enabled:true,startMonth,periodVersion:1});
  const config={username:'synthetic-test',password:'synthetic',identifier,revision:'test-revision'},saved={...connector.seal(company.id,config),name:'Synthetic company',identifier},events=[],calls=[];
@@ -45,11 +45,11 @@ test('Istanbul weekday schedule includes month/year changes and never runs on we
  assert.equal(previousMonth('2027-01-02'),'2026-12-01');
  assert(workHours(Date.parse('2026-11-17T06:00:00Z')));assert(!workHours(Date.parse('2026-11-17T15:00:00Z')));assert(!workHours(Date.parse('2026-10-31T06:00:00Z')));
 });
-test('Tracking starts with one month, then checks only the previous and current months across year boundaries',async()=>{
- assert.deepEqual(trackingPeriod('2026-10-31','2026-10'),{startMonth:'2026-10',from:'2026-10-01',to:'2026-10-31'});
- assert.equal(trackingPeriod('2026-11-01','2026-10').from,'2026-10-01');
- assert.equal(trackingPeriod('2026-12-01','2026-10').from,'2026-11-01');
- assert.equal(trackingPeriod('2027-01-01','2026-10').from,'2026-12-01');
+test('Tracking checks at most ten days across month/year boundaries and preserves historical archives',async()=>{
+ assert.deepEqual(trackingPeriod('2026-10-31','2026-10'),{startMonth:'2026-10',from:'2026-10-21',to:'2026-10-31'});
+ assert.equal(trackingPeriod('2026-11-01','2026-10').from,'2026-10-22');
+ assert.equal(trackingPeriod('2026-12-01','2026-10').from,'2026-11-21');
+ assert.equal(trackingPeriod('2027-01-01','2026-10').from,'2026-12-22');
  const f=fixture({date:'2026-10-31T06:00:00Z',startMonth:null}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
   const old=remoteInvoice(1,'2026-08-20'),september=remoteInvoice(2,'2026-09-27'),processed=remoteInvoice(3,'2026-10-27'),fresh=remoteInvoice(4,'2026-10-30');
@@ -59,15 +59,15 @@ test('Tracking starts with one month, then checks only the previous and current 
   assert.equal((await f.db.get('settings')).startMonth,'2026-10');
   assert.equal((await f.engine.summary()).counts.total,2);assert.equal((await f.engine.summary()).counts.done,1);
   assert.equal(f.calls.filter(c=>c.url.endsWith('/pdf')).length,2);assert.equal(f.events[0].count,1);assert.equal(f.events[0].pending,1);
-  assert(f.calls.filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-01')));
+  assert(f.calls.filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-21')));
   const before=f.calls.length;f.advanceTime(24);f.setRemote([september,remoteInvoice(6,'2026-10-31'),remoteInvoice(7,'2026-11-01')]);
   await f.engine.start(true);await drain(f.engine,f.db);
   assert(f.calls.slice(before).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-')));
   assert.equal((await f.engine.summary()).counts.total,4);
-  const december=f.calls.length;f.advanceTime(30*24);f.setRemote([remoteInvoice(8,'2026-10-25'),remoteInvoice(9,'2026-11-30'),remoteInvoice(10,'2026-12-01')]);
+  const december=f.calls.length;f.advanceTime(30*24);f.setRemote([remoteInvoice(8,'2026-10-28'),remoteInvoice(9,'2026-11-30'),remoteInvoice(10,'2026-12-01')]);
   await f.engine.start(true);await drain(f.engine,f.db);
-  assert(f.calls.slice(december).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-11-01')));
-  assert.equal((await f.engine.all()).some(r=>r.uuid===remoteInvoice(8,'2026-10-25').uuid),false);
+  assert(f.calls.slice(december).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-11-21')));
+  assert.equal((await f.engine.all()).some(r=>r.uuid===remoteInvoice(8,'2026-10-28').uuid),false);
   assert.equal((await f.engine.summary()).counts.total,6);assert.equal((await f.engine.summary()).counts.done,1);
   assert((await f.engine.handle('folders','GET').then(r=>r.json())).folders.some(g=>g.month==='2026-10'),'Valid October archive remains available in December');
  }finally{globalThis.fetch=original;}
@@ -88,7 +88,7 @@ test('Invoice dates stay oldest first across pages, filters and refreshes regard
  const actual=[];for(const offset of [0,100,200]){const page=await load({offset:String(offset)});assert.equal(page.total,205);actual.push(...page.rows);}
  assert.deepEqual(actual.map(r=>r.uuid),expected.map(r=>r.uuid));
  assert.deepEqual((await load({})).rows.map(r=>r.uuid),expected.slice(0,100).map(r=>r.uuid));
- const filtered=await load({status:'new',month:'2026-10'});
+ const filtered=await load({status:'waiting',month:'2026-10'});
  assert.deepEqual(filtered.rows.map(r=>r.uuid),expected.filter(r=>!r.done&&r.tarih.startsWith('2026-10')).map(r=>r.uuid));
  const incoming={...expected.at(-1),uuid:remoteInvoice(206,expected.at(-1).tarih).uuid,fatno:'AAA2026000000001',firstSeen:2000};await f.db.put('invoice:'+incoming.uuid,incoming);
  assert.equal((await load({offset:'200'})).rows.at(-1).uuid,incoming.uuid,'A newly arrived invoice on the latest date goes last, even with an alphabetically earlier number');
@@ -107,7 +107,7 @@ test('A running legacy job restarts within the new period instead of continuing 
  try{
   f.setRemote([remoteInvoice(1,'2026-09-20'),remoteInvoice(2,'2026-10-27')]);
   await f.db.put('job',{id:'11111111-2222-4333-8444-555555555555',phase:'pdf',documentStart:'2026-09-01',end:'2026-10-31',manual:true});
-  await f.engine.advance();assert(f.calls.some(c=>c.url.includes('/inbox?')&&c.url.includes('startDate=2026-10-01')));assert(!f.calls.some(c=>c.url.endsWith('/pdf')));
+  await f.engine.advance();assert(f.calls.some(c=>c.url.includes('/inbox?')&&c.url.includes('startDate=2026-10-21')));assert(!f.calls.some(c=>c.url.endsWith('/pdf')));
   await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,1);assert.equal((await f.engine.summary()).counts.pdfs,1);
  }finally{globalThis.fetch=original;}
 });
@@ -132,31 +132,31 @@ test('Refreshing legacy archives removes pre-start months, reclaims files and pr
  await assert.rejects(()=>f.engine.handle('pdf','GET',{},new URLSearchParams({id:remoteInvoice(1,'2026-08-20').uuid})),e=>e.status===404);
  await assert.rejects(()=>f.engine.handle('export','GET',{},new URLSearchParams({folder:'2026-09_2026-10-31'})),e=>e.status===404);
  for(let i=0;i<4;i++)await f.engine.advance();
- assert(await f.db.get('baseline:synthetic'));const current=await f.db.get('invoice:'+remoteInvoice(3,'2026-10-27').uuid);assert(current.file);assert.equal(current.revision,7);assert(current.done);assert(!current.deletedAt);
+ assert(await f.db.get('baseline:synthetic'));const current=await f.db.get('invoice:'+remoteInvoice(3,'2026-10-27').uuid);assert(current.file);assert.equal(current.revision,8);assert(current.done);assert(!current.deletedAt);
  assert((await f.engine.all()).filter(r=>r.tarih<'2026-10-01').every(r=>r.deletedAt&&r.excludedBeforeStart&&!r.file));
- const measured=[...f.db.data].filter(([k])=>k.startsWith('blob:')).reduce((n,[,v])=>n+v.length,0);assert.equal(await f.db.get('totalBytes'),measured);assert.equal(measured,current.file.size+(await f.db.get('folder:'+current.folder)).excel.size);
+ const measured=[...f.db.data].filter(([k])=>k.startsWith('blob:')).reduce((n,[,v])=>n+v.length,0);assert.equal(await f.db.get('totalBytes'),measured);assert(measured>=current.file.size+(await f.db.get('folder:'+current.folder)).excel.size);
 });
-test('Automatic archive catches previous-month invoices, saves only PDFs and preserves done/undo through rescans',async()=>{
+test('Automatic archive catches recent previous-month invoices, prepares Excel and preserves done/undo through rescans',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
   await f.engine.start();await drain(f.engine,f.db);
   const summary=await f.engine.summary();assert.equal(summary.counts.total,2);assert.equal(summary.counts.pdfs,2);assert.equal(summary.counts.fresh,2);assert(summary.status.lastSuccess);
-  const groups=(await(await f.engine.handle('folders','GET')).json()).folders;assert.equal(groups.length,2);assert(groups.every(g=>g.excel===null));
-  assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar (17.11.2026)'));
-  assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar (17.11.2026)'));
+  const groups=(await(await f.engine.handle('folders','GET')).json()).folders;assert.equal(groups.length,2);assert(groups.every(g=>g.excel?.current));
+  assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar (01.11.2026)'));
+  assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar (01.11.2026)'));
   assert.equal(f.events.length,1);assert.equal(f.events[0].title,'Pusula · Yeni Gelen 2 Fatura');assert(!f.events[0].title.includes('Soyturk'));assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
-  assert(f.calls.some(c=>c.url.includes('dateType=DELIVERY')));assert(f.calls.some(c=>c.url.includes('dateType=DOCUMENT')&&c.url.includes('startDate=2026-10-01')));
+  assert(f.calls.some(c=>c.url.includes('dateType=DELIVERY')));assert(f.calls.some(c=>c.url.includes('dateType=DOCUMENT')&&c.url.includes('startDate=2026-10-22')));
   const row=(await f.engine.all())[0];
-  await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:0}],done:true});
+  await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:true});
   await assert.rejects(f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:0}],done:false}),e=>e.status===409);
   f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
   assert.equal((await f.engine.all()).find(r=>r.uuid===row.uuid).done,true);assert.equal(f.events.length,1);
-  await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:1}],done:false});assert.equal((await f.engine.summary()).counts.fresh,2);
+  await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision+1}],done:false});assert.equal((await f.engine.summary()).counts.fresh,2);
   const folder=groups.find(g=>g.month==='2026-10');await f.engine.handle('excel','POST',{folder:folder.id});
   const excel=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'})),files=unzipSync(new Uint8Array(await excel.arrayBuffer()));
   const xml=strFromU8(files['xl/worksheets/sheet1.xml']);assert(xml.includes('YENİ GELEN'));assert(xml.includes('PUSULA EKİM 2026 GELEN E-FATURALAR'));assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,true);
-  await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:2}],done:true});
-  assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,false);
+  await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision+2}],done:true});
+  assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,true);
   await f.engine.handle('excel','POST',{folder:folder.id});
   const zipped=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id})),archive=unzipSync(new Uint8Array(await zipped.arrayBuffer()));
   assert.equal(Object.keys(archive).length,2);assert(Object.keys(archive).every(n=>n.startsWith(folder.name+'/')));
@@ -165,23 +165,23 @@ test('Automatic archive catches previous-month invoices, saves only PDFs and pre
   await f.engine.handle('delete-folder','POST',{folder:folder.id});await f.engine.advance();
   f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
   const deleted=(await f.engine.all()).find(r=>r.uuid===row.uuid);assert(deleted.deletedAt);assert.equal(deleted.file,null);assert(deleted.done);assert.equal(f.calls.filter(c=>c.url.endsWith('/pdf')).length,pdfCount);
-  f.setRemote([remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17'),remoteInvoice(3,'2026-10-25')]);f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
+  f.setRemote([remoteInvoice(1,'2026-10-27'),remoteInvoice(2,'2026-11-01'),remoteInvoice(3,'2026-10-28')]);f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
   const replacement=(await f.engine.all()).find(r=>r.uuid.endsWith('000000000003'));assert(replacement.file);assert(!replacement.deletedAt);assert.notEqual(replacement.folder,folder.id);
   assert.equal((await f.engine.all()).find(r=>r.uuid===row.uuid).deletedAt,deleted.deletedAt);
   const measured=[...f.db.data].filter(([k])=>k.startsWith('blob:')).reduce((n,[,v])=>n+v.length,0);assert.equal(await f.db.get('totalBytes'),measured);
  }finally{globalThis.fetch=original;}
 });
-test('Monthly Excel retains unresolved invoices from earlier collection dates and all status changes invalidate it',async()=>{
+test('Monthly Excel automatically retains older unresolved rows and updates immediately after marking',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
   await f.engine.start();await drain(f.engine,f.db);
-  f.setRemote([remoteInvoice(1,'2026-10-20'),remoteInvoice(2,'2026-11-17'),remoteInvoice(3,'2026-10-25')]);f.advanceTime(24);await f.engine.start();await drain(f.engine,f.db);
-  const groups=(await(await f.engine.handle('folders','GET')).json()).folders,folder=groups.find(g=>g.month==='2026-10'&&g.date==='2026-11-18');assert(folder);
+  f.setRemote([remoteInvoice(1,'2026-10-27'),remoteInvoice(2,'2026-11-01'),remoteInvoice(3,'2026-10-28')]);f.advanceTime(24);await f.engine.start();await drain(f.engine,f.db);
+  const groups=(await(await f.engine.handle('folders','GET')).json()).folders,folder=groups.find(g=>g.month==='2026-10'&&g.date==='2026-11-02');assert(folder);
   await f.engine.handle('excel','POST',{folder:folder.id});
   const response=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'}));const xml=strFromU8(unzipSync(new Uint8Array(await response.arrayBuffer()))['xl/worksheets/sheet1.xml']);
-  assert(xml.includes(remoteInvoice(1,'2026-10-20').documentNo));assert(xml.includes(remoteInvoice(3,'2026-10-25').documentNo));assert(!xml.includes(remoteInvoice(2,'2026-11-17').documentNo));
+  assert(xml.includes(remoteInvoice(1,'2026-10-27').documentNo));assert(xml.includes(remoteInvoice(3,'2026-10-28').documentNo));assert(!xml.includes(remoteInvoice(2,'2026-11-01').documentNo));
   const earlier=(await f.engine.all()).find(r=>r.uuid.endsWith('000000000001'));await f.engine.handle('mark','POST',{items:[{uuid:earlier.uuid,revision:earlier.revision}],done:true});
-  assert.equal((await(await f.engine.handle('folders','GET')).json()).folders.find(g=>g.id===folder.id).excel.current,false);
+  assert.equal((await(await f.engine.handle('folders','GET')).json()).folders.find(g=>g.id===folder.id).excel.current,true);
  }finally{globalThis.fetch=original;}
 });
 test('Failed PDF fetches never become successful archives or new invoice success notifications',async()=>{
@@ -190,18 +190,18 @@ test('Failed PDF fetches never become successful archives or new invoice success
 });
 test('Initial processed-number import is company-local and does not require recurring Excel uploads',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
- try{await f.engine.handle('baseline','POST',{numbers:[' '+remoteInvoice(1,'2026-10-20').documentNo+' ' ]});await f.engine.start();await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.done,1);assert.equal((await f.engine.summary()).counts.fresh,1);}finally{globalThis.fetch=original;}
+ try{await f.engine.handle('baseline','POST',{numbers:[' '+remoteInvoice(1,'2026-10-27').documentNo+' ' ]});await f.engine.start();await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.done,1);assert.equal((await f.engine.summary()).counts.fresh,1);}finally{globalThis.fetch=original;}
 });
 test('Clear all empties every invoice and archive, retains company setup and marks, then permits immediate reacquisition',async()=>{
  const f=fixture(),other=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
-  const a=remoteInvoice(1,'2026-10-20'),b=remoteInvoice(2,'2026-11-17'),rejected={...remoteInvoice(3,'2026-11-16'),invoiceStatus:'REJECTED'};f.setRemote([a,b,rejected]);
+  const a=remoteInvoice(1,'2026-10-27'),b=remoteInvoice(2,'2026-11-01'),rejected={...remoteInvoice(3,'2026-10-31'),invoiceStatus:'REJECTED'};f.setRemote([a,b,rejected]);
   await f.engine.handle('baseline','POST',{numbers:[a.documentNo]});await f.engine.start(true);await drain(f.engine,f.db);
   let records=await f.engine.all();const first=records.find(r=>r.uuid===a.uuid),second=records.find(r=>r.uuid===b.uuid);
   await f.engine.handle('mark','POST',{items:[{uuid:first.uuid,revision:first.revision}],done:false});await f.engine.handle('mark','POST',{items:[{uuid:second.uuid,revision:second.revision}],done:true});
   const folder=(await f.engine.handle('folders','GET').then(r=>r.json())).folders[0];await f.engine.handle('excel','POST',{folder:folder.id});
   await f.db.put('automation:company',company.id);await f.db.put('push:device:synthetic',{id:'keep'});await other.db.put('invoice:other',{uuid:'other',tarih:'2026-11-01'});
-  const before=await f.engine.summary();assert.equal(before.counts.rejected,1);assert.equal(before.monthly['2026-11'].rejected,1);assert.equal(before.monthly['2026-11'].done,1);
+  const before=await f.engine.summary();assert.equal(before.counts.rejected,1);assert.equal(before.monthly['2026-10'].rejected,1);assert.equal(before.monthly['2026-11'].done,1);
   await assert.rejects(()=>f.engine.handle('clear-all','POST',{}),e=>e.status===400);assert.equal((await f.engine.all()).length,3);
   await f.engine.handle('clear-all','POST',{confirm:true});
   const empty=await f.engine.summary();assert.equal(empty.counts.total,0);assert.equal(empty.counts.folders,0);assert.equal(empty.bytes,0);assert.deepEqual(empty.monthly,{});assert(!empty.running);assert.equal(empty.settings.enabled,true);assert.equal(empty.period.startMonth,'2026-10');
@@ -231,19 +231,19 @@ test('Legacy invoice scenarios refresh without downloads, new invoices, notifica
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
   await f.engine.start();await drain(f.engine,f.db);
-  const row=(await f.engine.all())[0];await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:0}],done:true});
+  const row=(await f.engine.all())[0];await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:true});
   const folder=(await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.month==='2026-10');await f.engine.handle('excel','POST',{folder:folder.id});
   const before=await f.engine.all(),status=await f.engine.status(),used=await f.db.get('totalBytes'),pdfs=f.calls.filter(c=>c.url.endsWith('/pdf')).length,events=f.events.length;
   for(const r of before){const {profile,...legacy}=r;await f.db.put('invoice:'+r.uuid,legacy);}
   await f.db.put('settings',{...await f.engine.settings(),enabled:false});
-  f.setRemote([{...remoteInvoice(1,'2026-10-20'),profile:'TICARIFATURA'},remoteInvoice(2,'2026-11-17'),remoteInvoice(3,'2026-11-17')]);
+  f.setRemote([{...remoteInvoice(1,'2026-10-27'),profile:'TICARIFATURA'},remoteInvoice(2,'2026-11-01'),remoteInvoice(3,'2026-11-01')]);
   const summary=await f.engine.summary();assert(summary.updatingTypes);assert(summary.running);
   await drain(f.engine,f.db);
-  const after=await f.engine.all();assert.equal(after.length,before.length);assert.equal(f.events.length,events);assert.equal(f.calls.filter(c=>c.url.endsWith('/pdf')).length,pdfs);assert.equal(await f.db.get('totalBytes'),used);
+  const after=await f.engine.all();assert.equal(after.length,before.length);assert.equal(f.events.length,events);assert.equal(f.calls.filter(c=>c.url.endsWith('/pdf')).length,pdfs);assert.equal(await f.db.get('totalBytes'),[...f.db.data].filter(([k])=>k.startsWith('blob:')).reduce((n,[,v])=>n+v.length,0));
   for(const r of after){const old=before.find(x=>x.uuid===r.uuid);assert.deepEqual({...r,profile:old.profile},old);}
   const displayed=(await f.engine.handle('invoices','GET').then(r=>r.json())).rows;assert(displayed.some(r=>r.tipLabel==='Ticari - Satış'));assert(displayed.some(r=>r.tipLabel==='Temel - Satış'));
   assert.equal((await f.engine.status()).lastSuccess,status.lastSuccess);assert.equal((await f.engine.status()).lastAttempt,status.lastAttempt);assert.equal((await f.engine.settings()).enabled,false);assert.equal((await f.engine.summary()).updatingTypes,false);
-  assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,false);
+  assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,true);
   await f.engine.handle('excel','POST',{folder:folder.id});const excel=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'}));assert(strFromU8(unzipSync(new Uint8Array(await excel.arrayBuffer()))['xl/worksheets/sheet1.xml']).includes('Ticari - Satış'));
  }finally{globalThis.fetch=original;}
 });
@@ -257,13 +257,58 @@ test('A failed scenario refresh leaves scan success and invoice files intact and
   assert.deepEqual((await f.engine.all()).map(r=>r.file),before.map(r=>r.file));assert.equal((await f.engine.summary()).updatingTypes,false);
  }finally{globalThis.fetch=original;}
 });
+test('New means first discovery in the latest monthly batch; repeats, baseline, old dates and other months stay distinct',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ const processed=remoteInvoice(1,'2026-10-27'),old=remoteInvoice(2,'2026-10-01'),oct=remoteInvoice(3,'2026-10-28'),nov=remoteInvoice(4,'2026-11-01'),later=remoteInvoice(5,'2026-10-30');
+ const load=async status=>(await f.engine.handle('invoices','GET',{},new URLSearchParams(status?{status}:{}))).json();
+ const sheet=async month=>{const r=await f.engine.handle('month-excel','GET',{},new URLSearchParams({month}));return strFromU8(unzipSync(new Uint8Array(await r.arrayBuffer()))['xl/worksheets/sheet1.xml']);};
+ const statusRow=(xml,no)=>xml.match(/<row\b[^>]*>.*?<\/row>/g).find(row=>row.includes(no));
+ try{
+  await f.engine.handle('baseline','POST',{numbers:[processed.documentNo]});f.setRemote([processed,old,oct,nov]);await f.engine.start();await drain(f.engine,f.db);
+  assert.equal((await load()).total,3);assert.equal((await load('new')).total,2);assert.equal((await load('done')).total,1);assert.equal((await load('waiting')).total,0);assert(!f.calls.some(c=>c.body?.[0]?.id===old.id));
+  const firstOct=await sheet('2026-10'),firstNov=await sheet('2026-11');assert(statusRow(firstOct,processed.documentNo).includes('İŞLENDİ'));assert(statusRow(firstOct,oct.documentNo).includes('YENİ GELEN'));assert(!firstOct.includes(nov.documentNo));assert(firstNov.includes(nov.documentNo)&&!firstNov.includes(oct.documentNo));
+  const events=f.events.length,firstFile=(await f.db.get('monthly-excel:2026-10')).file.id;f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
+  assert.equal(f.events.length,events);assert.equal((await load('new')).total,2);assert.equal((await f.db.get('monthly-excel:2026-10')).file.id,firstFile,'An unchanged check does not churn Excel or demote new arrivals');
+  f.setRemote([processed,old,oct,nov,later]);f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
+  const rows=(await load()).rows;assert.equal(rows.find(r=>r.fatno===oct.documentNo).state,'waiting');assert.equal(rows.find(r=>r.fatno===later.documentNo).state,'new');assert.equal(rows.find(r=>r.fatno===nov.documentNo).state,'new','November arrivals do not get moved into October');assert.equal(rows.find(r=>r.fatno===processed.documentNo).state,'done');
+  const nextOct=await sheet('2026-10');assert(statusRow(nextOct,oct.documentNo).includes('BEKLENİYOR'));assert(statusRow(nextOct,later.documentNo).includes('YENİ GELEN'));assert(statusRow(nextOct,processed.documentNo).includes('İŞLENDİ'));assert.equal(f.events.length,events+1);assert.equal(f.events.at(-1).count,1);
+  const beforeUndo=(await load()).rows.find(r=>r.fatno===processed.documentNo);await f.engine.handle('mark','POST',{items:[{uuid:beforeUndo.uuid,revision:beforeUndo.revision}],done:false});assert.equal((await load()).rows.find(r=>r.uuid===beforeUndo.uuid).state,'waiting','Undoing an old processed invoice never calls it newly arrived');
+  f.advanceTime(11*24);assert.equal((await f.engine.summary()).counts.fresh,0);assert((await sheet('2026-10')).includes('BEKLENİYOR'));
+ }finally{globalThis.fetch=original;}
+});
+test('Legacy unmatched October 1 invoices migrate to waiting; imported processed numbers restore completion and no old invoice is announced',async()=>{
+ const f=fixture(),at=Date.parse('2026-10-31T06:00:00Z'),old=remoteInvoice(1,'2026-10-01'),done=remoteInvoice(2,'2026-10-01');
+ await f.db.put('baseline:'+createHash('sha256').update(done.documentNo).digest('hex'),{at});
+ for(const source of [old,done])await f.db.put('invoice:'+source.uuid,{uuid:source.uuid,fatno:source.documentNo,tarih:source.issueDate,unvan:'Synthetic',tip:'SATIS',profile:'TEMELFATURA',tutar:100,birim:'TRY',yanit:'Kanunen kabul',firstSeen:at,done:false,revision:3});
+ const summary=await f.engine.summary();assert.equal(summary.counts.fresh,0);assert.equal(summary.counts.waiting,1);assert.equal(summary.counts.done,1);assert.equal(f.events.length,0);
+ const rows=(await f.engine.handle('invoices','GET').then(r=>r.json())).rows;assert.equal(rows.find(r=>r.fatno===old.documentNo).state,'waiting');assert.equal(rows.find(r=>r.fatno===done.documentNo).state,'done');assert(rows.every(r=>r.published));
+ await f.engine.clearAll();const original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{f.setRemote([remoteInvoice(1,'2026-10-01'),remoteInvoice(2,'2026-10-01')]);await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,0,'A reset does not pull old October 1 invoices into a November recent scan');}finally{globalThis.fetch=original;}
+});
+test('A reset can reacquire a recent invoice but does not announce it as new again',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{await f.engine.start();await drain(f.engine,f.db);const events=f.events.length;await f.engine.clearAll();await f.engine.start(true);await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.fresh,0);assert.equal(summary.counts.waiting,2);assert.equal(summary.counts.pdfs,2);assert.equal(f.events.length,events);assert((await f.db.list({prefix:'monthly-excel:'})).size===2);}finally{globalThis.fetch=original;}
+});
+for(const action of ['clear','mark'])test('A stale monthly Excel snapshot cannot overwrite '+action+' while generation is in flight',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  await f.engine.start();await drain(f.engine,f.db);const row=(await f.engine.all()).find(r=>r.tarih.startsWith('2026-10')),revisionKey='month-revision:2026-10';await f.db.put(revisionKey,(await f.db.get(revisionKey))+1);
+  const get=f.db.get;let unblock,started,blocked=false;const gate=new Promise(r=>unblock=r),waiting=new Promise(r=>started=r);
+  f.db.get=async key=>{if(!blocked&&key==='monthly-excel:2026-10'){blocked=true;started();await gate;}return get(key);};
+  const pending=f.engine.refreshMonthlyExcels();await waiting;
+  if(action==='clear')await f.engine.clearAll();else await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:true});
+  unblock();await pending;f.db.get=get;
+  if(action==='clear'){assert.equal((await f.db.list({prefix:'monthly-excel:'})).size,0);assert.equal((await f.db.list({prefix:'blob:'})).size,0);assert.equal(await f.db.get('totalBytes'),0);}
+  else{const result=await f.engine.handle('month-excel','GET',{},new URLSearchParams({month:'2026-10'})),xml=strFromU8(unzipSync(new Uint8Array(await result.arrayBuffer()))['xl/worksheets/sheet1.xml']);assert(xml.includes('İŞLENDİ'));assert(!xml.includes('YENİ GELEN'));assert.equal((await f.db.get('monthly-excel:2026-10')).revision,await f.db.get(revisionKey));}
+ }finally{globalThis.fetch=original;}
+});
 test('Document validation rejects foreign recipients, wrong identities, DTDs and non-PDF bytes',()=>{
  const row={fatno:'TEST',uuid:'11111111-2222-4333-8444-555555555555'},enc=s=>new TextEncoder().encode(s);
  assert.throws(()=>supplierFromXML(enc('<!DOCTYPE Invoice><Invoice/>'),row,identifier));
  assert.throws(()=>supplierFromXML(enc('<Invoice><ID>WRONG</ID></Invoice>'),row,identifier));
  assert.throws(()=>unwrapDocument(enc('not a pdf'),'pdf'));
- assert.equal(folderName('KİB Dijital Tek','2026-10','2026-11-17'),'KİB Dijital Tek Ekim 2026 Gelen E-Faturalar (17.11.2026)');
- const bytes=makeExcel('KİB Dijital Tek','2026-10','2026-11-17',[{fatno:'<test>',tarih:'2026-10-01',unvan:'Test & <script>',tip:'SATIS',tutar:123.5,birim:'TRY',yanit:'Yanıt gerekmiyor',done:false}]);
+ assert.equal(folderName('KİB Dijital Tek','2026-10','2026-11-01'),'KİB Dijital Tek Ekim 2026 Gelen E-Faturalar (01.11.2026)');
+ const bytes=makeExcel('KİB Dijital Tek','2026-10','2026-11-01',[{fatno:'<test>',tarih:'2026-10-01',unvan:'Test & <script>',tip:'SATIS',tutar:123.5,birim:'TRY',yanit:'Yanıt gerekmiyor',done:false}]);
  assert(strFromU8(unzipSync(bytes)['xl/worksheets/sheet1.xml']).includes('KİB DİJİTAL TEK EKİM'));
 });
 function subscription(){const client=createECDH('prime256v1');client.generateKeys();const auth=randomBytes(16);return {client,auth,value:{endpoint:'https://web.push.apple.com/synthetic',keys:{p256dh:client.getPublicKey().toString('base64url'),auth:auth.toString('base64url')}}};}

@@ -20,12 +20,13 @@ sunucu kontrolüne uygulanmaz.
 - Her etkin firma kendi kalıcı işi ve dosya alanında işlenir. Tarayıcı veya
   bilgisayarın açık kalması gerekmez. İşin adımları Durable Object alarmında
   devam eder; geçici hatalar sınırlı sayıda yeniden denenir.
-- Başlangıç ayı firma kapsamında ilk kontrol veya başlangıç Excel aktarımı
-  sırasında kaydedilir. İlk ay yalnızca o ay taranır. Örneğin Ekim başlangıcında
-  yalnızca Ekim; Kasım’a geçince Ekim–Kasım; Aralık’ta Kasım–Aralık taranır.
-- Geliş tarihi ve belge tarihi sorguları aynı dönemle sınırlıdır. Geliş sorgusu
-  son başarılı kontrolün iki gün öncesinden, en erken bu dönemin başından başlar.
-  Yakın zamanda teslim edilse bile dönemden eski belge indirilmez.
+- Başlangıç ayı ilk kontrol veya başlangıç Excel aktarımında firma kapsamında
+  kaydedilir. Yeni sorgu en fazla 10 gün geriye gider; başlangıç ayını ve önceki
+  ayın başını aşmaz. Örneğin 1 Kasım’da 22 Ekim–1 Kasım sorgulanır. Geliş ve
+  belge tarihine göre iki sorgu yapılır; belge tarihi bu aralığın dışında kalan
+  kayıt indirilmez. Daha önce arşivlenmiş geçerli aylar korunur.
+- Geliş sorgusu son başarılı kontrolün iki gün öncesinden, en erken tarama
+  aralığından başlar. Tarih, alıcı firma ve sayfalama sonuçları ayrıca doğrulanır.
 - Eski sürümden geçişte başlangıç ayı, Excel aktarım/kayıt alma zamanlarından
   belirlenir; fatura tarihleri başlangıç olarak kullanılmaz. Başlangıç ayından
   önce yanlışlıkla alınmış kayıtlar ilk yenilemede listeden ve sayaçlardan
@@ -57,17 +58,33 @@ firmanın tüm aylardaki fatura listesi ve arşiv dosyalarını, reddedilmiş ve
 dosyası olmayan kayıtlar dahil, kaldırır. Devam eden alma işi iptal edilir;
 eski bir isteğin sonradan dönmesi kayıtları geri getirmez. İzibiz bağlantısı,
 başlangıç ayı, otomatik takip ayarı, bildirim cihazları ve işlenmiş fatura
-referansı korunur. İşareti geri alınmış faturalar yeniden alınırken yeni gelen
-kalır. İzibiz Sistemini Başlat ile geçerli tarama döneminin faturaları yeniden
+referansı ve görülmüş fatura kimlikleri korunur. Yeniden alınan eski kayıtlar
+tekrar yeni sayılmaz; işlenmemiş kayıtlar Bekleniyor olarak geri gelir. İzibiz Sistemini Başlat ile geçerli tarama döneminin faturaları yeniden
 alınabilir. Otomatik takip açıksa sonraki planlı kontrol de tekrar alır;
 geçerli dönemden eski arşiv otomatik olarak yeniden indirilmez.
 
 ## İşlem durumu
 
-Yeni faturalar kullanıcı işaretleyene kadar YENİ GELEN olarak kalır.
-Zaman geçmesi bunları BEKLENİYOR veya İŞLENDİ yapmaz. İşlendi işareti geri
+Geliş durumu ile muhasebe durumu ayrıdır:
+- **YENİ GELEN:** En fazla 10 gün geriye tarihli, ilk kez görülmüş ve PDF’i
+  doğrulanmış, son yeni gruptaki işlenmemiş fatura.
+- **BEKLENİYOR:** Önceden görülmüş fakat işlenmemiş fatura. Aynı ayda başka
+  yeni faturalar bulunduğunda önceki yeniler buraya geçer. Yeni fatura olmayan
+  kontrol bu geçişi yapmaz. Belge tarihi 10 günlük sınırın dışında kalan bir
+  yeni kayıt da artık Yeni gelen olarak gösterilmez.
+- **İŞLENDİ:** İlk Excel’de numarası eşleşen veya kullanıcının sonradan
+  işaretlediği fatura. Yeni grubun gelmesi bunu otomatik değiştirmez.
+- **REDDEDİLDİ:** İzibiz’in reddedilmiş kaydı; muhasebe işareti değildir.
+
+İlk Excel firma kapsamında kalıcı numara referansıdır. Sonraki kontrollerde
+ETTN ve bu referans karşılaştırılır; aynı faturanın tekrar görünmesi yeni geliş
+sayılmaz. Aylar belge tarihine göre ayrıdır. Ekim’deki yeni grup Kasım listesini
+karıştırmaz. İlk geçişte eski işlenmemiş kayıtlar Bekleniyor’a geçirilir; ilk
+Excel’de eşleşen ama eski denemelerde işareti kaldırılmış kayıtlar İşlendi
+olarak düzeltilir. Mevcut manuel İşlendi kayıtları korunur. İşlendi işareti geri
 alınabilir. Her durum değişikliğinden sonra listenin üstünde süreyle kaybolmayan
-Geri al çubuğu görünür; fatura etkin filtreden çıksa da son işlem geri alınabilir.
+Geri al çubuğu görünür; fatura etkin filtreden çıksa da son işlem geri alınabilir. Eski bir faturanın
+işlendi işaretini kaldırmak onu otomatik olarak Yeni gelen yapmaz.
 İşlenmiş faturaların altında ayrıca belirgin Geri al düğmesi vardır. Kutucuk
 seçimi Seçimi kaldır ile kaldırılır; seçim tek başına işlem durumunu değiştirmez.
 Son işlemi geri alma, değişen kayıtların önceki durumunu ve güncel kayıt sürümünü
@@ -83,8 +100,7 @@ Satış, Ticari - İade gibi. Senaryo, [İzibiz liste yanıtındaki profile alan
 alınır; eksikse Temel/Ticari tahmini yapılmaz. Eski kayıtların senaryosu sayfa
 yenilendiğinde yalnızca liste okunarak tamamlanır; PDF’ler yeniden indirilmez,
 işlendi işaretleri değişmez ve yeni fatura bildirimi gönderilmez. Ayın Excel’i
-de aynı birleşik tipi kullanır; senaryo güncellemesi eski Excel’i güncel değil
-olarak işaretler.
+de aynı birleşik tipi kullanır; senaryo güncellemesi de aylık Excel’i otomatik günceller.
 
 Başlangıç için son işlenmiş Excel isteğe bağlı bir kez aktarılabilir. Tarayıcı
 dosyayı okur; sunucuya yalnızca numaralar gider. Geçmiş faturaların işlenmiş
@@ -103,13 +119,22 @@ göstergesi vardır. Hiçbir fatura Git'e, dist'e veya herkese açık statik dos
 yazılmaz. Arşiv dosyaları oturumla korunan API'den sunulur. ZIP dışa aktarma
 parça parça akıtılır; klasörün tamamı sunucu belleğine yüklenmez.
 
-Excel otomatik üretilmez. Kullanıcı klasörde Ayın Excel'ini hazırla dediğinde
-aynı firmada o aya ait tüm silinmemiş faturalar o andaki işaretlerle Excel'e
-alınır; önceki günlerde alınmış fakat işlenmemiş faturalar da dahil edilir.
-Excel aynı özel klasöre eklenir. Sonraki işaretlemeler
-önceden üretilmiş Excel'i eski sürüm olarak gösterir; yeniden hazırlanabilir.
-Excel adı baş harfli, iç başlığı Türkçe büyük harflidir. Son sütun işlem
-durumudur; İzibiz yanıtı ayrı korunur.
+Her ayın Excel’i otomatik üretilir. Yeni fatura grubu tamamlandığında,
+işaretleme/geri alma, başlangıç referans eşleşmesi veya senaryo değişikliği
+olduğunda o ayın tüm silinmemiş faturalarıyla aynı aylık dosya güncellenir.
+Eski işlenmemiş faturalar Bekleniyor, en son gruptakiler Yeni gelen, işlenmişler
+İşlendi olarak yer alır. Her ayın ayrı dosyası vardır; önceki ayın bekleyenleri
+sonraki ayın Excel’ine taşınmaz. Kullanıcıya bildirim gönderilmeden önce yeni
+PDF’ler ve güncel Excel hazırlanır. Yeni fatura olmayan tekrarda dosya gereksiz
+yeniden üretilmez.
+
+Faturalar başlığının yanındaki **Excel’i indir** doğrudan seçili ayın güncel
+Excel’ini verir. Aynı bağlantı klasör kartında ve içindedir. Hazırla/Güncelle
+adımı gerekmez. PDF’ler ve aylık Excel sunucuda özel arşivdedir; bilgisayarda
+otomatik indirme başlatılmaz. Excel adı baş harfli, iç başlığı Türkçe büyük
+harflidir. Son sütun işlem durumudur; İzibiz yanıtı ayrı korunur. Dosyanın satır
+anlık görüntüsü ve sürümü aynı işlemde doğrulanır; geç dönen eski iş yeni
+Excel’i veya temizlenmiş arşivi geri getiremez.
 
 Klasörü dışa aktar, PDF'leri ve varsa son Excel'i klasör adı altında ZIP olarak
 verir. Dışa aktarma kullanıcının isteğiyle gerçekleşir.
@@ -153,7 +178,8 @@ zamanını ve görünümü etkiler.
 npm run build, npm run check, npm test.
 Otomasyon testleri ilk ay sınırı, ay/yıl geçişi, önceki aya geç gelen fatura,
 başlangıçtan eski kayıtların temizliği ve yeniden alınmaması, PDF doğrulama,
-mükerrer tarama, ilk referans aktarımı, işaretleme/geri alma, eski kayıt
+mükerrer tarama ve sıfırlama sonrası tekrarın yeni sayılmaması, Yeni gelen–
+Bekleniyor geçişi, aylara ayrı Excel, ilk referans aktarımı, işaretleme/geri alma, eski kayıt
 çatışması, Excel sürümü, klasör silme, tüm arşivi temizleme ve yeniden alma, temizleme
 sırasında devam eden liste/PDF/metadata işlerinin iptali ve gerçek şifreli push
 isteğini kapsar.
