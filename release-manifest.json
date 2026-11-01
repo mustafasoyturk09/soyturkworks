@@ -51,7 +51,7 @@
     },
     {
       "file": "app/sales-issue.js",
-      "sha256": "68347ea0ad224c4b09a369f8d42ec111b7ffee713486644c194104e34944cfdc"
+      "sha256": "679092e12458bc0e7755f2610f11cbb2cb3d8d284c98c1c87d6e4d2ea186cc92"
     },
     {
       "file": "app/sfOcrCoreData.js",
@@ -211,7 +211,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "8194c9a2e7a4896666c04a5983602a8fb6079f212e52c74d1b3fdf5a618ca8a0"
+      "sha256": "e68f956576a87f96a57d51ed5581454d02dcb0dd61e242b948b8252b94e7d166"
     },
     {
       "file": "manifest.webmanifest",

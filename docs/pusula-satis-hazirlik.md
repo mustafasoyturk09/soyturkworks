@@ -7,20 +7,20 @@ Ayrı bir kolon eşleme, üçüncü Excel yükleme veya arşiv/gönderim adımı
 
 ## Otomatik hazırlama
 
-- Fatura tarihi tüm satırlara ve önizlemelere uygulanır. Tarihin ay/yılına ait
+- Fatura tarihi ekranda ve önizlemede GG-AA-YYYY biçimindedir (ör. 03-11-2026); içeride ISO tarih olarak saklanır. Tarih tüm satırlara ve önizlemelere uygulanır. Tarihin ay/yılına ait
   Bakım-Kira sütunu ve TİCARİ UNVAN başlığı otomatik bulunur. LİS-Diğer, E-Arşiv,
   Biruni, ay sonu Sentez ve sıfır matrah kayıtları bu akışa alınmaz. Yeni ay sütunu
   eksikse eski tutarla devam edilmez; renkli Excel hücresi gerekmez.
-- Eşleştirme PDF’nin SAYIN alıcı bloğundaki ticari unvanı Excel ticari unvanıyla
+- Önce önceki ayın ilk günü kesilen asıl faturalar seçilir (Kasım 2026 için 01-10-2026). Daha sonraki tarihli belgeler tutarı eşleşse bile asıl faturanın yerini almaz. Eşleştirme PDF’nin SAYIN alıcı bloğundaki ticari unvanı Excel ticari unvanıyla
   karşılaştırır. Satıcının vergi numarası alıcı yerine alınmaz. Yasal unvanların
   yaygın kısaltmaları normalleştirilir; benzer veya birden fazla sonuç kullanıcıya
-  öneri olarak gösterilir. Vergi numarası tek başına şube seçtirmez.
+  öneri olarak gösterilir. Vergi numarası tek başına şube seçtirmez. Önceden doğrulanan şube adresi/SS NO hatırlanır. Hizmet notu taşıyan Excel unvanlarında ELİS/LİS gibi ekler şirket adıyla karıştırılmaz; ilgili hizmet PDF’i ayrıca ayırt edilir.
 - SS NO varsa önce tam SS NO eşleşmesi aranır. Aynı unvan/VKN’de farklı adres,
-  SS NO, hizmet veya matrah bulunan PDF’ler birleştirilmez. Belirsiz sonuçta
+  SS NO, hizmet veya matrah bulunan PDF’ler birleştirilmez. Tam unvan ve tekil Excel/PDF tutarı eşleşmesi kullanılır; güncel ve önceki Excel tutarları farklı şubelere işaret ediyorsa otomatik karar verilmez. Belirsiz sonuçta
   adres, SS NO, matrah, fatura türü ve açıklamalar gösterilir; kullanıcı bir PDF
   seçer. Aynı PDF’nin birden fazla Excel satırına bağlanması ayrıca işaretlenir.
 - Alıcı unvanı, VKN/TCKN, vergi dairesi, adres, SS NO, satır açıklamaları,
-  miktar/birim, KDV, senaryo, tevkifat kodu/oranı, alt notlar ve banka bilgileri
+  miktar/birim, KDV, senaryo, tevkifat kodu/oranı, alt notlar ve tam tevkifat sebebi
   PDF metninin konumlarından okunur. Varsayılan Ticari - Satış’tır; PDF’deki
   Temel - Satış ve Tevkifat bilgileri korunur ve değiştirilebilir.
 - Yeni matrah **her zaman güncel Excel’den** gelir. Karşılaştırma önceki ayın
@@ -34,7 +34,7 @@ Ayrı bir kolon eşleme, üçüncü Excel yükleme veya arşiv/gönderim adımı
 - YALNIZ bölümündeki eski yazıyla tutar ayrı tutulur. Yeni yazıyla tutar yeni
   hizmet toplamı, PDF’deki KDV ve varsa tevkifat oranından hesaplanır. Yanındaki
   ek metinler ve diğer alt notlar ayrı düzenlenebilir satırlardır. Her notta
-  Sil / Geri al bulunur. Banka alanı notlardan ayrı taşınır.
+  Sil / Geri al bulunur. Banka alanı yalnızca soldaki özgün PDF’de bulunur; yeni önizlemeye kopyalanmaz. İzibiz’in kendi banka bilgileri bu modülde değiştirilmez.
 - PDF’den okunamayan alanlar ve görüntü olarak taranmış PDF’ler açıkça
   işaretlenir; veri veya vergi numarası uydurulmaz. Kaynak metnin tamamı ve
   özgün PDF ayrıntıda açılabilir. Otomatik OCR bu modülde bağlı değildir.
@@ -44,11 +44,9 @@ Ayrı bir kolon eşleme, üçüncü Excel yükleme veya arşiv/gönderim adımı
 Her satırın `Önizle` düğmesi aynı pencerede solda özgün önceki ay PDF’ini,
 sağda yeni tarih/Excel tutarıyla oluşturulan gerçek bir PDF önizlemesini gösterir.
 Telefonlarda iki belge arasında geçiş, tüm ekranlarda yakınlaştırma vardır.
-Belgeler ayrı kaydırılabilir; tüm sayfalar gösterilir. Yeni belge Türkçe gömülü
-font kullanır, açıklama ve notları satır satır taşır, uzun içerikte sayfa ekler.
+Belgeler ayrı kaydırılabilir; tüm sayfalar gösterilir. Eşleşmiş belgede özgün PDF’nin sayfa görüntüsü, logosu, sağ bilgi çerçevesi, tablo çizgileri ve boş satırları korunur. Değişen tarih, numara, tutarlar ve notlar aynı alanlara yazılır. Türkçe font kullanılır; alana sığmayan metin atlanmaz, ek açıklama sayfasına alınır.
 
-Yeni PDF belirgin `KONTROL ÖNİZLEMESİ / GÖNDERİLMEDİ` işaretlidir; yeni fatura no,
-ETTN veya resmi gönderim sonucu üretilmez. Düzenleme alanları önizlemenin
+Yeni PDF belirgin `KONTROL ÖNİZLEMESİ / GÖNDERİLMEDİ` işaretlidir. Numara `XXX2026…` biçiminde örnek bir yer tutucudur; gerçek seri tahsisi yapılmaz. Eski faturanın QR ve ETTN’si yeni önizlemede kullanılmaz; resmi gönderim sonucu üretilmez. Düzenleme alanları önizlemenin
 altındaki açılır bölümde yer alır. Değişiklik önizlemeye otomatik yansır.
 
 ## Kayıt ve izolasyon
@@ -59,7 +57,7 @@ Eski JSON yedekleri okunur; yeni yedeklerde hizmetler, not silme tercihleri,
 referans bilgileri ve şube seçimleri korunur. Yedek ham Excel/PDF içermez.
 Başka cihazda bulunmayan kaynak dosyalar yeniden eklenmelidir.
 
-Her fatura satırının Sil / Geri al işlemi yalnızca o satırı etkiler; yenileme,
+Silme sonrasında hemen görünen Geri al düğmesi ve sayılı Silinenler filtresi bulunur. Her fatura satırının Sil / Geri al işlemi yalnızca o satırı etkiler; yenileme,
 yeniden içe alma ve dönem değişiminde korunur. Listeyi temizleme kaynak PDF/Excel
 kopyalarını ve diğer modülleri silmez. Gerçek çalışma dosyaları dağıtıma ve
 Git’e dahil edilmez. Dosyalar yalnızca kullanıcının tarayıcısında işlenir.
