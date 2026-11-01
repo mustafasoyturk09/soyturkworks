@@ -71,7 +71,7 @@ export class InvoiceArchive{
       const migrate=settings.workflowVersion!==2;if(!migrate&&settings.workflowDay===date)return;
       for(const row of (await tx.list({prefix:'invoice:'})).values()){
         const baseline=row.fatno?await tx.get('baseline:'+sha(row.fatno.replace(/\s/g,'').toLocaleUpperCase('tr'))):null;
-        const done=migrate&&baseline?true:!!row.done,arrivalState=migrate||invoiceState(row,date)==='waiting'?'waiting':row.arrivalState;
+        const done=migrate&&baseline?true:!!row.done,arrivalState=migrate||invoiceState(row,date)==='waiting'||row.arrivalState==='new'&&row.tarih<recentInvoiceDate(date)?'waiting':row.arrivalState;
         if(migrate||row.done!==done||row.arrivalState!==arrivalState){
           await tx.put('invoice:'+row.uuid,{...row,done,arrivalState,published:migrate?true:row.published,revision:(row.revision||0)+1});
           if(!row.deletedAt){const key='month-revision:'+row.tarih.slice(0,7);await tx.put(key,(await tx.get(key)||0)+1);}
@@ -112,7 +112,7 @@ export class InvoiceArchive{
       await this.requireJob(job,tx);const rows=[...(await tx.list({prefix:'invoice:'})).values()];
       const candidates=rows.filter(r=>!r.deletedAt&&!r.isRet&&!r.done&&r.file&&!r.published&&r.tarih>=recentInvoiceDate(date)),months=new Set(candidates.map(r=>r.tarih.slice(0,7))),ids=new Set(candidates.map(r=>r.uuid));
       for(const row of rows){
-        const isNew=ids.has(row.uuid);if(!isNew&&!(months.has(row.tarih.slice(0,7))&&invoiceState(row,date)==='new'&&row.arrivalBatch!==job.id))continue;
+        const isNew=ids.has(row.uuid);if(!isNew&&!(months.has(row.tarih.slice(0,7))&&row.arrivalState==='new'&&row.arrivalBatch!==job.id))continue;
         const updated={...row,arrivalState:isNew?'new':'waiting',published:true,arrivalBatch:isNew?job.id:row.arrivalBatch,revision:(row.revision||0)+1};
         await tx.put('invoice:'+row.uuid,updated);await tx.put('seen:'+row.uuid,{...await tx.get('seen:'+row.uuid),published:true});
         const key='month-revision:'+row.tarih.slice(0,7);await tx.put(key,(await tx.get(key)||0)+1);

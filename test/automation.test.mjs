@@ -302,6 +302,15 @@ for(const action of ['clear','mark'])test('A stale monthly Excel snapshot cannot
   else{const result=await f.engine.handle('month-excel','GET',{},new URLSearchParams({month:'2026-10'})),xml=strFromU8(unzipSync(new Uint8Array(await result.arrayBuffer()))['xl/worksheets/sheet1.xml']);assert(xml.includes('İŞLENDİ'));assert(!xml.includes('YENİ GELEN'));assert.equal((await f.db.get('monthly-excel:2026-10')).revision,await f.db.get(revisionKey));}
  }finally{globalThis.fetch=original;}
 });
+test('Undoing a processed invoice after a later arrival batch restores waiting rather than reviving the earlier new batch',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  await f.engine.start();await drain(f.engine,f.db);let row=(await f.engine.all()).find(r=>r.tarih.startsWith('2026-10'));await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:true});
+  f.setRemote([remoteInvoice(1,'2026-10-27'),remoteInvoice(2,'2026-11-01'),remoteInvoice(3,'2026-10-30')]);f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
+  row=(await f.engine.all()).find(r=>r.uuid===row.uuid);assert(row.done);assert.equal(row.arrivalState,'waiting');await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:false});
+  const display=(await f.engine.handle('invoices','GET').then(r=>r.json())).rows.find(r=>r.uuid===row.uuid);assert.equal(display.state,'waiting');assert.equal((await f.engine.summary()).counts.fresh,2);
+ }finally{globalThis.fetch=original;}
+});
 test('Document validation rejects foreign recipients, wrong identities, DTDs and non-PDF bytes',()=>{
  const row={fatno:'TEST',uuid:'11111111-2222-4333-8444-555555555555'},enc=s=>new TextEncoder().encode(s);
  assert.throws(()=>supplierFromXML(enc('<!DOCTYPE Invoice><Invoice/>'),row,identifier));
