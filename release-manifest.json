@@ -191,11 +191,11 @@
     },
     {
       "file": "automation/index.html",
-      "sha256": "23b3ba37f5ea827389e5b6bb3321e4f0673f70762567579c62b222ec66ffba94"
+      "sha256": "db700d4bef36b61c42b42f9b6954213d8d07e705bf07a0620b6f3c954ec49807"
     },
     {
       "file": "automation/style.css",
-      "sha256": "70e91b27510c1895170f9088e9d1853440808154a84ee9d3fe16304e191642a6"
+      "sha256": "92d97ab43ab9859359a9e5e6417fec4d3099523d54536f2b6ef848a46c21e633"
     },
     {
       "file": "favicon.ico",
