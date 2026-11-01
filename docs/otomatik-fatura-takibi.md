@@ -40,8 +40,10 @@ sunucu kontrolüne uygulanmaz.
 ## Ekran kullanımı
 
 İlk açılış Faturalar bölümüdür; Türkiye saatine göre mevcut yıl ve ay seçilir.
-Yıl seçimi, önceki/sonraki yıl düğmeleri ve Ocak–Aralık kutuları Faturalar ile
-Klasörler arasında ortak çalışır. Ay kutuları fatura veya PDF sayısını gösterir.
+Yıl seçimi, önceki/sonraki yıl düğmeleri ve Ocak–Aralık kutuları Faturalar,
+Klasörler ve Takip Durumu arasında ortak çalışır. Takip Durumu’nda seçilen ayın
+özet sayıları gösterilir; sayı kartları aynı ayın ilgili fatura filtresini açar.
+Verisiz ve gelecek aylar da seçilebilir; bu aylarda sayılar sıfırdır. Ay kutuları fatura veya PDF sayısını gösterir.
 Takip başlangıcından önceki aylar boş görünür. Bildirime dokunulunca o
 bildirimdeki yeni faturaların ayı açılır. Güncel ayda yeni fatura yoksa önceki
 aya geç gelen faturaların ayı seçilir.
