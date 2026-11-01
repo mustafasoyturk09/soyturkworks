@@ -15,6 +15,17 @@ template=template.replace(/<script>\s*\(\(\) => \{\n  'use strict';\n  const sid
 const iziCSS=await readFile(new URL('../src/izibiz.css',import.meta.url),'utf8');
 const iziJS=await readFile(new URL('../src/izibiz.js',import.meta.url),'utf8');
 const mobileCSS=await readFile(new URL('../src/mobile.css',import.meta.url),'utf8');
+const salesCSS=await readFile(new URL('../src/sales-issue.css',import.meta.url),'utf8');
+const salesJS=await readFile(new URL('../src/sales-issue.js',import.meta.url),'utf8');
+const salesHTML=await readFile(new URL('../src/sales-issue.html',import.meta.url),'utf8');
+// Both web and portable builds contain the same module markup. User files are
+// browser-local and are never serialized into the distributed source template.
+source=source.replace(/<div class="page" id="page-satis-kesme"[\s\S]*?(?=<div class="page" id="page-satis")/,()=>salesHTML+'\n');
+template=template.replace(/<div class="page" id="page-satis-kesme"[\s\S]*?(?=<div class="page" id="page-satis")/,()=>salesHTML+'\n');
+const salesStyle='<style id="sw-sales-preparation-ui">'+salesCSS+mobileCSS.slice(mobileCSS.indexOf('/* Sales preparation'))+'</style>';
+const salesScript='<script id="sw-sales-preparation-code">'+salesJS+'</script>';
+if(template.includes('id="sw-sales-preparation-ui"'))template=template.replace(/<style id="sw-sales-preparation-ui">[\s\S]*?<\/style>/,()=>salesStyle);else template=template.replace('</head>',()=>salesStyle+'</head>');
+if(template.includes('id="sw-sales-preparation-code"'))template=template.replace(/<script id="sw-sales-preparation-code">[\s\S]*?<\/script>/,()=>salesScript);else template=template.replace('</body>',()=>salesScript+'</body>');
 const iziMedia=mobileCSS.slice(mobileCSS.indexOf('@media(max-width:600px)'),mobileCSS.indexOf('.sw-mobile-bar, .sw-nav-backdrop'));
 const iziStyle='<style id="sw-izibiz-ui">'+iziCSS+iziMedia+'</style>';
 const iziScript='<script id="sw-izibiz-code">'+iziJS+'</script>';

@@ -222,3 +222,18 @@ html { -webkit-text-size-adjust: 100%; }
 }
 
 @media(max-width:600px){#ef115Top .sw-auto-follow{font-size:11px;padding:8px 10px;min-height:40px;max-width:100%}}
+
+/* Sales preparation stays readable without widening the phone viewport. */
+[data-si-pusula-nav][hidden]{display:none!important}
+@media(max-width:700px){
+  body #page-satis-kesme .si-table-head{display:none}
+  body #page-satis-kesme .si-row{grid-template-columns:1fr 1fr;gap:0;padding:8px 12px}
+  body #page-satis-kesme .si-row>div{display:flex;flex-direction:column;gap:6px;border:0;border-bottom:1px solid var(--si-border);padding:12px 8px;min-width:0;text-align:center}
+  body #page-satis-kesme .si-row>div::before{content:attr(data-label);color:var(--si-muted);font-size:9px;letter-spacing:.6px}
+  body #page-satis-kesme .si-row>div:nth-child(3){grid-column:1/-1;grid-row:2}
+  body #page-satis-kesme .si-row>div:nth-child(4){font-size:16px}
+  body #page-satis-kesme .si-row>div:last-child{border:0}
+  body #page-satis-kesme .si-row>div:last-child::before{display:none}
+}
+@media(max-width:380px){body #page-satis-kesme .si-theme button{padding:7px 9px}body #page-satis-kesme .si-period{padding:18px}body #page-satis-kesme .si-period-fields{flex-direction:column}body #page-satis-kesme .si-period-fields label{width:100%}body #page-satis-kesme .si-upload{padding:21px}body #page-satis-kesme .si-upload .si-icon{width:36px;height:36px}body #page-satis-kesme .si-steps button{gap:7px;padding:9px}body #page-satis-kesme .si-steps button>span{width:27px;height:27px}body #page-satis-kesme .si-tabs button{padding:8px}}
+@media(max-width:1024px) and (orientation:landscape) and (max-height:540px){body #page-satis-kesme .si-dialog{max-height:calc(100dvh - 16px)}body #page-satis-kesme .si-dialog-head{padding:14px 20px}body #page-satis-kesme .si-header{margin-bottom:22px}}

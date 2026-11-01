@@ -11,7 +11,7 @@
     },
     {
       "file": "app/branding.css",
-      "sha256": "d230b51ec9bdded6d71251adbbc7e87434966b8625aea9fa5ac216edd348c39d"
+      "sha256": "6ba18d36da29f5e3f71b8a35a596fa6f37fd29661413996d2ca82c3211169517"
     },
     {
       "file": "app/calculator-ui.css",
@@ -31,7 +31,7 @@
     },
     {
       "file": "app/mobile.css",
-      "sha256": "f6bacf9a40bc051327178d33247e911123b1e438c3e6e16a9600223dfd0f0570"
+      "sha256": "fc74dc10e92c54dc0413a8527615df728699384581662310614bbc2890bed59d"
     },
     {
       "file": "app/mobile.js",
@@ -44,6 +44,14 @@
     {
       "file": "app/runtime.js",
       "sha256": "2415c25f6e40dc96238f797a6994a92035fb39d211fe6555216ca1174c527a11"
+    },
+    {
+      "file": "app/sales-issue.css",
+      "sha256": "9bdcf7fd2657d0212c2f79b26d2e30910bc94ce2003a70243b448e337692e992"
+    },
+    {
+      "file": "app/sales-issue.js",
+      "sha256": "b76f3a7f72b730a2ddf13a32b0fa434ba7c6cec13f84c530ac6e395bea8c9d7d"
     },
     {
       "file": "app/sfOcrCoreData.js",
@@ -203,7 +211,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "989d1696fff3dc6014bd9cfeb7407560664be39059701c117eee72e93acf5b08"
+      "sha256": "59322743aa5b2bca75da5cd16da74135d785941247c9b7737a71776963eb3951"
     },
     {
       "file": "manifest.webmanifest",

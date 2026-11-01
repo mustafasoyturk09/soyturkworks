@@ -10,7 +10,8 @@ body > aside .brand-mark-photo {
   display: block; width: 100%; height: 100%; max-width: 100%; object-fit: contain;
   filter: drop-shadow(0 6px 6px #0005) drop-shadow(0 0 6px #c1d9f21a);
 }
-body > aside .brand-text { color: #edf3fc; font-size: 20px; line-height: 1.18; letter-spacing: .01em; }
+body > aside .brand-text { color: #edf3fc; font-size: 20px; line-height: 1.18; letter-spacing: .01em; text-transform: uppercase; }
+body > aside .brand-text > span { display: block; }
 body > aside .brand-sub { margin: 8px 0 28px; text-align: center; font-size: 9.5px; letter-spacing: .13em; }
 .sw-header-logo { width: 36px; height: 36px; flex: 0 0 36px; object-fit: contain; filter: drop-shadow(0 2px 3px #0004); }
 #ef115Side .ef115-loaded[data-state="error"] { color: #862d20; font-weight: 600; overflow-wrap: anywhere; }
