@@ -176,7 +176,7 @@ async function renderNotifications(){
   }
   const ready=!!saved&&saved.active!==false&&usable&&permission==='granted',needsInstall=ios&&!standalone;
   $('pushStatus').textContent=ready?'Bu telefon tüm firmaların bildirimlerine bağlı.':needsInstall?'Telefonunda hata yok. Bu sayfa Safari sekmesinde açık.':!usable?'Bu tarayıcıda telefon bildirimi açılamıyor.':permission==='denied'?'Bildirim izni kapalı. iPhone Ayarları’ndan açabilirsin.':ios?'Doğru yerdesin. Aşağıdaki düğmeye bir kez bas.':'Bu cihazda bildirimler henüz açık değil.';
-  const setup=$('pushSetupSteps');setup.hidden=!needsInstall;setup.innerHTML=needsInstall?'<strong>iPhone’da yalnızca bir kez yap:</strong><ol><li>Safari’de Paylaş menüsünü aç.</li><li>Ana Ekrana Ekle’ye bas.</li><li>Ana ekrandaki Soyturk Works simgesini aç.</li><li>Bildirimler bölümünde “Bu telefonda tüm firmaları aç” düğmesine bas ve İzin Ver’i seç.</li></ol><p>Herhangi bir firmanın ekranı yeterli. Bilgisayardan işlem yapma; diğer firmalarda tekrarlama.</p>':'';
+  const setup=$('pushSetupSteps');setup.hidden=!needsInstall;setup.innerHTML=needsInstall?'<strong>iPhone’da yalnızca bir kez yap:</strong><ol><li>Safari’de Paylaş menüsünü aç.</li><li>Ana Ekrana Ekle’ye bas.</li><li>Ana ekrandaki SW logolu uygulama simgesini aç.</li><li>Bildirimler bölümünde “Bu telefonda tüm firmaları aç” düğmesine bas ve İzin Ver’i seç.</li></ol><p>Herhangi bir firmanın ekranı yeterli. Bilgisayardan işlem yapma; diğer firmalarda tekrarlama.</p>':'';
   $('enablePush').hidden=ready||needsInstall;$('enablePush').disabled=!usable||permission==='denied';$('testPush').hidden=!ready;
   $('pushHelp').textContent=ready?'Kurulum tamam. Hafta içi 09 · 11 · 13 · 15 · 17’de tüm firmaların özeti bu telefona gelir.':needsInstall?'Ana ekrana ekledikten sonra Safari’yi kapatıp mutlaka uygulama simgesinden aç.':ios?'Bu işlem tüm firmalar için tek seferliktir. Başka firmalarda yeniden açma veya test yapma.':'Telefonuna bildirim istiyorsan bu işlemi bilgisayardan değil, telefonundaki ana ekran uygulamasından yap.';
   $('deviceList').innerHTML=devices.length?devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span><strong>'+escape(d.name)+'</strong><small>'+(d.active===false?'Oturum değişti · Açınca otomatik yenilenir':d.id===pushId?'Bu cihaz · Tüm firmalara bağlı':'Tüm firmalara bağlı')+'</small></span><div class="device-actions"><button data-remove-device="'+d.id+'">Kaldır</button></div></div>').join(''): '<p class="subtle">Hesaba henüz bildirim cihazı bağlanmadı.</p>';
@@ -197,10 +197,10 @@ async function repairPushSubscription(){
 }
 $('enablePush').onclick=()=>busy($('enablePush'),async()=>{
   const environment=pushEnvironment();
-  if(environment.ios&&!environment.standalone)throw Error('Önce Safari’den Ana Ekrana Ekle; sonra ana ekrandaki Soyturk Works simgesinden aç.');
+  if(environment.ios&&!environment.standalone)throw Error('Önce Safari’den Ana Ekrana Ekle; sonra ana ekrandaki SW logolu uygulama simgesinden aç.');
   if(!environment.supported)throw Error('Bu tarayıcı telefon bildirimini desteklemiyor.');
   const permission=await Notification.requestPermission();if(permission!=='granted'){toast('Bildirim izni verilmedi. İstediğinde ayarlardan açabilirsin.');await renderNotifications();return;}
-  const registration=await registrationPromise;if(!registration?.pushManager)throw Error('Bildirim hizmeti açılamadı. iPhone’da ana ekrandaki Soyturk Works simgesinden açıp yeniden dene.');
+  const registration=await registrationPromise;if(!registration?.pushManager)throw Error('Bildirim hizmeti açılamadı. iPhone’da ana ekrandaki SW logolu uygulama simgesinden açıp yeniden dene.');
   await navigator.serviceWorker.ready;const config=await api(pushURL('config'));
   const sub=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicBytes(config.publicKey)});
   await api(pushURL('subscribe'),{subscription:sub.toJSON(),name:deviceName()});await renderNotifications();toast('Bu cihaz tüm firmaların bildirimlerine bağlandı.');
