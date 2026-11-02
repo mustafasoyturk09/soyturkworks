@@ -33,6 +33,8 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
     const password='Qa2026!';
     await t.test('Unauthenticated requests cannot bypass login through HTML or app assets',async()=>{
       for(const path of ['/automation/app.js','/api/automation','/api/automation/PUSULA/bootstrap?month=2026-11','/api/automation/PUSULA/clear-all','/api/automation/PUSULA/month-excel?month=2026-10','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
+      const workspaceHtml=await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),workspaceChunk=workspaceHtml.match(/\.\/app\/(inline-script-[a-f0-9]{16}\.js)/)?.[1];assert(workspaceChunk);
+      const deniedChunk=await request('/app/'+workspaceChunk);assert.equal(deniedChunk.status,401);assert.equal(deniedChunk.headers.get('cache-control'),'no-store');
       assert.equal((await request('/workspace/PUSULA/')).status,303);
       assert.equal((await request('/takip')).status,303);
       assert.equal((await request('/push-sw.js')).status,200);

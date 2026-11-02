@@ -91,9 +91,9 @@ export default {
     const path=url.pathname,staticAsset=!path.startsWith('/api/')&&/\.(?:css|js|json|mjs|png|ico|ttf)$/.test(path);
     if(path==='/push-sw.js')headers.set('Cache-Control','no-cache');
     else if(path==='/manifest.webmanifest')headers.set('Cache-Control','private, max-age=300, must-revalidate');
-    else if(/^\/app\/(?:inline-(?:script|style)|portable-template)-[a-f0-9]{16}\.(?:js|css|json)$/.test(path))headers.set('Cache-Control','private, max-age=31536000, immutable');
-    else if(path.startsWith('/assets/vendor/'))headers.set('Cache-Control','private, max-age=31536000, immutable');
-    else if(staticAsset)headers.set('Cache-Control','private, max-age=300, stale-while-revalidate=86400');
+    else if(response.ok&&/^\/app\/(?:inline-(?:script|style)|portable-template)-[a-f0-9]{16}\.(?:js|css|json)$/.test(path))headers.set('Cache-Control','private, max-age=31536000, immutable');
+    else if(response.ok&&path.startsWith('/assets/vendor/'))headers.set('Cache-Control','private, max-age=31536000, immutable');
+    else if(response.ok&&staticAsset)headers.set('Cache-Control','private, max-age=300, stale-while-revalidate=86400');
     else headers.set('Cache-Control','no-store');
     headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
     return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
