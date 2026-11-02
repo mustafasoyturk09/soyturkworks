@@ -88,9 +88,10 @@ export default {
     headers.set('Referrer-Policy','no-referrer');
     headers.set('X-Frame-Options','DENY');
     headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=(), publickey-credentials-get=(self), publickey-credentials-create=(self)');
-    const path=url.pathname,staticAsset=!path.startsWith('/api/')&&/\.(?:css|js|mjs|png|ico|ttf)$/.test(path);
+    const path=url.pathname,staticAsset=!path.startsWith('/api/')&&/\.(?:css|js|json|mjs|png|ico|ttf)$/.test(path);
     if(path==='/push-sw.js')headers.set('Cache-Control','no-cache');
     else if(path==='/manifest.webmanifest')headers.set('Cache-Control','private, max-age=300, must-revalidate');
+    else if(/^\/app\/(?:inline-(?:script|style)|portable-template)-[a-f0-9]{16}\.(?:js|css|json)$/.test(path))headers.set('Cache-Control','private, max-age=31536000, immutable');
     else if(path.startsWith('/assets/vendor/'))headers.set('Cache-Control','private, max-age=31536000, immutable');
     else if(staticAsset)headers.set('Cache-Control','private, max-age=300, stale-while-revalidate=86400');
     else headers.set('Cache-Control','no-store');

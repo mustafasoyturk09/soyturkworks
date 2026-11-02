@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $=id=>document.getElementById(id), main=$('main');
-  let state, noticeTimer;
+  let state, noticeTimer, openingWorkspace=false;
   const parameters=new URLSearchParams(location.hash.slice(1)||location.search);
   const recoveryToken=parameters.get('reset')||parameters.get('setup');
   const isSetup=parameters.has('setup');
@@ -48,13 +48,22 @@
     });
   }
   async function localMail(){const mail=await fetch('/__local/mail').then(r=>r.json());let a=main.querySelector('.local-mail');if(!a){a=document.createElement('a');a.className='local-mail';main.querySelector('.login-card').append(a);}a.textContent='Yerel test e-postasını aç';a.href=mail.link;}
+  function openWorkspace(company,button) {
+    if(openingWorkspace||!company.active)return;
+    openingWorkspace=true;button.disabled=true;button.setAttribute('aria-busy','true');
+    const veil=document.createElement('div');veil.className='workspace-opening';veil.setAttribute('role','status');veil.setAttribute('aria-live','polite');
+    const spinner=document.createElement('i');spinner.setAttribute('aria-hidden','true');
+    const copy=document.createElement('div'),name=document.createElement('strong'),detail=document.createElement('span');
+    name.textContent=company.name;detail.textContent='Çalışma alanı açılıyor…';copy.append(name,detail);veil.append(spinner,copy);document.body.append(veil);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>location.assign('/workspace/'+company.id+'/')));
+  }
   function companyCard(company) {
     const card=document.createElement('article');card.className='company-card'+(!company.active?' is-inactive':'');card.style.setProperty('--accent',company.color);
     const open=document.createElement('button');open.type='button';open.className='company-open';open.disabled=!company.active;open.setAttribute('aria-label',company.name+' çalışma alanını aç');
     const symbol=document.createElement('span');symbol.className='company-symbol';symbol.textContent=company.initials;
     const name=document.createElement('span');name.className='company-name';name.textContent=company.name;
     const enter=document.createElement('span');enter.className='company-enter';enter.append(document.createTextNode(company.active?'Çalışma alanını aç':'Firma pasif'));const arrow=document.createElement('span');arrow.textContent='↗';arrow.setAttribute('aria-hidden','true');enter.append(arrow);
-    open.append(symbol,name,enter);open.onclick=()=>location.href='/workspace/'+company.id+'/';
+    open.append(symbol,name,enter);open.onclick=()=>openWorkspace(company,open);
     const controls=document.createElement('div');controls.className='company-controls';
     const remove=document.createElement('button');remove.type='button';remove.className='remove-company';remove.textContent='Kaldır';remove.setAttribute('aria-label',company.name+' firmasını kaldır');
     remove.onclick=()=>{if(confirm(company.name+' firma seçiminden kaldırılsın mı? Kayıtları korunacak; daha sonra geri getirebilirsin.'))busy(remove,()=>updateCompany(company,{active:false,deleted:true}));};
@@ -63,7 +72,12 @@
   }
   async function updateCompany(company,patch){const result=await api('companies',{id:company.id,...patch},'PATCH');state.companies=result.companies;renderCompanies();if($('archiveDialog').open)renderArchive();}
   function renderCompanies(){const grid=$('companyGrid');grid.replaceChildren(...state.companies.filter(c=>!c.deleted).map(companyCard));if(!grid.children.length){const p=document.createElement('p');p.textContent='Tüm firmalar kaldırıldı. Aşağıdan geri getirebilirsin.';grid.append(p);}}
-  function companies(){template('companiesTemplate');renderCompanies();$('archiveButton').onclick=()=>{renderArchive();$('archiveDialog').showModal();};}
+  function prefetchWorkspace(){
+    const source=$('workspacePrefetch');if(!source)return;
+    let assets=[];try{assets=JSON.parse(source.textContent);}catch{}source.remove();
+    for(const href of assets){if(!/^\/app\/inline-(?:script|style)-[a-f0-9]{16}\.(?:js|css)$/.test(href))continue;const link=document.createElement('link');link.rel='prefetch';link.href=href;link.as=href.endsWith('.css')?'style':'script';document.head.append(link);}
+  }
+  function companies(){template('companiesTemplate');renderCompanies();prefetchWorkspace();$('archiveButton').onclick=()=>{renderArchive();$('archiveDialog').showModal();};}
   function renderArchive(){const list=$('archiveList');list.replaceChildren();const archived=state.companies.filter(c=>c.deleted);if(!archived.length)list.textContent='Kaldırılan firma yok.';archived.forEach(company=>{const row=document.createElement('div');row.className='archive-row';const name=document.createElement('span');name.textContent=company.name;const restore=document.createElement('button');restore.type='button';restore.textContent='Geri getir';restore.onclick=()=>busy(restore,()=>updateCompany(company,{active:true,deleted:false}));row.append(name,restore);list.append(row);});}
   async function account(){
     template('accountTemplate');$('accountUsername').textContent=state.account.username;$('accountEmail').textContent=state.account.recoveryEmail;

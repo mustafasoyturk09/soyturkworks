@@ -8,3 +8,7 @@
 
 /* Customer welcome uses the existing mint accent and white heading. */
 .intro h1{color:#fff}.company-heading h1{text-wrap:balance}
+.workspace-opening{position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;gap:18px;padding:24px;background:#08111ee8;backdrop-filter:blur(9px);opacity:0;animation:workspace-opening-in .14s ease-out forwards}.workspace-opening>i{width:36px;height:36px;flex:none;border:3px solid #76d5b830;border-top-color:#76d5b8;border-radius:50%;animation:workspace-opening-spin .65s linear infinite}.workspace-opening>div{display:grid;gap:5px;min-width:0}.workspace-opening strong{font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:500;overflow-wrap:anywhere}.workspace-opening span{color:#91a8bf;font-size:12px}@keyframes workspace-opening-in{to{opacity:1}}@keyframes workspace-opening-spin{to{transform:rotate(360deg)}}
+@media(max-width:650px){.workspace-opening{gap:14px}.workspace-opening>i{width:30px;height:30px}.workspace-opening strong{font-size:19px}}
+@media(max-height:550px) and (orientation:landscape){.workspace-opening{padding:14px}.workspace-opening>i{width:28px;height:28px}.workspace-opening strong{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.workspace-opening{opacity:1;animation:none}.workspace-opening>i{animation:none;border-color:#76d5b8}}

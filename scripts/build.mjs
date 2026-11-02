@@ -1,4 +1,4 @@
-import {readFile,writeFile,mkdir,copyFile,readdir,stat} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,copyFile,readdir,stat,rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -17,6 +17,8 @@ for(const entry of manifest){
  vendorOutput.set(entry.file,hash===entry.sha256?bytes:normalized);
 }
 const dist=join(root,'dist');await mkdir(join(dist,'app'),{recursive:true});await mkdir(join(dist,'assets/vendor'),{recursive:true});await mkdir(join(dist,'assets/brand'),{recursive:true});
+const generatedAsset=/^(?:inline-(?:script|style)|portable-template)-[a-f0-9]{16}\.(?:js|css|json)$/;
+for(const name of await readdir(join(dist,'app')))if(generatedAsset.test(name))await rm(join(dist,'app',name),{force:true});
 const ocrIds=['sfOcrCoreData','sfOcrLangData','sfOcrLangDataEng'];
 const brandFiles=['sw-logo.png','favicon-16.png','favicon-32.png','favicon-48.png','apple-touch-icon.png'];
 const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','automation/index.html','automation/style.css','automation/app.js','manifest.webmanifest','push-sw.js','app/workspace.js','app/workspace.css','app/izibiz.js','app/izibiz.css','app/sales-issue.js','app/sales-issue.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
@@ -39,11 +41,43 @@ for(const id of ocrIds){
  await writeFile(join(dist,filename),'document.getElementById('+JSON.stringify(id)+').textContent='+JSON.stringify(match[2])+';\n');
  html=html.replace(pattern,()=>match[1]+match[3]+'<script src="./'+filename+'"></script>');
 }
+// The full offline template is needed only when the user downloads a portable
+// copy. Keep it out of the first workspace response and load it on demand.
+const generated=new Map();
+function generatedName(prefix,extension,content){
+ const digest=createHash('sha256').update(content).digest('hex').slice(0,16);
+ const name='app/'+prefix+'-'+digest+'.'+extension;
+ generated.set(name,content);return name;
+}
+const portablePattern=/<script type="application\/json" id="fc153PortableTemplate">([\s\S]*?)<\/script>/;
+const portable=html.match(portablePattern);
+if(!portable)throw Error('Taşınabilir kopya şablonu bulunamadı.');
+const portableName=generatedName('portable-template','json',portable[1]);
+html=html.replace(portablePattern,'<script type="application/json" id="fc153PortableTemplate" data-src="./'+portableName+'"></script>');
+
+// Large inline blocks make every company switch download and parse the whole
+// application again. Content-addressed files are cached once and reused by all
+// company workspaces while preserving the parser-blocking execution order.
+html=html.replace(/<script>([\s\S]*?)<\/script>/g,(tag,content)=>{
+ if(content.length<32768)return tag;
+ const name=generatedName('inline-script','js',content);
+ return '<script src="./'+name+'"></script>';
+});
+html=html.replace(/<style>([\s\S]*?)<\/style>/g,(tag,content)=>{
+ if(content.length<32768)return tag;
+ const name=generatedName('inline-style','css',content);
+ return '<link rel="stylesheet" href="./'+name+'">';
+});
+for(const [name,content] of generated)await writeFile(join(dist,name),content);
 await writeFile(join(dist,'index.html'),html);
 await copyFile(join(root,'src/_headers'),join(dist,'_headers'));
 for(const name of ['runtime.js','pdf-loader.mjs','mobile.css','mobile.js','branding.css','calculator-ui.css','calculator-ui.js','workspace.js','workspace.css','izibiz.js','izibiz.css','sales-issue.js','sales-issue.css'])await copyFile(join(root,'src',name),join(dist,'app',name));
 await mkdir(join(dist,'portal'),{recursive:true});
-for(const name of ['index.html','portal.css','portal.js'])await copyFile(join(root,'src/portal',name),join(dist,'portal',name));
+for(const name of ['portal.css','portal.js'])await copyFile(join(root,'src/portal',name),join(dist,'portal',name));
+let portalHtml=await readFile(join(root,'src/portal/index.html'),'utf8');
+const workspacePrefetch=[...generated.keys()].filter(name=>/^app\/inline-(?:script|style)-/.test(name)).map(name=>'/'+name);
+portalHtml=portalHtml.replace('</head>','<script type="application/json" id="workspacePrefetch">'+JSON.stringify(workspacePrefetch)+'</script></head>');
+await writeFile(join(dist,'portal/index.html'),portalHtml);
 await build({entryPoints:[join(root,'src/portal/passkeys-entry.js')],outfile:join(dist,'portal/passkeys.js'),bundle:true,format:'iife',globalName:'SWPasskeys',minify:true,target:'es2022',legalComments:'none'});
 await mkdir(join(dist,'automation'),{recursive:true});
 for(const name of ['index.html','style.css','app.js'])await copyFile(join(root,'src/automation',name),join(dist,'automation',name));

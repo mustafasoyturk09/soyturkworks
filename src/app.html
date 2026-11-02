@@ -10002,10 +10002,21 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     return {format:'fc-portable-sales-v1',workspace:{companyId:window.SWWorkspace.companyId},id:'fc153-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),createdAt:new Date().toISOString(),values:values};
   }
   function s153Json(value){return JSON.stringify(value).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');}
-  function s153BuildPortable(snapshot){
+  var s153TemplatePromise=null;
+  function s153LoadTemplate(){
     var node=document.getElementById('fc153PortableTemplate');
-    if(!node||!node.textContent)throw new Error('Taşınabilir kopya şablonu bulunamadı.');
-    var template=JSON.parse(node.textContent),source=template;
+    if(!node)return Promise.reject(new Error('Taşınabilir kopya şablonu bulunamadı.'));
+    if(node.textContent){try{return Promise.resolve(JSON.parse(node.textContent));}catch(e){return Promise.reject(e);}}
+    var templateUrl=node.getAttribute('data-src');
+    if(!templateUrl)return Promise.reject(new Error('Taşınabilir kopya şablonu bulunamadı.'));
+    if(!s153TemplatePromise)s153TemplatePromise=fetch(templateUrl,{credentials:'same-origin',cache:'force-cache'}).then(function(response){
+      if(!response.ok)throw new Error('Taşınabilir kopya şablonu indirilemedi.');
+      return response.text();
+    }).then(function(text){return JSON.parse(text);}).catch(function(error){s153TemplatePromise=null;throw error;});
+    return s153TemplatePromise;
+  }
+  async function s153BuildPortable(snapshot){
+    var template=await s153LoadTemplate(),source=template;
     ['sfOcrCoreData','sfOcrLangData','sfOcrLangDataEng'].forEach(function(id){
       var data=document.getElementById(id);if(!data||!data.textContent)throw new Error('PDF okuma bileşeni eksik: '+id);
       source=source.replace('<!--FC153_BINARY_'+id+'-->',function(){return data.textContent;});
@@ -10015,10 +10026,10 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
       '<script type="application/json" id="fc153PortableData">'+s153Json(snapshot)+'</scr'+'ipt>';
     return source.replace('<!--FC153_PORTABLE_DATA-->',function(){return additions;});
   }
-  function s153DownloadPortable(){
+  async function s153DownloadPortable(){
     if(s102Busy){showNotice('PDF okuma tamamlandığında ayarlı kopyayı kaydedebilirsiniz.');return;}
     try{
-      var snapshot=s153Snapshot(),source=s153BuildPortable(snapshot);
+      var snapshot=s153Snapshot(),source=await s153BuildPortable(snapshot);
       var url=URL.createObjectURL(new Blob([source],{type:'text/html;charset=utf-8'})),a=document.createElement('a');
       a.href=url;a.download='Soyturk_Works_Ayarlarimla_'+snapshot.createdAt.slice(0,10)+'.html';a.click();
       setTimeout(function(){URL.revokeObjectURL(url);},3000);
@@ -10185,11 +10196,11 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
   function s156FileValues(){var values={};values[s102MemoryKey]=JSON.stringify(s102Memory);values[s150ServiceKey]=JSON.stringify(s150Services);values.fc_sales_memory_undo_v1=JSON.stringify(s151Undo);Object.keys(HISTORY_KEYS).forEach(function(c){values[HISTORY_KEYS[c]]=JSON.stringify(companyStates[c].history);});values.fc_sales_work_v156=JSON.stringify(s156WorkValues());values.fc_sales_row_undo_v156=JSON.stringify(s156MemoryUndo);values.fc_sales_companies_v156=JSON.stringify(s156ExtraCompanies);return values;}
   function s156Stamp(values){var text=JSON.stringify(Object.keys(values).filter(function(k){return k!=='fc156_file_stamp';}).sort().map(function(k){return [k,values[k]];})),hash=2166136261;for(var i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}return String(hash>>>0)+':'+text.length;}
   function s156UpdateSaveLight(){var button=document.getElementById('s156SaveAll');if(!button||!s156Ready)return;var dirty=s156Stamp(s156FileValues())!==s156SavedStamp;button.classList.toggle('s156-unsaved',dirty);button.setAttribute('aria-label',dirty?'Kaydet ve Güncelle — Dosyaya Alınmamış Değişiklik Var':'Kaydet ve Güncelle');button.disabled=s102Busy;}
-  function s156Download(){
+  async function s156Download(){
     if(s102Busy)return;s156Persist();
     try{var values=s156FileValues(),stamp=s156Stamp(values);values.fc156_file_stamp=stamp;
       var snapshot={format:'fc-portable-sales-v1',workspace:{companyId:window.SWWorkspace.companyId},id:'fc153-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),createdAt:new Date().toISOString(),values:values};
-      var source=s153BuildPortable(snapshot),url=URL.createObjectURL(new Blob([source],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='Soyturk_Works_Guncel.html';a.click();setTimeout(function(){URL.revokeObjectURL(url);},3000);
+      var source=await s153BuildPortable(snapshot),url=URL.createObjectURL(new Blob([source],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='Soyturk_Works_Guncel.html';a.click();setTimeout(function(){URL.revokeObjectURL(url);},3000);
       s156SavedStamp=stamp;try{s153Storage.setItem('fc156_file_stamp',stamp);}catch(e){}s156UpdateSaveLight();showNotice('Güncel dosya indirildi. Diğer bilgisayara bu dosyayı gönderin.');
     }catch(e){showNotice('Dosya kaydedilemedi: '+e.message);}
   }

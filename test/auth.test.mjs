@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer} from 'node:net';
@@ -86,8 +86,9 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       const config=await request('/api/push/config?company=PUSULA',null,cookie);assert.equal(config.status,200);assert.equal(Buffer.from(config.value.publicKey,'base64url').length,65);assert.equal(config.value.privateKey,undefined);
       assert.equal((await request('/api/push/devices?company=PUSULA',null,cookie)).value.devices.length,0);
       assert.equal((await request('/api/push/subscribe?company=PUSULA',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);
-      const appAsset=await request('/automation/app.js',null,cookie),vendorAsset=await request('/assets/vendor/xlsx.full.min.js',null,cookie),workerAsset=await request('/push-sw.js');
-      assert.match(appAsset.headers.get('cache-control'),/max-age=300/);assert.match(vendorAsset.headers.get('cache-control'),/immutable/);assert.equal(workerAsset.headers.get('cache-control'),'no-cache');
+      const workspaceHtml=await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),workspaceChunk=workspaceHtml.match(/\.\/app\/(inline-script-[a-f0-9]{16}\.js)/)?.[1];assert(workspaceChunk);
+      const appAsset=await request('/automation/app.js',null,cookie),workspaceAsset=await request('/app/'+workspaceChunk,null,cookie),vendorAsset=await request('/assets/vendor/xlsx.full.min.js',null,cookie),workerAsset=await request('/push-sw.js');
+      assert.match(appAsset.headers.get('cache-control'),/max-age=300/);assert.match(workspaceAsset.headers.get('cache-control'),/immutable/);assert.match(vendorAsset.headers.get('cache-control'),/immutable/);assert.equal(workerAsset.headers.get('cache-control'),'no-cache');
       assert.equal((await request('/api/automation/PUSULA/settings',{enabled:false},cookie)).status,200);
       assert.equal((await request('/api/automation/PUSULA/clear-all',{},cookie)).status,400);
       assert.equal((await request('/api/automation/UNKNOWN/clear-all',{confirm:true},cookie)).status,403);

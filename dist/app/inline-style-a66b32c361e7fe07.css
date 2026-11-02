@@ -1,0 +1,1143 @@
+
+  :root{
+    --ink:#101a2e; --ink-2:#1b2946; --ink-3:#293a5c;
+    --paper:#eaf0e8; --paper-deep:#dfe8db; --card:#fbfaf5; --rule:#c3d0bd;
+    --text:#182016; --muted:#5c6b58;
+    --gold:#b8862e; --gold-dark:#8f6a1f;
+    --red:#a93226; --red-deep:#7c241a; --yellow:#f2c230; --blue:#2f5f8a;
+    --shadow: 0 1px 2px rgba(16,26,46,.06), 0 8px 24px rgba(16,26,46,.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:'IBM Plex Sans', sans-serif; background:var(--paper); color:var(--text); display:flex; min-height:100vh;}
+  ::selection{background:var(--yellow);color:var(--ink);}
+
+  aside{
+    width:250px; flex-shrink:0;
+    background:linear-gradient(180deg,var(--ink),var(--ink-2) 60%, var(--ink) 100%);
+    color:#dfe6f0; display:flex; flex-direction:column; padding:28px 18px;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
+  .brand-mark{
+    width:62px;height:68px;
+    position:relative;
+    overflow:visible;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .brand-mark-photo{
+    width:92px; height:auto;
+    max-width:none;
+    display:block;
+    filter:drop-shadow(0 3px 5px rgba(20,10,4,.35));
+    pointer-events:none;
+  }
+  .brand-mark svg{width:100%; height:100%; display:block;}
+  .brand-text{font-family:'Fraunces',serif; font-size:19px; font-weight:600; letter-spacing:.2px; color:#f3f0e6;}
+  .brand-sub{font-size:11px; color:#8fa0bd; margin:2px 0 30px 58px; letter-spacing:.08em; text-transform:uppercase;}
+  nav{display:flex; flex-direction:column; gap:4px;}
+  .nav-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:#7686a3; margin:18px 10px 6px;}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:13.5px; color:#c6d1e3; cursor:pointer; border:1px solid transparent;}
+  .nav-item.active{background:rgba(184,134,46,.16); border-color:rgba(184,134,46,.35); color:#f6e9cf; font-weight:600;}
+  .nav-item.disabled{color:#56637f; cursor:default;}
+  .nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  .nav-tag{margin-left:auto; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; background:rgba(255,255,255,.06); padding:2px 6px; border-radius:20px; color:#8494b0;}
+  .sidebar-foot{margin-top:auto; padding-top:18px; border-top:1px solid rgba(255,255,255,.08); font-size:11px; color:#69789a; line-height:1.6;}
+
+  main{flex:1; min-width:0; padding:40px 48px 80px; max-width:1180px; position:relative;}
+  /* Yurt Dışı modülü açıkken sağ boşluğu kapatmak için tam genişlik kullan */
+  main.wide{max-width:none;}
+  /* küçük dizüstü/pencere genişliklerinde yatay boşluğu daraltarak taşmayı önlemeye yardımcı olur;
+     modül/buton/form işlevleri değişmez, yalnızca kenar boşlukları küçülür. */
+  @media(max-width:1500px){ main{ padding:32px clamp(20px, 3vw, 48px) 60px; } }
+  header.page-head{margin-bottom:34px; position:static;}
+
+  /* ---- sağ üst canlı tarih + analog saat: TÜM modüllerde aynı sabit konum (viewport'a sabit) ---- */
+  .clock-widget{position:fixed; top:clamp(12px, 2vh, 24px); right:clamp(14px, 2vw, 34px); display:flex; align-items:center; gap:12px; z-index:90;
+    background:var(--card); border:1px solid var(--rule); border-radius:12px; padding:8px 14px; box-shadow:var(--shadow); max-width:calc(100vw - 28px);}
+  .clock-date{text-align:center; line-height:1.35; display:flex; flex-direction:column; align-items:center; cursor:pointer;}
+  .clock-day{font-family:'IBM Plex Sans'; font-weight:600; font-size:12.5px; color:var(--ink);}
+  .clock-full{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);}
+  .clock-digital{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--gold-dark); font-weight:600; margin-top:1px;}
+  .clock-date:hover .clock-full{text-decoration:underline;}
+  .analog{width:46px; height:46px; flex-shrink:0; transform-origin:center; cursor:default;}
+  /* Not: eski ".analog:hover{transform:scale(1.9)...}" büyütme efekti Ana Sayfa isteğiyle kaldırıldı
+     (bkz. 44.html değişiklik notları) — saat artık hover'da büyümüyor, sabit kalıyor. */
+  .analog .face{fill:#fbfaf5; stroke:var(--ink); stroke-width:2;}
+  .analog .roman{font-family:'Fraunces',serif; font-size:8px; fill:var(--ink); font-weight:600;}
+  .analog .hh{stroke:var(--ink); stroke-width:2.4; stroke-linecap:round;}
+  .analog .mh{stroke:var(--ink-2); stroke-width:1.8; stroke-linecap:round;}
+  .analog .sh{stroke:var(--red); stroke-width:1; stroke-linecap:round;}
+  .analog .pin{fill:var(--red);}
+
+  /* tarih tıklayınca açılan takvim */
+  .cal-pop{position:fixed; top:clamp(70px, 9vh, 82px); right:clamp(14px, 2vw, 34px); z-index:95; background:var(--card); border:1px solid var(--rule);
+    border-radius:12px; box-shadow:var(--shadow); padding:12px; width:250px; max-width:calc(100vw - 28px); display:none;}
+  .cal-pop.show{display:block;}
+  .cal-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .cal-nav button{border:1px solid var(--rule); background:var(--paper); border-radius:6px; cursor:pointer; font-size:13px; padding:3px 9px; font-weight:700; color:var(--ink);}
+  .cal-nav button:hover{background:var(--paper-deep);}
+  .cal-title{font-family:'IBM Plex Sans'; font-weight:700; font-size:13px; color:var(--ink);}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:2px;}
+  .cal-grid .dow{font-size:9.5px; color:var(--muted); text-align:center; font-weight:700; padding:2px 0;}
+  .cal-grid .cell{font-family:'IBM Plex Mono',monospace; font-size:11px; text-align:center; padding:4px 0; border-radius:5px; color:var(--text);}
+  .cal-grid .cell.today{background:var(--gold); color:#fff; font-weight:700;}
+  .cal-grid .cell.blank{visibility:hidden;}
+  .cal-year{display:flex; gap:4px; align-items:center;}
+  .cal-year select{border:1px solid var(--rule); border-radius:6px; padding:2px 4px; font-size:12px; background:var(--paper);}
+
+  /* ---- KUR HESAPLAMA paneli (Excel görünümünün birebir hali) ---- */
+  .kur-block{background:#fff; border:2px solid #000; border-radius:2px; padding:0; margin-bottom:14px; width:430px; font-family:'Calibri','IBM Plex Sans',sans-serif;} /* v77: 26px->14px, hesap makinesine daha yakın */
+  .kur-head{background:#fff; border-bottom:2px solid #000; text-align:center; font-weight:700; font-size:15px; color:#000; padding:6px 0; letter-spacing:.02em;}
+  .kur-tbl{width:100%; border-collapse:collapse; table-layout:fixed;}
+  .kur-tbl th{border:1px solid #000; font-weight:700; font-size:12px; padding:5px 4px; color:#fff; text-align:center;}
+  .kur-tbl th.g{background:#548235;}
+  .kur-tbl th.r{background:#c00000;}
+  .kur-tbl td{border:1px solid #000; padding:0; text-align:center; height:30px; background:#fff;}
+  .kur-tbl td input{width:100%; border:none; text-align:center; font-family:'Calibri','IBM Plex Sans',sans-serif; font-size:14px; font-weight:700; color:#000; padding:5px 2px; background:transparent;}
+  .kur-tbl td input:focus{outline:2px solid #548235; outline-offset:-2px;}
+  .kur-tbl td.matrah{font-size:14px; font-weight:700; color:#000;}
+
+  /* muhasebe tablosu: KUR'dan ayrı, kendi çerçevesinde (ekran görüntüsü gibi) */
+  .mah-block{background:#fff; border:2px solid #000; border-radius:2px; width:430px; margin-bottom:14px; font-family:'Calibri','IBM Plex Sans',sans-serif;} /* v77: 26px->14px, hesap makinesine daha yakın */
+  .mah-tbl{width:100%; border-collapse:collapse; table-layout:fixed;}
+  .mah-tbl td{font-size:11px; padding:4px 6px; vertical-align:middle; height:24px;}
+  .mah-tbl .acc{font-weight:700; color:#000; white-space:nowrap; text-align:left; padding-left:8px;}
+  .mah-tbl .lbl{color:#000; text-align:left;}
+  /* 309/360/360 satırları sağa girintili (Excel'deki gibi), sağ sütun çizgisine yakın */
+  .mah-tbl .acc.ind{text-align:left; padding-left:44px; padding-right:10px; color:#000; white-space:nowrap;}
+  .mah-tbl .acc.ind .lbltxt{font-weight:400; display:inline-block; margin-left:22px;}
+  /* .ind-code: kod metnini ayrı bir kutuda tutar (kodun kendi başlangıcı hâlâ padding-left:44px'te,
+     hiçbir şekilde kaymaz). .lbltxt'e uygulanan margin-left:22px, kod ile açıklama arasında SABİT
+     bir boşluk garanti eder — kodun render genişliğinden bağımsız olarak asla üst üste binmez.
+     Bu değer, üstteki referans satırdaki (191.02.002 / 770.05.007) görünen kod–açıklama boşluğuna
+     en yakın, güvenli ve ölçülebilir sabit değerdir. */
+  .mah-tbl .acc.ind .ind-code{display:inline-block;}
+  .mah-tbl .lbl.ind{text-align:left; padding-left:0; padding-right:8px; white-space:nowrap;}
+  .mah-tbl .num{text-align:center; font-weight:700; color:#000; border-left:1px solid #000; border-right:1px solid #000;}
+  .mah-head td{border-bottom:2px solid #000; height:26px;}
+  .mah-head .borc-h{color:#000; font-weight:700; text-align:center; font-size:13px; border:1px solid #000; border-bottom:2px solid #000;}
+  .mah-head .alacak-h{color:#000; font-weight:700; text-align:center; font-size:13px; border:1px solid #000; border-bottom:2px solid #000;}
+  .mah-toplam td{border-top:2px solid #000; font-weight:700; color:#c00000;}
+  .mah-toplam .tl{text-align:right; color:#c00000; font-weight:700; padding-right:8px;}
+  .mah-toplam .num{color:#c00000; border:1px solid #000; border-top:2px solid #000;}
+  .kdv-copy{font-size:10px; color:var(--gold-dark); cursor:pointer; text-align:right; padding:6px 8px; user-select:none;}
+  .kdv-copy:hover{text-decoration:underline;}
+
+  /* ---- DS-3B görünümlü hesap makinesi (Casio DS-3B fotoğraf referansına göre) ---- */
+  .calc{width:270px; max-width:100%; box-sizing:border-box; border-radius:13px; overflow:hidden;
+    margin-left:auto; background:#1a1a1a;
+    border:1px solid #050505;
+    box-shadow:0 14px 36px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.06);}
+  /* --- siyah üst kasa: logo + ekran --- */
+  .calc-black{background:linear-gradient(180deg,#26282b,#151618 85%); padding:10px 12px 12px; position:relative;}
+  .calc-top{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:7px;}
+  .calc-logo{font-family:'IBM Plex Sans'; font-weight:800; font-size:15.5px; letter-spacing:.01em; color:#f5f5f2; font-style:italic;}
+  .calc-model{font-family:'IBM Plex Sans'; font-size:8.5px; font-weight:700; letter-spacing:.03em; color:#d7d9db; text-align:right; line-height:1.15;}
+  .calc-model b{font-size:16px; display:inline; font-style:normal; margin:0 2px;}
+  /* --- güneş paneli (solar cell), koyu kahve/siyah cam görünümü --- */
+  .calc-solar{margin:0 0 8px; height:20px; border-radius:2px; position:relative; overflow:hidden;
+    background:linear-gradient(160deg,#2a1f14 0%, #1c140c 35%, #100b06 60%, #241a10 100%);
+    border:1px solid #050302;
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.10), inset 0 -1px 3px rgba(0,0,0,.7);}
+  .calc-solar::before{content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 2px, transparent 2px 9px);}
+  .calc-solar::after{content:""; position:absolute; top:1px; left:6%; width:38%; height:35%;
+    background:linear-gradient(120deg, rgba(255,255,255,.22), transparent 70%); border-radius:2px; filter:blur(.4px);}
+  /* --- LCD ekran --- */
+  .calc-screen{background:linear-gradient(175deg,#c7d2b8,#aebd93); border-radius:2px; padding:7px 10px 8px;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.5), inset 0 -1px 0 rgba(255,255,255,.15); border:1px solid #23271b; overflow:hidden;}
+  .calc-indicators{display:flex; gap:7px; font-family:'IBM Plex Sans'; font-size:8px; font-weight:700; color:#4a5638; opacity:.55; min-height:10px; letter-spacing:.03em;}
+  .calc-indicators span{opacity:0; transition:opacity .1s;}
+  .calc-indicators span.on{opacity:1;}
+  .calc-prev{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#4a5638; text-align:right; min-height:11px; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .calc-out{font-family:'IBM Plex Mono',monospace; font-size:23px; font-weight:700; color:#161d0d; text-align:right;
+    letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-style:italic;}
+  .calc-out.err{color:#a11;}
+  /* --- sürgü şeritleri (yuvarlama / ondalık / vergi oranı) --- */
+  .calc-sliders{background:#0e0f10; padding:7px 12px 8px; display:flex; flex-direction:column; gap:5px; border-top:1px solid #000;}
+  .slider-row{display:flex; align-items:center; gap:6px;}
+  .slider-row .sl-label{font-family:'IBM Plex Sans'; font-size:6.5px; font-weight:700; color:#8a8f95; letter-spacing:.05em; width:30px; flex-shrink:0; text-transform:uppercase; line-height:1.15;}
+  .sl-track{flex:1; display:flex; background:#c7cacd; border-radius:9px; padding:1.5px; gap:0; box-shadow:inset 0 1px 2px rgba(0,0,0,.4);}
+  .sl-opt{flex:1; border:none; background:transparent; font-family:'IBM Plex Sans'; font-size:6.6px; font-weight:700; color:#4a4d50;
+    padding:2.5px 1px; border-radius:7px; cursor:pointer; letter-spacing:.01em; white-space:nowrap; overflow:hidden;}
+  .sl-opt.active{background:linear-gradient(180deg,#3a3d42,#202327); color:#fff; box-shadow:0 1px 0 #08090a;}
+  .sl-opt:focus-visible{outline:2px solid #6a9fd8; outline-offset:1px;}
+  .taxrate-row{display:flex; align-items:center; gap:6px;}
+  .taxrate-btn{flex:1; font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#e6e8ea;
+    background:linear-gradient(180deg,#2c2f33,#141618); border:none; border-radius:5px; padding:4px 6px; cursor:pointer;
+    box-shadow:0 1px 0 #08090a, inset 0 1px 0 rgba(255,255,255,.1); text-align:left;}
+  .taxrate-btn:focus-visible{outline:2px solid #6a9fd8; outline-offset:1px;}
+  .taxrate-panel{display:none; background:#1c1e20; border-radius:6px; padding:7px 8px; margin-top:2px; gap:6px; align-items:center;}
+  .taxrate-panel.show{display:flex;}
+  .taxrate-panel input{width:56px; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 5px; border:1px solid #444; border-radius:4px; background:#e8e8e4; color:#111;}
+  .taxrate-panel button{font-family:'IBM Plex Sans'; font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:5px; border:none; cursor:pointer; background:#4a7a3a; color:#fff;}
+  .taxrate-panel .tr-lbl{font-family:'IBM Plex Sans'; font-size:8.5px; color:#c6c9cc;}
+
+  /* --- gövde alt kısmı: fırçalanmış metal/grafit gri --- */
+  .calc-body{padding:10px 11px 13px; position:relative;
+    background:
+      repeating-linear-gradient(100deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px),
+      linear-gradient(155deg,#9a9ea3 0%, #b8bcc0 22%, #a3a7ab 45%, #b4b8bc 68%, #94989c 100%);
+    box-shadow:inset 0 3px 6px rgba(0,0,0,.18), inset 0 -2px 4px rgba(255,255,255,.15);}
+  .calc-memrow{display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-bottom:5px; position:relative; z-index:1;}
+  .calc-taxrow{display:flex; justify-content:flex-end; gap:5px; margin-bottom:8px; position:relative; z-index:1;}
+  .calc-grid{display:grid; grid-template-columns:repeat(6,1fr); grid-auto-rows:29px; gap:4px; position:relative; z-index:1;}
+
+  .calc-btn{border:none; border-radius:6px; font-family:'IBM Plex Sans'; font-size:14px; font-weight:700;
+    cursor:pointer; transition:transform .06s, box-shadow .06s; user-select:none; display:flex; align-items:center; justify-content:center;
+    color:#fff; background:linear-gradient(180deg,#3a3d42,#1c1e20);
+    box-shadow:0 2px 0 #08090a, inset 0 1px 0 rgba(255,255,255,.16), inset 0 -2px 2px rgba(0,0,0,.25);}
+  .calc-btn:active{transform:translateY(2px); box-shadow:0 0 0 #08090a, inset 0 1px 0 rgba(255,255,255,.14);}
+  .calc-btn:focus-visible{outline:2px solid #6a9fd8; outline-offset:2px; z-index:2;}
+  /* koyu yuvarlak memory/gt tuşları (siyah, küçük) */
+  .calc-btn.mem{background:linear-gradient(180deg,#3a3d42,#202327); font-size:10.5px; border-radius:7px; height:27px;
+    box-shadow:0 2px 0 #0c0e10, inset 0 1px 0 rgba(255,255,255,.14);}
+  .calc-btn.mem.active-mode{background:linear-gradient(180deg,#5d7a3d,#2f4322);}
+  /* açık gri fonksiyon/rakam tuşları */
+  .calc-btn.gray{background:linear-gradient(180deg,#e9ebed,#c0c4c8); color:#202225;
+    box-shadow:0 2px 0 #85898d, inset 0 1px 0 #fff, inset 0 -2px 2px rgba(0,0,0,.08);}
+  .calc-btn.gray:active{box-shadow:0 0 0 #85898d, inset 0 1px 0 #fff;}
+  /* koyu gri (AC, ▶) */
+  .calc-btn.dgray{background:linear-gradient(180deg,#5a5e64,#33363a); color:#fff;}
+  /* turuncu C */
+  .calc-btn.cc{background:linear-gradient(180deg,#eceef0,#c4c8cc); color:#d4691a;
+    box-shadow:0 2px 0 #94989d, inset 0 1px 0 #fff, inset 0 -2px 2px rgba(0,0,0,.08);}
+  .calc-btn.cc:active{box-shadow:0 0 0 #94989d, inset 0 1px 0 #fff;}
+  .calc-btn.tax{background:linear-gradient(180deg,#3a3d42,#202327); font-size:10.5px; padding:0 8px; height:26px; border-radius:6px;}
+  /* rakam tuşları biraz daha büyük punto, siyaha yakın zeminde beyaz yazı istenmişti -> burada rakamlar açık gri/siyah tuş olarak fotoğraftaki gibi koyu tonda */
+  .calc-btn.num{font-size:16px;}
+  /* uzun + tuşu (2 satır) */
+  .calc-btn.plus{grid-row:span 2; font-size:20px;}
+  .calc-btn.span2{grid-column:span 2;}
+  .calc-lbl{position:relative;}
+  .calc-lbl::after{content:attr(data-top); position:absolute; top:-11px; left:50%; transform:translateX(-50%); font-size:7.5px; font-weight:700; color:#8a8f95; letter-spacing:.02em; white-space:nowrap;}
+
+    .yevmiye-layout{display:flex; gap:22px; align-items:flex-start;}
+  .yevmiye-main{flex:1; min-width:0; max-width:1040px;}
+  .yevmiye-side{flex-shrink:0; position:sticky; top:10px; margin-left:auto;} /* v77: 18px->10px, hesap makinesi için birkaç piksel daha yer aç */
+  @media(max-width:1080px){ .yevmiye-layout{flex-direction:column;} .yevmiye-side{position:static; margin-left:0;} }
+
+  /* ===================================================================
+     4. ADIM — LOGO XML AKTARIMI (İsteğe Bağlı) — sadece "lx-" prefixli
+     sınıflar kullanılır; mevcut modüllerle/CSS ile çakışma riski yoktur.
+     =================================================================== */
+  /* v69: "4 — Logo XML Aktarımı" artık <details>/<summary> DEĞİL — 1/2/3 ile
+     aynı .step kart tasarımını kullanan gerçek, her zaman görünür bir 4.
+     adım (bkz. #yStep4). Altında iki sekmeli bir seçim var (Satın Almaya
+     Aktar / Muhasebe Fişlerine Aktar) — .lx-tabs/.lx-tab. */
+  .lx-tabs{ display:flex; border:1.5px solid var(--ink-2); border-radius:10px; overflow:hidden; margin:14px 0 16px 44px; }
+  .lx-tab{
+    flex:1 1 0; appearance:none; border:none; background:var(--card); color:var(--ink-2);
+    font-family:'IBM Plex Sans',sans-serif; font-size:13px; font-weight:700; padding:12px 14px;
+    cursor:pointer; transition:background .12s,color .12s; text-align:center;
+  }
+  .lx-tab + .lx-tab{ border-left:1.5px solid var(--ink-2); }
+  .lx-tab[aria-selected="true"]{ background:var(--ink-2); color:#f2e6c8; }
+  .lx-tab:hover:not([aria-selected="true"]){ background:#fdf3e0; }
+  .lx-tab:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
+  @media (max-width: 640px){
+    .lx-tabs{ flex-direction:column; margin-left:0; }
+    .lx-tab + .lx-tab{ border-left:none; border-top:1.5px solid var(--ink-2); }
+  }
+  .lx-body{ margin-left:44px; }
+  .lx-substage-title{ font-weight:700; font-size:13px; margin-bottom:6px; }
+  .lx-substage-sub{ font-size:11.5px; color:var(--muted); margin:-2px 0 10px; }
+  /* v68: firma seçici — Yurt Dışı Yevmiye modülünün üstünde, PDF yüklemeden önce */
+  .fc-company-picker{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:2px 0 16px; }
+  .fc-company-picker-label{ font-size:11.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .fc-company-seg{ display:inline-flex; border:1.5px solid var(--gold-dark,#b8860b); border-radius:9px; overflow:hidden; }
+  .fc-company-seg button{ appearance:none; border:none; background:#fff; color:var(--gold-dark,#b8860b); font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; cursor:pointer; transition:background .12s,color .12s; }
+  .fc-company-seg button + button{ border-left:1.5px solid var(--gold-dark,#b8860b); }
+  .fc-company-seg button.active{ background:var(--gold-dark,#b8860b); color:#fff; }
+  .fc-company-seg button:hover:not(.active){ background:#fdf3e0; }
+  .lx-company-badge{ display:inline-block; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:10px; vertical-align:middle; }
+  .lx-company-badge-pusula{ background:#e4ecfb; color:#1d4ea8; }
+  .lx-company-badge-kib{ background:#fbe8f4; color:#a1147a; }
+  .lx-note{ font-size:12px; color:var(--muted); line-height:1.5; background:#fff8e6; border:1px solid #e8c468; border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+  .lx-warn{ font-size:12px; color:#7a3b00; background:#fff1e0; border:1px solid #e39a3d; border-radius:8px; padding:10px 12px; margin:8px 0; }
+  .lx-card{ border:1px solid #ddd; border-radius:10px; padding:12px 14px; margin-bottom:12px; background:#fff; }
+  /* v67: sadeleştirilmiş kartlar daha az dikey alan kaplasın */
+  .lx-card-compact{ padding:10px 12px; margin-bottom:9px; }
+  .lx-card-compact .lx-row{ margin-bottom:6px; gap:6px 12px; }
+  .lx-card-compact .lx-field{ min-width:110px; }
+  .lx-card-compact .lx-field input, .lx-card-compact .lx-field select{ padding:5px 7px; }
+  .lx-card-compact .lx-ledger-wrap{ margin:6px 0; }
+  .lx-card-compact .lx-match-row{ margin:4px 0 8px; }
+  .lx-card-title{ font-weight:700; font-size:12.5px; margin-bottom:8px; }
+  /* v70: kart başlığı artık SOL: PDF adı + firma rozeti, SAĞ: "PDF'yi
+     Önizle" düğmesi olacak şekilde bir satır (madde 2). Dar kartlarda
+     flex-wrap ile düğme alta geçer; uzun dosya adı overflow-wrap ile
+     sarılır, düğmeyi kart dışına itmez. */
+  .lx-card-title-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .lx-card-title-row .lx-card-title-left{ font-weight:700; font-size:12.5px; min-width:0; overflow-wrap:anywhere; }
+  .lx-row{ display:flex; flex-wrap:wrap; gap:8px 14px; margin-bottom:8px; }
+  .lx-field{ display:flex; flex-direction:column; gap:3px; font-size:11.5px; color:var(--muted); min-width:140px; flex:1; }
+  .lx-field input, .lx-field select{ font-size:12.5px; padding:6px 8px; border:1px solid #ccc; border-radius:6px; font-family:inherit; }
+  .lx-field.readonly input{ background:#f2f2f2; color:#555; }
+  .lx-calc-grid{ display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; font-size:12px; margin:8px 0; padding:8px 10px; background:#f7f7f7; border-radius:6px; }
+  .lx-calc-grid span{ color:var(--muted); }
+  .lx-calc-grid b{ color:#000; }
+  .lx-btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .lx-btn{ font-size:12px; padding:6px 12px; border-radius:6px; border:1px solid var(--gold-dark,#b8860b); background:#fff; color:var(--gold-dark,#b8860b); cursor:pointer; }
+  .lx-btn:hover{ background:#fdf3e0; }
+  .lx-btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .lx-btn-solid{ background:var(--gold-dark,#b8860b); color:#fff; }
+  .lx-btn-solid:hover{ background:#9c6f08; }
+  .lx-preview{ margin-top:10px; font-size:12px; background:#fbfaf6; border:1px solid #e3d9bf; border-radius:8px; padding:10px 12px; }
+  .lx-preview table{ width:100%; border-collapse:collapse; margin-top:6px; }
+  .lx-preview td{ padding:3px 6px; border-bottom:1px solid #eee; }
+  .lx-preview td.lx-b{ text-align:right; }
+  .lx-raw{ margin-top:8px; }
+  .lx-raw pre{ font-size:10.5px; max-height:260px; overflow:auto; background:#1e1e1e; color:#d4d4d4; padding:10px; border-radius:6px; white-space:pre-wrap; word-break:break-all; }
+  .lx-status-tag{ display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; margin-left:6px; }
+  .lx-status-ok{ background:#e2f4e2; color:#1e7d1e; }
+  .lx-status-bad{ background:#fbe1e1; color:#a11414; }
+  .lx-status-warn{ background:#fff1d0; color:#9a6a00; }
+  .lx-dz{ border:1.5px dashed #c9b98a; border-radius:8px; padding:16px; text-align:center; font-size:12.5px; color:var(--muted); cursor:pointer; background:#fefcf6; }
+  .lx-dz.drag{ background:#fdf3e0; }
+  .lx-batch-row{ display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee; font-size:12.5px; }
+  .lx-batch-row:last-child{ border-bottom:none; }
+
+  /* ---- YENİ (v66): AŞAMA B — Muhasebeleştirme Sonrası Fiş XML'ini Düzenle ---- */
+  .lx-readonly-grid{ display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; font-size:11.5px; background:#f2f2f2; border-radius:6px; padding:8px 10px; margin-bottom:10px; }
+  .lx-readonly-grid .lx-rg-title{ grid-column:1 / -1; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:2px; }
+  .lx-readonly-grid span{ color:var(--muted); }
+  .lx-readonly-grid b{ color:#000; font-family:'IBM Plex Mono',monospace; font-weight:600; word-break:break-all; }
+  .lx-match-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:8px 0; font-size:12px; }
+  .lx-match-row select{ font-size:12px; padding:5px 7px; border:1px solid #ccc; border-radius:6px; max-width:100%; }
+  .lx-ledger-wrap{ overflow-x:auto; margin:8px 0; }
+  .lx-ledger{ width:100%; min-width:560px; border-collapse:collapse; font-size:11.5px; }
+  .lx-ledger th{ text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); padding:4px 5px; border-bottom:1px solid #ccc; white-space:nowrap; }
+  .lx-ledger td{ padding:3px 4px; border-bottom:1px solid #eee; vertical-align:middle; }
+  .lx-ledger input{ width:100%; box-sizing:border-box; font-size:11.5px; padding:4px 5px; border:1px solid #ccc; border-radius:4px; font-family:inherit; }
+  .lx-ledger input.lx-num{ text-align:right; font-family:'IBM Plex Mono',monospace; min-width:74px; }
+  .lx-ledger input.lx-code{ font-family:'IBM Plex Mono',monospace; min-width:88px; }
+  .lx-ledger tr.lx-row-new td{ background:#fbfaf0; }
+  .lx-ledger .lx-del{ cursor:pointer; color:#a11414; font-weight:700; border:none; background:none; font-size:14px; padding:2px 6px; }
+  .lx-ledger .lx-del:hover{ text-decoration:underline; }
+  .lx-ledger tfoot td{ border-top:2px solid #000; border-bottom:none; font-weight:700; padding-top:6px; }
+  .lx-radio-row{ display:flex; gap:16px; align-items:center; font-size:12px; margin:8px 0; flex-wrap:wrap; }
+  .lx-radio-row label{ display:flex; align-items:center; gap:5px; cursor:pointer; }
+  .lx-balance-bad{ font-size:13.5px; font-weight:800; color:#a11414; background:#fdeaea; border:2px solid #e57373; border-radius:8px; padding:10px 14px; margin:10px 0; }
+  .lx-balance-ok{ font-size:12px; font-weight:700; color:#1e7d1e; background:#eaf7ea; border:1px solid #b6dfb6; border-radius:8px; padding:7px 12px; margin:10px 0; }
+  .lx-change-list{ font-size:11.5px; margin:6px 0 0; padding-left:18px; }
+  .lx-change-list li{ margin-bottom:2px; }
+  .lx-code-fix{ font-size:12px; background:#fff1e0; border:1px solid #e39a3d; border-radius:8px; padding:8px 10px; margin:8px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .lx-code-fix button{ font-size:11.5px; padding:4px 9px; border-radius:6px; border:1px solid var(--gold-dark,#b8860b); background:#fff; color:var(--gold-dark,#b8860b); cursor:pointer; }
+  .lx-code-fix button:hover{ background:#fdf3e0; }
+  .lx-mini-label{ font-size:10.5px; color:var(--muted); display:block; margin-bottom:2px; }
+  .lx-hint-small{ font-size:10.5px; color:var(--muted); font-style:italic; margin-top:4px; }
+
+  .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-dark); margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .eyebrow::before{content:"";width:16px;height:1px;background:var(--gold-dark);}
+  h1{font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0 0 8px; letter-spacing:-.01em;}
+  .page-desc{color:var(--muted); font-size:14.5px; max-width:620px; line-height:1.55;}
+
+  .step{background:var(--card); border:1px solid var(--rule); border-radius:14px; padding:26px 28px; margin-bottom:22px; box-shadow:var(--shadow); position:relative;}
+  .step[data-locked="true"]{opacity:.45; pointer-events:none;}
+  .step-head{display:flex; align-items:center; gap:14px; margin-bottom:6px;}
+  .step-num{font-family:'Fraunces',serif; font-weight:600; font-size:15px; width:30px;height:30px;border-radius:50%; background:var(--ink); color:#f2e6c8; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .step-title{font-size:17px; font-weight:600;}
+  .step-sub{font-size:13px; color:var(--muted); margin:2px 0 18px 44px;}
+
+  .dropzone{margin-left:44px; border:1.5px dashed var(--rule); border-radius:10px; padding:26px; text-align:center;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 27px, rgba(92,107,88,.06) 27px 28px); cursor:pointer; transition:.15s border-color, .15s background;}
+  .dropzone:hover, .dropzone.drag{ border-color:var(--gold); background:rgba(184,134,46,.06); }
+  .dropzone:focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
+  .dropzone input{display:none;}
+  .dz-icon{font-size:22px; margin-bottom:8px; opacity:.6;}
+  .dz-text{font-size:13.5px; color:var(--text);}
+  .dz-text b{color:var(--gold-dark);}
+  .dz-hint{font-size:11.5px; color:var(--muted); margin-top:4px;}
+
+  .file-chip{margin-left:44px; display:inline-flex; align-items:center; gap:10px; background:var(--paper-deep); border:1px solid var(--rule); padding:8px 14px; border-radius:20px; font-size:12.5px; font-family:'IBM Plex Mono',monospace;}
+  .file-chip .x{cursor:pointer; color:var(--red); font-weight:700; padding:0 2px;}
+
+  .summary-row{margin:18px 0 0 44px; display:flex; gap:22px; flex-wrap:wrap;}
+  .summary-card{background:var(--paper); border:1px solid var(--rule); border-radius:9px; padding:10px 16px; min-width:140px;}
+  .summary-card .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);}
+  .summary-card .v{font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:600; margin-top:3px;}
+
+  /* Adım 2 sayaç paneli */
+  .count-panel{margin:16px 0 0 44px; display:flex; gap:14px; flex-wrap:wrap; align-items:stretch;}
+  .count-box{background:#fff; border:1px solid var(--rule); border-radius:11px; padding:12px 18px; min-width:150px; display:flex; flex-direction:column; gap:4px; box-shadow:var(--shadow);}
+  .count-box .cb-k{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);}
+  .count-box .cb-v{font-family:'Fraunces',serif; font-weight:700; font-size:30px; line-height:1; color:var(--ink);}
+  .count-box.ref{border-color:#8fb2cf; background:#f2f7fb;}
+  .count-box.ham{border-color:#c9b061; background:#fdfaef;}
+  .count-box.done2{border-color:#a9c99a; background:#eef6ea;}
+  .count-box.done2 .cb-v{color:#4a7a3a;}
+  .count-op{display:flex; align-items:center; font-family:'Fraunces',serif; font-weight:700; font-size:26px; color:var(--muted); padding:0 2px;}
+  .count-box.yeni{border:2px solid var(--gold); background:linear-gradient(180deg,#fff8e6,#fdefc4); min-width:170px;}
+  .count-box.yeni .cb-k{color:var(--gold-dark); font-weight:700;}
+  .count-box.yeni .cb-v{color:var(--gold-dark); font-size:36px;}
+  .count-box.yeni .cb-sub{font-size:10.5px; color:var(--muted); margin-top:2px;}
+  .badge-islendi{background:#4a7a3a; color:#fff;}
+  .row-islendi{background:rgba(74,122,58,.08);}
+
+  .title-edit{margin:18px 0 0 44px; display:flex; flex-direction:column; gap:6px;}
+  .title-edit label{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
+  .title-edit input{font-family:'Fraunces',serif; font-size:16px; font-weight:600; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:#fff; max-width:640px;}
+
+  table.ledger{margin:20px 0 0 44px; border-collapse:collapse; width:calc(100% - 44px); font-size:12.5px;}
+  table.ledger th{background:var(--blue); color:#fff; font-weight:600; padding:8px 10px; text-align:left; position:sticky; top:0; font-size:11px; text-transform:uppercase; letter-spacing:.04em;}
+  table.ledger td{padding:7px 10px; border-bottom:1px solid var(--rule); font-family:'IBM Plex Mono', monospace; font-size:12px;}
+  table.ledger tbody tr:hover{background:rgba(184,134,46,.06);}
+  .badge{display:inline-block; padding:2px 7px; border-radius:20px; font-size:10px; font-family:'IBM Plex Sans'; font-weight:600; letter-spacing:.02em;}
+  .badge-ret{background:var(--red); color:#fff;}
+  .badge-usd{background:var(--blue); color:#fff;}
+  .badge-eur{background:#8b0000; color:#fff;}
+  .badge-iade{background:var(--red); color:#fff;}
+  .row-ret{background:rgba(169,50,38,.08);}
+  .row-new{background:rgba(232,196,104,.22);}
+  .badge-new{background:var(--gold); color:#fff;}
+  .chk{transform:scale(1.15); cursor:pointer;}
+  .table-wrap{max-height:420px; overflow:auto; margin-left:44px; border:1px solid var(--rule); border-radius:8px;}
+  .table-wrap table{margin:0; width:100%;}
+
+  .scan-view{margin-left:44px; display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;}
+  .scan-img-box{border:1px solid var(--rule); border-radius:8px; overflow:hidden; max-width:360px; background:#fff; box-shadow:var(--shadow);}
+  .scan-img-box img{display:block; width:100%;}
+  .scan-hint{font-size:12.5px; color:var(--muted); max-width:340px; line-height:1.6;}
+  .stamp{position:absolute; top:20px; right:26px; font-family:'Fraunces',serif; font-weight:700; font-size:11px; letter-spacing:.08em; color:var(--red); border:2px solid var(--red); border-radius:6px; padding:4px 9px; transform:rotate(-6deg); opacity:.85; text-transform:uppercase;}
+
+  .btn{font-family:'IBM Plex Sans'; font-weight:600; font-size:13px; padding:10px 18px; border-radius:8px; border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:8px;}
+  .btn-gold{background:var(--gold); color:#fff;}
+  .btn-gold:hover{background:var(--gold-dark);}
+  .btn-ghost{background:transparent; border-color:var(--rule); color:var(--text);}
+  .btn-ghost:hover{background:var(--paper-deep);}
+  .btn-row{margin:16px 0 0 44px; display:flex; gap:10px; flex-wrap:wrap;}
+  .btn[disabled]{opacity:.4; cursor:not-allowed;}
+
+  /* Ortak küçük "Temizle" butonu — Gelen E-Fatura, Yurt Dışı Yevmiye ve Cari Mutabakat
+     modüllerinde aynı tasarımla kullanılır. Sade, küçük, füme zemin + beyaz yazı. */
+  .fc-clear-btn{
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:11.5px; line-height:1.2;
+    padding:6px 13px; border-radius:7px; border:1px solid transparent;
+    background:#5a5d61; color:#fff; cursor:pointer; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:5px; transition:.15s background;
+  }
+  .fc-clear-btn:hover{ background:#43464a; }
+  .fc-clear-btn:active{ transform:translateY(1px); }
+
+  .toast{position:fixed; bottom:26px; right:26px; background:var(--ink); color:#f0ead2; padding:12px 18px; border-radius:9px; font-size:13px; box-shadow:var(--shadow); opacity:0; transform:translateY(8px); transition:.25s; pointer-events:none; max-width:340px;}
+  .toast.show{opacity:1; transform:translateY(0);}
+
+  details.settings{margin-left:44px; margin-top:14px;}
+  details.settings summary{cursor:pointer; font-size:12.5px; color:var(--muted); user-select:none;}
+  .map-row{display:flex; gap:8px; margin-top:8px; align-items:center;}
+  .map-row input{padding:6px 9px; border:1px solid var(--rule); border-radius:6px; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  .map-row input.domain{width:220px;}
+  .map-row input.name{width:150px;}
+  .map-row .del{color:var(--red); cursor:pointer; font-size:15px; font-weight:700;}
+
+  /* Yevmiye modulu */
+  .y-card{
+    display:flex; gap:16px; background:var(--paper); border:1px solid var(--rule); border-radius:10px; padding:14px;
+    position:relative;
+  }
+  .y-lightbox{
+    display:none; position:fixed; inset:0; background:rgba(16,26,46,.88); z-index:100;
+    align-items:center; justify-content:center; padding:50px 30px 30px; cursor:zoom-out;
+    overflow:hidden;
+  }
+  .y-card-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;}
+  /* v70: PDF önizleme düğmesi 2. adımdan kaldırıldı (madde 1) — dosya adı
+     artık tek başına, düz bir satır. Düğme kendi karşılığını 4. adımdaki
+     Logo kartının başlık satırında bulur (bkz. .lx-card-title-row). */
+  .y-card-name{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); word-break:break-all;}
+  .y-preview-btn{
+    display:inline-flex; align-items:center; gap:6px; flex-shrink:0;
+    background:var(--card); border:1px solid var(--gold); color:var(--ink-2);
+    font-family:'IBM Plex Sans',sans-serif; font-size:12px; font-weight:600;
+    padding:6px 12px; border-radius:20px; cursor:pointer; transition:.15s;
+    white-space:nowrap;
+  }
+  .y-preview-btn:hover, .y-preview-btn:focus-visible{ background:var(--gold); color:#fff; outline:none; }
+  .y-preview-btn:disabled{ opacity:.6; cursor:default; }
+  .y-preview-err{font-size:11px; color:var(--red); margin-top:2px;}
+  .y-lightbox-loading{
+    color:#fff; font-family:'IBM Plex Sans',sans-serif; font-size:14px; text-align:center; padding:60px 40px;
+  }
+  .y-card-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .y-card-row input[type=text]{font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px 10px; border:1px solid var(--rule); border-radius:8px; width:140px;}
+  .y-breakdown{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text); background:#fff; border:1px solid var(--rule); border-radius:8px; padding:8px 12px; display:none;}
+  .y-breakdown div{display:flex; justify-content:space-between; gap:14px;}
+  .y-status{font-size:11.5px; color:var(--red);}
+  .y-lightbox.show{display:flex;}
+  /* v70: görüntü artık taşıp kaydırma gerektirmiyor — tüm ilk sayfa tek
+     bakışta sığacak şekilde object-fit:contain + max-width/max-height ile
+     ekrana ORANLI küçültülüyor (madde 3). PDF.js render scale'i (canvas
+     çözünürlüğü) ile buradaki EKRAN boyutu birbirinden bağımsız: canvas
+     yüksek çözünürlükte render edilebilir, ekranda görünen boyutu her
+     zaman bu CSS kısıtlar (width:100%/height:auto ile GERMİYORUZ artık). */
+  .y-lightbox-scroll{
+    width:100%; height:100%; overflow:hidden; cursor:auto;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); background:#fff;
+  }
+  #yLightboxImg,
+  .y-lightbox img{
+    display:block; width:auto; height:auto; max-width:90vw; max-height:86vh; object-fit:contain;
+  }
+  .y-lightbox .y-lightbox-close{
+    position:absolute; top:18px; right:22px; z-index:110;
+    background:var(--card); border:none; border-radius:8px; padding:9px 18px; font-family:'IBM Plex Sans'; font-weight:600; cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  .y-lightbox .y-lightbox-close:hover{ filter:brightness(1.06); }
+  /* v70: ipucu metni artık akış dışı (absolute) — normal akışta kalsaydı
+     .y-lightbox-scroll'un height:100%'ünden pay çalar, bu da görüntünün
+     86vh'e kadar büyüyebildiği durumlarda kapsayıcı tarafından KIRPILMASINA
+     yol açardı (madde 3 — kesinlikle kırpma olmamalı). */
+  .y-lightbox .y-lightbox-hint{
+    position:absolute; left:16px; right:16px; bottom:10px; z-index:105;
+    color:#dfe6f0; font-size:12.5px; text-align:center; pointer-events:none;
+  }
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--rule); border-radius:6px;}
+
+  /* =====================================================================
+     CARİ MUTABAKAT MODÜLÜ — "Mutabakat Stüdyosu" (yalnızca #page-mutabakat içinde etkili)
+     Tüm sınıflar cm- önekli, genel .btn/.step/input/select/table seçicileri kullanılmıyor.
+     ===================================================================== */
+  #page-mutabakat{ --cm-navy:#101a2e; --cm-navy2:#1b2946; --cm-ivory:#faf6ec; --cm-ivory2:#f1ead8;
+    --cm-sage:#7a9478; --cm-bronze:#b8862e; --cm-bronze-dark:#8f6a1f; --cm-teal:#2f7d78; --cm-red:#a93226; }
+  #page-mutabakat .cm-top{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:linear-gradient(155deg, var(--cm-navy), var(--cm-navy2) 60%, var(--cm-navy) 100%);
+    border-radius:16px; padding:20px 24px; margin-bottom:24px; box-shadow:var(--shadow);
+    position:relative; overflow:hidden;
+  }
+  #page-mutabakat .cm-top::before{
+    content:""; position:absolute; top:-40%; right:-10%; width:260px; height:260px; border-radius:50%;
+    background:radial-gradient(circle, rgba(184,134,46,.16), transparent 70%); pointer-events:none;
+  }
+  #page-mutabakat .cm-top-title{ font-family:'Fraunces',serif; font-size:19px; font-weight:600; color:#f3f0e6; margin:0; position:relative; z-index:1;}
+  #page-mutabakat .cm-top-sub{ font-size:12px; color:#9db0d0; margin:2px 0 0; position:relative; z-index:1;}
+  #page-mutabakat .cm-top-actions{ display:flex; gap:10px; margin-left:auto; flex-wrap:wrap; position:relative; z-index:1;}
+  #page-mutabakat .cm-btn{
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:13px; padding:10px 16px; border-radius:9px;
+    border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+    transition:.15s background, .15s transform; white-space:nowrap;
+  }
+  #page-mutabakat .cm-btn:active{ transform:translateY(1px); }
+  #page-mutabakat .cm-btn-primary{ background:var(--cm-bronze); color:#fff; }
+  #page-mutabakat .cm-btn-primary:hover{ background:var(--cm-bronze-dark); }
+  #page-mutabakat .cm-btn-ghost{ background:rgba(255,255,255,.08); color:#e7ecf5; border-color:rgba(255,255,255,.18); }
+  #page-mutabakat .cm-btn-ghost:hover{ background:rgba(255,255,255,.15); }
+  #page-mutabakat .cm-btn[disabled]{ opacity:.4; cursor:not-allowed; }
+  #page-mutabakat .cm-counts{ display:flex; gap:10px; flex-wrap:wrap; position:relative; z-index:1; }
+  #page-mutabakat .cm-count{
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); border-radius:10px;
+    padding:7px 13px; text-align:center; min-width:64px;
+  }
+  #page-mutabakat .cm-count .cm-count-v{ font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:#f3f0e6; line-height:1; }
+  #page-mutabakat .cm-count .cm-count-k{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:#9db0d0; margin-top:2px; }
+
+  /* Küçük, kompakt "Tıkla ve Seç" butonu — artık tam satır kaplayan büyük bir yükleme kutusu değil,
+     sol sütunda (cm-queue) durum yazısının hemen üzerinde duran küçük bir buton. Aynı #cmDropzone
+     elemanı ve mevcut click/drag&drop event listener'ları korunur; yalnızca görünüm/boyut/konum değişti. */
+  #page-mutabakat .cm-dropzone{
+    display:inline-flex; align-items:center; justify-content:center; align-self:flex-start;
+    gap:6px; width:auto; max-width:100%; margin:0; padding:8px 16px;
+    border:1px solid transparent; border-radius:9px; cursor:pointer; transition:.15s background;
+    position:relative; z-index:1; background:var(--cm-bronze); color:#fff;
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:12.5px; white-space:nowrap;
+  }
+  #page-mutabakat .cm-dropzone:hover{ background:var(--cm-bronze-dark); }
+  #page-mutabakat .cm-dropzone.cm-drag{ background:var(--cm-bronze-dark); box-shadow:0 0 0 3px rgba(184,134,46,.28); }
+  #page-mutabakat .cm-dropzone input{ display:none; }
+  #page-mutabakat .cm-dropzone .cm-dz-text{ font-size:inherit; font-weight:inherit; color:inherit; }
+
+  /* "Tıkla ve Seç" ile "Temizle" butonlarını piksel olarak eşit genişlik/yükseklikte
+     hizalayan kapsayıcı. Grid + align-items:stretch, metin uzunluğu farkına bakmaksızın
+     iki hücreyi de satırın en yüksek elemanına göre eşit yükseklikte gerer; width:100%
+     ise her sütunu (1fr) eşit genişlikte yapar. Renkler burada değiştirilmez. */
+  #page-mutabakat .cm-upload-actions{
+    display:inline-grid; grid-template-columns:repeat(2, 1fr); align-items:stretch; gap:8px;
+  }
+  #page-mutabakat .cm-upload-actions .cm-dropzone,
+  #page-mutabakat .cm-upload-actions #cmClearBtn{
+    width:100%; box-sizing:border-box; margin:0; align-self:stretch;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  /* Temizle butonuna yalnızca "Tıkla ve Seç" ile aynı font büyüklüğü/kalınlığı,
+     border-radius ve iç boşluk uygulanır; füme zemin/beyaz yazı rengi (.fc-clear-btn'den
+     miras) burada DEĞİŞTİRİLMEZ. */
+  #page-mutabakat .cm-upload-actions #cmClearBtn{
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:12.5px;
+    padding:8px 16px; border-radius:9px;
+  }
+
+  /* cm-studio: sabit px genişlikler yerine, mevcut alana göre daralabilen clamp() değerleri kullanılır.
+     Büyük ekranlarda (>=~1536px) üst sınırlara (290/400/430px) ulaşarak eski masaüstü görünümüyle birebir aynı kalır;
+     1366-1536px arası laptop genişliklerinde yatay taşma olmadan orantılı küçülür. --cm-avail, sidebar (250px) +
+     ana içerik yatay boşluğu (96px) + sütun aralıkları (40px) düşülmüş yaklaşık kullanılabilir genişliktir. */
+  #page-mutabakat .cm-studio{ display:flex; gap:20px; align-items:flex-start; --cm-avail:calc(100vw - 386px); }
+  #page-mutabakat .cm-queue{ width:clamp(220px, calc(var(--cm-avail) * 0.26), 290px); flex-shrink:1; display:flex; flex-direction:column; gap:10px; max-height:74vh; overflow-y:auto; padding-right:4px; }
+  #page-mutabakat .cm-form-col{ width:clamp(280px, calc(var(--cm-avail) * 0.36), 400px); flex-shrink:1; }
+  #page-mutabakat .cm-preview-col{ flex:1 1 280px; min-width:clamp(260px, calc(var(--cm-avail) * 0.30), 430px); position:sticky; top:90px; align-self:flex-start; max-height:calc(100vh - 110px); overflow:hidden; }
+
+  #page-mutabakat .cm-card{
+    background:var(--cm-ivory); border:1px solid #e2d9c2; border-radius:12px; padding:13px 15px; cursor:pointer;
+    transition:.15s border-color, .15s box-shadow; position:relative;
+  }
+  #page-mutabakat .cm-card:hover{ border-color:var(--cm-bronze); }
+  #page-mutabakat .cm-card.cm-selected{ border-color:var(--cm-bronze); box-shadow:0 0 0 2px rgba(184,134,46,.35); background:#fffaf0; }
+  #page-mutabakat .cm-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  #page-mutabakat .cm-card-idx{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8a7a52; background:#f1ead8; border-radius:5px; padding:1px 6px; }
+  #page-mutabakat .cm-card-name{ font-size:12px; font-weight:600; color:#2a2416; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  #page-mutabakat .cm-card-x{ color:var(--cm-red); cursor:pointer; font-weight:700; font-size:13px; padding:0 3px; flex-shrink:0; }
+  #page-mutabakat .cm-card-companies{ font-size:11.5px; color:#5c5240; line-height:1.5; margin-bottom:6px; }
+  #page-mutabakat .cm-card-companies b{ color:#2a2416; }
+  #page-mutabakat .cm-badge{ display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:600; letter-spacing:.02em; }
+  #page-mutabakat .cm-badge-analiz{ background:#e4e9f0; color:#3a4a63; }
+  #page-mutabakat .cm-badge-eksik{ background:#fbe8cf; color:#8f5a1f; }
+  #page-mutabakat .cm-badge-yerlesim{ background:#fde3cf; color:#a3481f; }
+  #page-mutabakat .cm-badge-hazir{ background:#dcedd6; color:#3f6b34; }
+  #page-mutabakat .cm-badge-atlandi{ background:#e6e2d8; color:#6b6352; }
+  #page-mutabakat .cm-badge-hata{ background:#f5d9d5; color:#8f2a20; }
+  #page-mutabakat .cm-card-skip{ font-size:11px; color:#8a7a52; margin-top:6px; display:flex; align-items:center; gap:5px; cursor:pointer; }
+
+  #page-mutabakat .cm-panel{
+    background:#fff; border:1px solid #e2ded2; border-radius:14px; padding:22px 24px; box-shadow:var(--shadow);
+  }
+  #page-mutabakat .cm-panel-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; color:var(--cm-navy); margin:0 0 16px; }
+  #page-mutabakat .cm-field{ margin-bottom:16px; }
+  #page-mutabakat .cm-field label{ display:block; font-size:11.5px; font-weight:600; color:#5c6b58; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  #page-mutabakat .cm-field input[type=text], #page-mutabakat .cm-field select{
+    width:100%; box-sizing:border-box; font-family:'IBM Plex Sans'; font-size:13.5px; padding:11px 13px;
+    border:1px solid #d8d2c2; border-radius:9px; background:#fdfcf7; color:#182016;
+  }
+  #page-mutabakat .cm-field input[type=text]:focus, #page-mutabakat .cm-field select:focus{ outline:2px solid var(--cm-bronze); outline-offset:1px; }
+  #page-mutabakat .cm-field-hint{ font-size:11px; color:#8a8f95; margin-top:5px; }
+  #page-mutabakat .cm-field-warn{ font-size:11.5px; color:#a3481f; margin-top:5px; font-weight:600; }
+  #page-mutabakat .cm-seg{ display:flex; gap:8px; flex-wrap:wrap; }
+  #page-mutabakat .cm-seg button{
+    flex:1; min-width:100px; font-family:'IBM Plex Sans'; font-size:12.5px; font-weight:600; padding:10px 8px;
+    border:1.5px solid #d8d2c2; border-radius:9px; background:#fdfcf7; color:#5c6b58; cursor:pointer; transition:.12s;
+  }
+  #page-mutabakat .cm-seg button.cm-active{ border-color:var(--cm-bronze); background:#fff6e4; color:#8f6a1f; }
+  #page-mutabakat .cm-seg button.cm-active.cm-borc{ border-color:var(--cm-red); background:#fbeae7; color:#8f2a20; }
+  #page-mutabakat .cm-seg button.cm-active.cm-alacak{ border-color:var(--cm-teal); background:#e6f2f0; color:#1f5852; }
+  /* YENİ: Tutar alanı yanındaki ₺/€/$ para birimi simge butonları — mevcut .cm-field input stiline
+     dokunmadan, girişin sağına küçük, oranlı, tıklanabilir bir buton grubu ekler. */
+  #page-mutabakat .cm-amount-row{ display:flex; gap:8px; align-items:stretch; }
+  #page-mutabakat .cm-amount-row input[type=text]{ flex:1; min-width:0; }
+  #page-mutabakat .cm-currency-seg{ display:flex; gap:4px; flex-shrink:0; }
+  #page-mutabakat .cm-currency-seg button{
+    width:34px; font-family:'IBM Plex Sans'; font-size:14px; font-weight:700; padding:0;
+    border:1.5px solid #d8d2c2; border-radius:9px; background:#fdfcf7; color:#5c6b58; cursor:pointer; transition:.12s;
+  }
+  #page-mutabakat .cm-currency-seg button.cm-active{ border-color:var(--cm-bronze); background:#fff6e4; color:#8f6a1f; }
+  #page-mutabakat .cm-toggle-row{ display:flex; align-items:center; gap:10px; }
+  #page-mutabakat .cm-toggle{ position:relative; width:42px; height:24px; flex-shrink:0; }
+  #page-mutabakat .cm-toggle input{ opacity:0; width:0; height:0; position:absolute; }
+  #page-mutabakat .cm-toggle-track{ position:absolute; inset:0; background:#d8d2c2; border-radius:20px; cursor:pointer; transition:.15s; }
+  #page-mutabakat .cm-toggle-track::before{ content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  #page-mutabakat .cm-toggle input:checked + .cm-toggle-track{ background:var(--cm-bronze); }
+  #page-mutabakat .cm-toggle input:checked + .cm-toggle-track::before{ transform:translateX(18px); }
+  #page-mutabakat .cm-toggle-label{ font-size:12.5px; color:#182016; }
+  #page-mutabakat .cm-stamp-preview{ width:70px; height:auto; border:1px solid #e2ded2; border-radius:6px; background:#fff; padding:4px; margin-top:8px; }
+  #page-mutabakat .cm-status-box{
+    background:#f6f3e8; border:1px solid #e2d9c2; border-radius:10px; padding:12px 14px; font-size:12px;
+    color:#5c5240; line-height:1.6; max-height:170px; overflow-y:auto;
+  }
+  #page-mutabakat .cm-status-box ul{ margin:0; padding-left:18px; }
+  #page-mutabakat .cm-status-ok{ color:#3f6b34; }
+  #page-mutabakat .cm-status-warn{ color:#a3481f; }
+  #page-mutabakat .cm-status-err{ color:#8f2a20; }
+
+  #page-mutabakat .cm-preview-wrap{
+    background:linear-gradient(160deg,#eef1e8,#e3e8dc); border:1px solid #d3ddca; border-radius:16px;
+    padding:20px; display:flex; align-items:center; justify-content:center; min-height:420px; position:relative;
+    overflow:hidden; max-height:calc(100vh - 150px);
+  }
+  #page-mutabakat .cm-preview-canvas-box{
+    background:#fff; box-shadow:0 10px 30px rgba(16,26,46,.18); border-radius:4px; max-width:100%;
+  }
+  #page-mutabakat .cm-preview-canvas-box img{ display:block; width:100%; border-radius:4px; }
+  #page-mutabakat .cm-preview-canvas{
+    display:block; width:auto; height:auto; max-width:100%; max-height:calc(100vh - 170px); background:#fff; border-radius:4px;
+    cursor:default;
+  }
+  #page-mutabakat .cm-preview-empty{ color:#7a8577; font-size:13px; text-align:center; }
+  #page-mutabakat .cm-preview-loading{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(238,241,232,.7);
+    border-radius:16px; font-size:12.5px; color:#5c6b58; font-weight:600;
+  }
+  /* YENİ (v63): Mutabakat Tarihi otomatik bulunamadığında önizlemede elle yerleştirme için tıklanabilir
+     yüzey ipucu, sürüklenebilir tarih rozeti ve küçük satır-içi giriş kutusu. */
+  #page-mutabakat .cm-preview-canvas.cm-date-clickable{ cursor:crosshair; }
+  #page-mutabakat .cm-date-hint{
+    position:absolute; left:12px; top:12px; background:rgba(16,26,46,.88); color:#f3f0e6; font-size:11px;
+    font-weight:600; padding:6px 10px; border-radius:8px; z-index:5; pointer-events:none; max-width:70%;
+  }
+  #page-mutabakat .cm-date-pill{
+    position:absolute; background:#1b2946; color:#fff; font-size:11px; font-weight:600; padding:3px 8px 3px 9px;
+    border-radius:999px; cursor:grab; z-index:6; white-space:nowrap; box-shadow:0 3px 10px rgba(16,26,46,.35);
+    display:flex; align-items:center; gap:6px; user-select:none;
+  }
+  #page-mutabakat .cm-date-pill.cm-dragging{ cursor:grabbing; opacity:.85; }
+  #page-mutabakat .cm-date-pill .cm-date-pill-x{
+    background:rgba(255,255,255,.18); border-radius:50%; width:15px; height:15px; display:flex;
+    align-items:center; justify-content:center; font-size:10px; line-height:1;
+  }
+  #page-mutabakat .cm-date-pill .cm-date-pill-x:hover{ background:rgba(255,255,255,.32); }
+  #page-mutabakat .cm-date-inline-input{
+    position:absolute; z-index:7; font-size:12px; padding:4px 7px; border-radius:6px; border:1.5px solid var(--cm-bronze);
+    box-shadow:0 4px 14px rgba(16,26,46,.3); width:118px;
+  }
+  /* Render sırasında son başarılı önizleme ekranda kalır; hata olursa üstte küçük bir uyarı şeridi gösterilir. */
+  #page-mutabakat .cm-preview-warn{
+    position:absolute; left:12px; right:12px; bottom:12px; background:rgba(169,50,38,.94); color:#fff;
+    font-size:11.5px; font-weight:600; padding:7px 11px; border-radius:8px; text-align:center; box-shadow:var(--shadow);
+  }
+
+  #page-mutabakat .cm-empty-state{ text-align:center; padding:50px 20px; color:#7a8577; }
+  #page-mutabakat .cm-empty-state .cm-empty-icon{ font-size:34px; opacity:.5; margin-bottom:10px; }
+
+  /* Yalnızca gerçekten dar (mobil/tablet) pencerelerde alt alta yerleşim: laptop genişliklerinde
+     (1366px ve üzeri, %125 yakınlaştırmada bile) bu kural devreye girmez. position:sticky kasıtlı olarak
+     korunur — önizleme dar ekranda da sağda/üstte "yapışık" kalmaya devam eder, position:static'e dönmez. */
+  @media(max-width:900px){
+    #page-mutabakat .cm-studio{ flex-direction:column; }
+    #page-mutabakat .cm-queue, #page-mutabakat .cm-form-col{ width:100%; }
+    #page-mutabakat .cm-preview-col{ width:100%; min-width:0; max-width:100%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    #page-mutabakat .cm-btn, #page-mutabakat .cm-toggle-track, #page-mutabakat .cm-toggle-track::before{
+      transition:none !important;
+    }
+  }
+
+  /* =====================================================================
+     ANA SAYFA (Ana Sayfa / fc-home): yalnızca yeni eklenen stiller.
+     Mevcut modüllerin CSS'ine dokunulmadı; tüm seçiciler #page-home
+     kapsamına veya fc-/nav-home- önekine sınırlı, isim çakışması yok.
+     ===================================================================== */
+  :root{
+    --fc-torn: polygon(0% 3%, 4% 0%, 9% 3%, 15% 0.5%, 21% 3%, 28% 0%, 35% 2.5%, 42% 0.5%, 49% 3%, 56% 0%, 63% 2.5%, 70% 0.5%, 77% 3%, 84% 0%, 91% 2.5%, 96% 0.5%, 100% 3%, 100% 97%, 96% 100%, 91% 97.5%, 84% 100%, 77% 97%, 70% 99.5%, 63% 97.5%, 56% 100%, 49% 97%, 42% 99.5%, 35% 97.5%, 28% 100%, 21% 97%, 15% 99.5%, 9% 97%, 4% 100%, 0% 97%);
+    /* Not: aşağıdaki 4 varyant, aynı düzenli zikzağın kopyası gibi görünmemesi için
+       elle düzensizleştirilmiş, farklı noktalarda ve farklı derinliklerde yırtık/dalgalı
+       kenarlar üretir. Her kağıt/kart farklı bir varyant kullanır (bkz. kullanım yerleri). */
+    --fc-torn-2: polygon(0% 4.5%, 13% 3.5%, 14% 2.5%, 20% 3.5%, 25% 5.8%, 26% 3.3%, 40% 5.7%, 59% 2.5%, 61% 1%, 62% 4.5%, 67% 0.5%, 70% 2.5%, 73% 2.5%, 77% 0.5%, 80% 1.5%, 82% 3.5%, 100% 0.5%, 100% 99.5%, 82% 98.5%, 80% 99.5%, 77% 99.5%, 73% 99.5%, 70% 95.5%, 67% 99.5%, 62% 99%, 61% 98.5%, 59% 98.5%, 40% 97.5%, 26% 96.9%, 25% 96.8%, 20% 99%, 14% 99%, 13% 99%, 0% 99%);
+    --fc-torn-3: polygon(0% 1%, 10% 0.5%, 11% 4.5%, 25% 0.5%, 27% 2.5%, 33% 6.7%, 34% 4.5%, 37% 4.5%, 38% 1%, 44% 1.5%, 49% 1%, 53% 6.5%, 63% 1.5%, 71% 0.5%, 85% 5.7%, 91% 1%, 100% 0.5%, 100% 92.8%, 91% 98.5%, 85% 96.5%, 71% 98.5%, 63% 97.5%, 53% 98.5%, 49% 98.5%, 44% 98.5%, 38% 99.5%, 37% 99%, 34% 95.5%, 33% 99.5%, 27% 99.5%, 25% 93.6%, 11% 96.5%, 10% 99.5%, 0% 97.5%);
+    --fc-torn-4: polygon(0% 3.5%, 4% 3.5%, 6% 2.5%, 14% 0.5%, 20% 0.5%, 38% 0.5%, 49% 4.6%, 57% 3.5%, 60% 1%, 61% 0.5%, 65% 1%, 67% 1%, 78% 0.5%, 79% 0.5%, 87% 3.5%, 91% 4.5%, 100% 0.5%, 100% 97.5%, 91% 95.5%, 87% 96.5%, 79% 97.5%, 78% 99.5%, 67% 99.5%, 65% 98.5%, 61% 99%, 60% 99.5%, 57% 96.5%, 49% 98.5%, 38% 95.5%, 20% 95.5%, 14% 97.5%, 6% 96.5%, 4% 96.9%, 0% 95.5%);
+    --fc-torn-5: polygon(0% 4.5%, 3% 4.5%, 4% 3.5%, 12% 0.5%, 19% 0.5%, 22% 3.3%, 30% 0.5%, 40% 0.5%, 50% 0.5%, 60% 4.5%, 64% 0.5%, 70% 5.6%, 81% 0.5%, 85% 3.5%, 89% 1.5%, 93% 2.5%, 100% 3.5%, 100% 99.5%, 93% 96.5%, 89% 97.5%, 85% 95.5%, 81% 95.5%, 70% 99%, 64% 97.5%, 60% 99%, 50% 99%, 40% 97.5%, 30% 95.5%, 22% 96.5%, 19% 99.5%, 12% 99.5%, 4% 95.5%, 3% 97.5%, 0% 99.5%);
+    --fc-kraft:#dfc27f; --fc-kraft-ink:#4a3a1a;
+    --fc-graphite:#46484c; --fc-graphite-ink:#f1ece1;
+    --fc-sky:#cfe1ec; --fc-sky-ink:#1c3a4a;
+  }
+
+  .brand{ cursor:pointer; }
+  .nav-home-icon{ width:14px; height:14px; flex-shrink:0; }
+
+  #page-home{
+    background-color:#f3ecdb;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(74,58,26,.02) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at 15% 15%, rgba(74,58,26,.05), transparent 45%),
+      radial-gradient(ellipse at 88% 80%, rgba(74,58,26,.045), transparent 50%);
+    margin:-40px -48px -80px; padding:40px 48px 80px;
+  }
+  @media(max-width:1500px){
+    #page-home{ margin:-32px calc(-1 * clamp(20px, 3vw, 48px)) -60px; padding:32px clamp(20px, 3vw, 48px) 60px; }
+  }
+  #page-home .page-head{ margin-bottom:18px; min-height:1px; }
+
+  .fc-home-top{
+    display:grid; grid-template-columns:minmax(280px, 1fr) minmax(240px, 360px);
+    align-items:start; gap:clamp(16px, 2.6vw, 32px); margin-bottom:30px;
+  }
+  .fc-welcome-paper{
+    position:relative; max-width:min(560px, 100%);
+    background:#fdfcf6;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(92,71,38,.025) 0 2px, transparent 2px 26px),
+      radial-gradient(ellipse at 20% 30%, rgba(92,71,38,.05), transparent 55%);
+    clip-path:var(--fc-torn-2);
+    padding:22px clamp(20px,3vw,34px) 26px;
+    filter:drop-shadow(0 10px 18px rgba(16,26,46,.14)) drop-shadow(0 2px 4px rgba(16,26,46,.08));
+  }
+  .fc-welcome-title{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px, 2.6vw, 30px);
+    margin:0 0 8px; color:var(--ink); display:flex; align-items:center; gap:10px;
+  }
+  .fc-paw{ width:20px; height:20px; color:var(--ink); flex-shrink:0; }
+  .fc-welcome-sub{ margin:0; color:var(--muted); font-size:14.5px; line-height:1.55; }
+
+  /* ---- Ana Sayfa tarih/saat kağıdı: mevcut .clock-widget/.clock-date/.analog altyapısı
+     AYNEN kullanılır (tick()/renderCal()/toggleCal() değişmedi); sadece #page-home içindeki
+     tek örneği için, ".clock-widget" temel kuralından daha spesifik bir seçiciyle GÖRÜNÜMÜ
+     override edilir. Diğer modüllerde artık clock-widget kalmadığı için orijinal kural
+     etkilenmez/kullanılmaz — geri dönmek istenirse bu blok silinmesi yeterlidir. ---- */
+  .fc-clock-paper{ position:relative; min-width:0; }
+  .fc-clock-paper .clock-widget{
+    position:relative; display:flex; align-items:center; gap:clamp(10px,1.6vw,18px);
+    width:100%; max-width:100%; box-sizing:border-box; z-index:auto;
+    background:#fdfcf6;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(92,71,38,.025) 0 2px, transparent 2px 26px),
+      radial-gradient(ellipse at 75% 25%, rgba(92,71,38,.05), transparent 55%);
+    border:none; border-radius:0; clip-path:var(--fc-torn-3);
+    padding:16px clamp(14px,2vw,22px);
+    filter:drop-shadow(0 10px 18px rgba(16,26,46,.14)) drop-shadow(0 2px 4px rgba(16,26,46,.08));
+  }
+  .fc-clock-pin{
+    position:absolute; top:-6px; left:50%; transform:translateX(-50%); width:12px; height:12px; z-index:3;
+    border-radius:50%; background:radial-gradient(circle at 35% 30%, #4a4a4a, #101010);
+    box-shadow:0 2px 4px rgba(16,26,46,.35), inset 0 -2px 2px rgba(0,0,0,.2), inset 0 1px 1px rgba(255,255,255,.45);
+    pointer-events:none;
+  }
+  .fc-clock-pin::before, .fc-card-pin::before{
+    content:""; position:absolute; left:50%; top:112%; transform:translateX(-50%);
+    width:15px; height:5px; border-radius:50%; background:rgba(20,14,6,.24); filter:blur(1px);
+  }
+  .fc-pin--sm{ width:9px; height:9px; top:-4px; }
+  .fc-pin--sm::before{ width:11px; height:4px; }
+  .fc-clock-paper .clock-date{ align-items:flex-start; text-align:left; gap:6px; flex:1; min-width:0; }
+  .fc-clock-row{ display:flex; align-items:center; gap:7px; }
+  .fc-clock-row + .fc-clock-row{ margin-top:2px; }
+  .fc-clock-ic{ width:14px; height:14px; flex-shrink:0; color:var(--muted); }
+  .fc-clock-paper .clock-day{ font-size:12px; letter-spacing:.04em; }
+  .fc-clock-paper .clock-full{ font-size:11px; }
+  .fc-clock-paper .clock-digital{ font-size:13px; margin-top:0; }
+  .fc-clock-paper .analog{
+    width:clamp(52px, 6vw, 66px); height:clamp(52px, 6vw, 66px); flex-shrink:0;
+  }
+  @media(max-width:900px){
+    .fc-home-top{ grid-template-columns:1fr; }
+    .fc-clock-paper{ max-width:min(420px, 100%); }
+  }
+
+  .fc-home-cards{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:clamp(18px, 2.4vw, 30px); max-width:980px; margin-bottom:30px;
+  }
+  .fc-card{ position:relative; }
+  .fc-card-paper{
+    position:relative; clip-path:var(--fc-torn); padding:26px 22px 22px;
+    min-height:220px; display:flex; flex-direction:column; cursor:pointer;
+    filter:drop-shadow(0 10px 16px rgba(16,26,46,.16)) drop-shadow(0 2px 4px rgba(16,26,46,.1));
+    transition:transform .15s ease;
+  }
+  .fc-card:hover .fc-card-paper{ transform:translateY(-3px); }
+  .fc-card--kraft .fc-card-paper{ background:var(--fc-kraft); color:var(--fc-kraft-ink); clip-path:var(--fc-torn-4); }
+  .fc-card--graphite .fc-card-paper{ background:var(--fc-graphite); color:var(--fc-graphite-ink); clip-path:var(--fc-torn-5); }
+  .fc-card--sky .fc-card-paper{ background:var(--fc-sky); color:var(--fc-sky-ink); clip-path:var(--fc-torn); }
+
+  .fc-card-icon{ width:38px; height:38px; margin-bottom:12px; }
+  .fc-card-icon svg{ width:100%; height:100%; }
+  .fc-card-title{ font-family:'Fraunces',serif; font-weight:700; font-size:19px; line-height:1.22; margin:0 0 10px; text-transform:uppercase; letter-spacing:.01em; }
+  .fc-card-title span{ display:block; }
+  .fc-card-desc{ font-size:13px; line-height:1.55; margin:0 0 16px; opacity:.9; }
+  .fc-card-btn{
+    margin-top:auto; align-self:flex-start; font-family:'IBM Plex Sans',sans-serif; font-size:12px; font-weight:700;
+    letter-spacing:.03em; padding:8px 16px; border-radius:20px; cursor:pointer; background:transparent;
+  }
+  .fc-card--kraft .fc-card-btn{ border:1.5px solid var(--fc-kraft-ink); color:var(--fc-kraft-ink); }
+  .fc-card--kraft .fc-card-btn:hover{ background:rgba(74,58,26,.1); }
+  .fc-card--graphite .fc-card-btn{ border:1.5px solid var(--fc-graphite-ink); color:var(--fc-graphite-ink); }
+  .fc-card--graphite .fc-card-btn:hover{ background:rgba(241,236,225,.12); }
+  .fc-card--sky .fc-card-btn{ border:1.5px solid var(--fc-sky-ink); color:var(--fc-sky-ink); }
+  .fc-card--sky .fc-card-btn:hover{ background:rgba(28,58,74,.08); }
+
+  .fc-card-pin{
+    position:absolute; top:-6px; left:50%; transform:translateX(-50%); width:13px; height:13px; z-index:3;
+    border-radius:50%; pointer-events:none;
+    box-shadow:0 2px 4px rgba(16,26,46,.35), inset 0 -2px 2px rgba(0,0,0,.2), inset 0 1px 1px rgba(255,255,255,.5);
+  }
+  .fc-card--kraft .fc-card-pin{ background:radial-gradient(circle at 35% 30%, #ffe37a, #d9a316); }
+  .fc-card--graphite .fc-card-pin{ background:radial-gradient(circle at 35% 30%, #4a4a4a, #101010); }
+  .fc-card--sky .fc-card-pin{ background:radial-gradient(circle at 35% 30%, #6fa8cc, #2f5f8a); }
+  /* Raptiye pozisyon çeşitliliği: kartlar aynı yere sabitlenmiş gibi görünmesin. */
+  .fc-card-pin--left{ left:30%; }
+  .fc-card-pin--right{ left:70%; }
+
+  .fc-home-tip{
+    position:relative; display:flex; align-items:center; gap:12px; max-width:980px;
+    background:#fdfcf6; clip-path:var(--fc-torn-4); padding:16px clamp(18px,2.4vw,28px);
+    filter:drop-shadow(0 6px 12px rgba(16,26,46,.12));
+    font-size:13.5px; color:var(--text);
+  }
+  .fc-tip-icon{ width:22px; height:22px; color:var(--gold-dark); flex-shrink:0; }
+
+  .fc-mascot-box{ display:flex; align-items:flex-end; gap:8px; margin-bottom:14px; }
+  .fc-mascot-photo{ width:40px; height:auto; flex-shrink:0; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35)); pointer-events:none; }
+  .fc-mascot-note{
+    position:relative; background:#fdfcf6; color:#2a2013; clip-path:var(--fc-torn-3);
+    padding:8px 12px 9px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600;
+    line-height:1.5; transform:rotate(-2deg);
+    filter:drop-shadow(0 3px 6px rgba(0,0,0,.25));
+  }
+  .fc-mascot-note span{ display:block; }
+
+  /* =====================================================================
+     ORTAK "YARA BANTLI KAĞIT" ÇERÇEVESİ (fc-paper-wrap + fc-tape + fc-curl)
+     Kağıdın kendisi (clip-path uygulanan öğe) hiç değişmez; bant/kıvrım
+     öğeleri onun DIŞINDA, clip'lenmeyen bir sarmalayıcı içine konur ki
+     köşeden taşabilsinler. Tamamen katma değerli/geri alınabilir: silmek
+     için sadece fc-tape/fc-curl span'lerini ve fc-paper-wrap'i kaldırın.
+     ===================================================================== */
+  .fc-paper-wrap{ position:relative; }
+  /* Eski bez yara bandı: kağıdın TAM sol üst köşesini çapraz yakalayacak şekilde
+     konumlanır (yarısı kağıt üzerinde, yarısı dışarıda). Mat/lifli dokusu iki
+     yönlü ince çizgi deseniyle (dokuma bez hissi) verilir; parlak/plastik bant
+     görünümünden kaçınılır. */
+  .fc-tape{
+    position:absolute; top:-15px; left:-15px; width:96px; height:31px; z-index:4;
+    clip-path:polygon(1% 14%, 5% 1%, 95% 4%, 99% 16%, 98% 87%, 94% 99%, 4% 96%, 1% 84%);
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.09) 0 2px, transparent 2px 4px),
+      repeating-linear-gradient(0deg, rgba(60,46,24,.07) 0 1px, transparent 1px 3px),
+      linear-gradient(175deg, #cdbd9c 0%, #bfab84 45%, #c7b696 100%);
+    box-shadow:0 3px 7px rgba(16,26,46,.3);
+    transform:rotate(-30deg); transform-origin:center; opacity:.95; pointer-events:none;
+  }
+  .fc-tape::before{
+    content:""; position:absolute; left:9%; right:9%; top:36%; height:26%;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,.4) 0 2px, transparent 2px 5px);
+    opacity:.6;
+  }
+  .fc-tape--sm{ width:56px; height:19px; top:-10px; left:-10px; }
+  .fc-tape--sm::before{ height:22%; }
+  .fc-curl{
+    position:absolute; right:2px; bottom:2px; width:22px; height:22px; z-index:4; pointer-events:none;
+    clip-path:polygon(100% 0, 0 100%, 100% 100%);
+    background:linear-gradient(135deg, rgba(120,100,60,.05) 40%, rgba(90,74,40,.42) 55%, rgba(60,48,24,.12) 78%, transparent 92%);
+  }
+  .fc-curl::before{
+    content:""; position:absolute; inset:0;
+    clip-path:polygon(100% 18%, 18% 100%, 100% 100%);
+    background:linear-gradient(135deg, rgba(253,250,240,.95) 0%, rgba(226,210,175,.85) 60%, rgba(190,168,120,.55) 100%);
+  }
+  .fc-curl--sm{ width:14px; height:14px; }
+
+  /* =====================================================================
+     ESKİTME / YIPRANMA EFEKTLERİ (geri alınabilir, modüler)
+     Bu iki sınıf tamamen katma değerlidir: ana renkleri/temayı değiştirmez,
+     sadece ilgili öğeye ek bir doku/köşe efekti pseudo-element'i ekler.
+     Beğenilmezse yalnızca class="..." içinden "fc-aged-paper"/"fc-burn-edge*"
+     kaldırılarak 43.html'deki temiz kağıt görünümüne dönülebilir.
+     ===================================================================== */
+  .fc-aged-paper{ position:relative; }
+  .fc-aged-paper::before{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:-1;
+    background:
+      radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(96,74,36,.10) 78%, rgba(78,58,26,.24) 100%),
+      radial-gradient(circle at 20% 84%, rgba(120,94,45,.13), transparent 24%),
+      radial-gradient(circle at 86% 18%, rgba(120,94,45,.11), transparent 22%),
+      radial-gradient(circle at 72% 90%, rgba(120,94,45,.09), transparent 20%),
+      radial-gradient(circle at 8% 12%, rgba(120,94,45,.08), transparent 18%),
+      repeating-linear-gradient(114deg, rgba(90,70,35,.05) 0 2px, transparent 2px 6px),
+      repeating-linear-gradient(24deg, rgba(90,70,35,.035) 0 2px, transparent 2px 7px);
+    mix-blend-mode:multiply;
+  }
+  /* Küçük, seyrek "hafif yanık uç" lekeleri — büyük köşe çerçevesi DEĞİL, birkaç
+     milimetrelik noktacıklar. Her karta uygulanmaz (bkz. FC_AGE_CORNERS içinde
+     boş varyant). */
+  .fc-burn-edge{ position:relative; }
+  .fc-burn-edge::after{
+    content:""; position:absolute; z-index:-1; pointer-events:none;
+    top:-1px; left:23%; width:9px; height:7px; border-radius:48%;
+    background:radial-gradient(circle, rgba(40,26,10,.5) 0%, rgba(80,55,25,.26) 48%, transparent 76%);
+  }
+  .fc-burn-edge--tl::after{ top:auto; left:7%; bottom:-1px; width:7px; height:6px; }
+  .fc-burn-edge--br::after{ top:-1px; left:auto; right:12%; width:8px; height:6px; }
+
+  @media(max-width:640px){
+    .fc-home-cards{ grid-template-columns:1fr; }
+    .fc-welcome-paper{ max-width:100%; }
+  }
+
+  /* =====================================================================
+     MODÜL 03 — SATINALMA FATURALARI (v73, sunucusuz/tek dosya)
+     Yalnızca sf- önekli id/class'larla çalışan izole bir blok.
+     ===================================================================== */
+  #page-satinalma{ --sf-navy:#101a2e; --sf-navy2:#1b2946; --sf-gold:#b8862e; --sf-gold2:#d9ac52;
+    --sf-ivory:#faf6ec; --sf-red:#a3481f; --sf-green:#3f6b34; --sf-yellow:#8f6a1f; }
+
+  .sf-top{ background:linear-gradient(120deg,var(--sf-navy),var(--sf-navy2)); border-radius:14px; padding:18px 20px;
+    display:flex; align-items:flex-start; gap:18px; flex-wrap:wrap; margin-bottom:16px; position:relative; overflow:hidden; }
+  .sf-top-title{ font-family:'Fraunces',serif; font-size:19px; font-weight:600; color:#f3f0e6; margin:0; }
+  .sf-top-sub{ font-size:12px; color:#9db0d0; margin:2px 0 0; }
+  .sf-top-actions{ display:flex; gap:10px; margin-left:auto; flex-wrap:wrap; align-items:center; }
+  .sf-btn{ font-family:inherit; font-size:12.5px; font-weight:700; padding:9px 14px; border-radius:9px;
+    border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); color:#e7ecf5; cursor:pointer; }
+  .sf-btn:hover{ background:rgba(255,255,255,.15); }
+  .sf-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .sf-btn-primary{ background:var(--sf-gold); color:#1a1206; border-color:var(--sf-gold); }
+  .sf-btn-primary:hover{ background:var(--sf-gold2); }
+  .sf-btn-danger{ background:rgba(163,72,31,.85); border-color:transparent; color:#fff; }
+  .sf-counts{ display:flex; gap:8px; flex-wrap:wrap; }
+  .sf-count{ background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); border-radius:9px;
+    padding:7px 12px; min-width:74px; text-align:center; }
+  .sf-count .v{ font-family:'Fraunces',serif; font-weight:700; font-size:17px; color:#f3f0e6; line-height:1; }
+  .sf-count .k{ font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:#9db0d0; margin-top:2px; }
+
+  .sf-company-select{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:18px; max-width:680px; }
+  .sf-company-card{ border:1.5px solid var(--rule); border-radius:12px; padding:16px; cursor:pointer; background:var(--paper); transition:.12s; }
+  .sf-company-card:hover{ border-color:var(--sf-gold); }
+  .sf-company-card.active{ border-color:var(--sf-gold); box-shadow:0 0 0 2px rgba(184,134,46,.25); background:#fffaf0; }
+  .sf-company-card.disabled{ opacity:.55; }
+  .sf-company-card h4{ margin:0 0 4px; font-size:14.5px; font-weight:700; color:var(--text); }
+  .sf-company-card p{ margin:0; font-size:11.5px; color:var(--muted); line-height:1.5; }
+  .sf-company-warn{ margin-top:8px; font-size:11px; font-weight:600; color:var(--sf-red); background:#fbeae7; border-radius:6px; padding:5px 8px; display:none; }
+  .sf-company-card.disabled .sf-company-warn{ display:block; }
+
+  .sf-filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .sf-chip{ font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:20px; border:1px solid var(--rule);
+    background:#fff; color:var(--muted); cursor:pointer; }
+  .sf-chip.active{ border-color:var(--sf-gold); background:#fff6e4; color:var(--sf-yellow); }
+
+  .sf-panel{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+  .sf-drop{ flex:1 1 260px; border:2px dashed var(--rule); border-radius:12px; display:flex; align-items:center;
+    justify-content:center; flex-direction:column; gap:6px; padding:16px; cursor:pointer; color:var(--muted); min-height:100px; }
+  .sf-drop:hover{ border-color:var(--sf-gold); color:var(--sf-yellow); }
+  .sf-drop.drag{ border-color:var(--sf-gold); background:#fff6e4; }
+  .sf-drop input{ display:none; }
+  .sf-drop b{ font-size:13.5px; color:var(--text); }
+  .sf-drop span{ font-size:11.5px; text-align:center; max-width:520px; }
+
+  .sf-table-wrap{ overflow-x:auto; border:1px solid var(--rule); border-radius:10px; background:#fff; }
+  table.sf-table{ border-collapse:collapse; width:100%; min-width:1680px; font-size:12px; }
+  table.sf-table th{ background:var(--sf-navy); color:#dfe6f2; font-size:10px; text-transform:uppercase;
+    letter-spacing:.04em; text-align:left; padding:8px 8px; white-space:nowrap; position:sticky; top:0; z-index:1; }
+  table.sf-table td{ padding:5px 6px; border-bottom:1px solid var(--rule); vertical-align:middle; }
+  table.sf-table tr:hover td{ background:#faf7ef; }
+  table.sf-table input[type=text], table.sf-table select, table.sf-table input[type=number]{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:5px 6px; border:1px solid var(--rule);
+    border-radius:5px; background:#fff; color:var(--text); width:100%; min-width:70px; }
+  table.sf-table .sf-thumb{ width:40px; height:40px; object-fit:cover; border-radius:5px; cursor:zoom-in; border:1px solid var(--rule); display:block; background:#f3f0e6; }
+  .sf-cell-warn input, .sf-cell-warn select{ background:#fff8e1; border-color:#e0b84c; }
+  .sf-cell-error input, .sf-cell-error select{ background:#fdeceb; border-color:var(--sf-red); }
+  table.sf-table input.sf-field-error{ background:#fdeceb; border-color:var(--sf-red); border-width:1.5px; }
+  .sf-inline-err{ font-size:9.5px; color:var(--sf-red); font-weight:600; margin-top:2px; line-height:1.3; white-space:normal; }
+  .sf-badge{ font-size:10px; font-weight:700; padding:3px 8px; border-radius:12px; white-space:nowrap; display:inline-block; }
+  .sf-badge-okunuyor{ background:#e4e9f0; color:#3a4a63; }
+  .sf-badge-kontrol{ background:#fbe8cf; color:#8f5a1f; }
+  .sf-badge-onayli{ background:#dcedd6; color:#3f6b34; }
+  .sf-badge-hatali{ background:#f5d9d5; color:#8f2a20; }
+  .sf-spin{ display:inline-block; animation:sfSpin 1.4s linear infinite; }
+  @keyframes sfSpin{ from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .sf-row-actions{ display:flex; gap:4px; }
+  .sf-icon-btn{ border:none; background:transparent; cursor:pointer; font-size:14px; padding:3px 5px; border-radius:5px; }
+  .sf-icon-btn:hover{ background:rgba(0,0,0,.06); }
+  .sf-icon-btn.del{ color:var(--sf-red); }
+  .sf-icon-btn.ok{ color:var(--sf-green); }
+  .sf-line-add{ font-size:10.5px; color:var(--sf-yellow); cursor:pointer; text-decoration:underline; margin-top:3px; display:inline-block; }
+
+  .sf-acc-tbl{ width:100%; border-collapse:collapse; font-size:11px; margin:8px 0; }
+  .sf-acc-tbl th{ text-align:left; font-size:9.5px; text-transform:uppercase; color:var(--muted); padding:3px 4px; border-bottom:1px solid var(--rule); }
+  .sf-acc-tbl td{ padding:4px 4px; border-bottom:1px dotted var(--rule); font-family:'IBM Plex Mono',monospace; }
+  .sf-acc-tbl td.num{ text-align:right; }
+  .sf-acc-total{ font-weight:700; }
+  .sf-reconcile-ok{ color:var(--sf-green); font-weight:700; font-size:11px; }
+  .sf-reconcile-bad{ color:var(--sf-red); font-weight:700; font-size:11px; }
+  .sf-warn-list{ font-size:11px; color:var(--sf-yellow); margin:6px 0 0; padding-left:16px; }
+  .sf-warn-list li{ margin-bottom:2px; }
+
+  .sf-lightbox{ position:fixed; inset:0; background:rgba(10,14,24,.86); display:none; align-items:center;
+    justify-content:center; z-index:400; padding:30px; }
+  .sf-lightbox.open{ display:flex; }
+  .sf-lightbox img{ max-width:min(92vw,720px); max-height:88vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .sf-lightbox-x{ position:absolute; top:18px; right:24px; color:#fff; font-size:26px; cursor:pointer; }
+
+  .sf-empty{ text-align:center; padding:50px 20px; color:var(--muted); }
+  .sf-empty .ic{ font-size:34px; opacity:.5; margin-bottom:8px; }
+
+  @media(max-width:900px){
+    .sf-top{ flex-direction:column; }
+    .sf-top-actions{ margin-left:0; width:100%; }
+    .sf-panel{ flex-direction:column; }
+  }
+
+/* v75 — profesyonel kontrol merkezi */
+#page-home{background:#081426!important;background-image:radial-gradient(circle at 78% 6%,rgba(21,117,91,.18),transparent 30%),linear-gradient(145deg,#081426 0%,#0d1d34 58%,#0a1729 100%)!important;color:#fff!important;margin:-40px -48px -80px!important;padding:40px 48px 80px!important;min-height:100vh}
+.dash-hero{display:flex;justify-content:space-between;gap:32px;align-items:flex-start;padding:10px 0 30px;border-bottom:1px solid rgba(255,255,255,.09)}
+.dash-kicker,.dash-panel-head span,.dash-bottom span{color:#4fcb98;font-size:10px;font-weight:800;letter-spacing:.18em}
+.dash-hero h1{font-family:'Fraunces',serif;font-size:clamp(34px,4vw,54px);line-height:1.06;margin:12px 0;color:#f5f8fb}.dash-hero h1 span{color:#58d39f}.dash-hero p{color:#95a5bb;font-size:14px;margin:0;max-width:570px}
+.dash-date{min-width:285px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:14px 18px}.dash-date .clock-widget{position:static;background:transparent;border:0;box-shadow:none;padding:5px 0 0;width:100%;color:#fff}.dash-date .analog{display:none}.dash-date .clock-date{color:#fff}.dash-date .clock-day,.dash-date .clock-full,.dash-date .clock-digital{color:#fff}.dash-live{font-size:9px;font-weight:800;letter-spacing:.13em;color:#8ea0b6;display:flex;align-items:center;gap:7px}.dash-live i{width:7px;height:7px;border-radius:50%;background:#53d69e;box-shadow:0 0 0 4px rgba(83,214,158,.12)}
+.dash-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}.dash-metrics article{background:#11223b;border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:18px;position:relative;overflow:hidden}.dash-metrics article:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#50ca96}.dash-metrics span{display:block;color:#8ea0b6;font-size:9px;font-weight:800;letter-spacing:.12em}.dash-metrics strong{display:inline-block;color:#fff;font-family:'Fraunces',serif;font-size:30px;margin:9px 8px 0 0}.dash-metrics small{color:#72849b;font-size:11px}
+.dash-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(310px,.85fr);gap:18px}.dash-panel{background:#10213a;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:20px}.dash-panel-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}.dash-panel-head h2{font-family:'Fraunces',serif;color:#fff;font-size:21px;margin:5px 0 0}.dash-panel-head small,.dash-panel-head>b{font-size:10px;color:#8496ad;font-weight:600}
+#page-home .fc-home-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:none;margin:0}#page-home .fc-card{min-width:0}#page-home .fc-card-paper{clip-path:none!important;filter:none!important;background:#152944!important;border:1px solid rgba(255,255,255,.08);border-radius:13px;min-height:134px;padding:17px;color:#eaf0f6!important;transform:none!important}#page-home .fc-card-paper:hover{border-color:rgba(80,202,150,.7);background:#182f4e!important}#page-home .fc-tape,#page-home .fc-card-pin,#page-home .fc-curl{display:none}#page-home .fc-card-icon{width:28px;height:28px;color:#58d39f;margin-bottom:10px}#page-home .fc-card-title{font-family:'IBM Plex Sans',sans-serif;font-size:13px;margin-bottom:6px}#page-home .fc-card-title span{display:inline}#page-home .fc-card-title span+span:before{content:" "}#page-home .fc-card-desc{font-size:10.5px;color:#8fa1b6;margin-bottom:10px}#page-home .fc-card-btn{border:0!important;color:#58d39f!important;padding:0;font-size:9px;background:transparent!important}
+.dash-chart-row{display:flex;align-items:center;gap:20px}.dash-donut{width:150px;height:150px;flex:0 0 auto;border-radius:50%;background:conic-gradient(#50ca96 0 25%,#4a8ddb 25% 50%,#c49a47 50% 75%,#65768d 75%);display:grid;place-items:center;position:relative}.dash-donut:before{content:"";position:absolute;inset:18px;border-radius:50%;background:#10213a}.dash-donut div{z-index:1;text-align:center}.dash-donut strong{display:block;color:#fff;font-family:'Fraunces',serif;font-size:27px}.dash-donut span{font-size:8px;letter-spacing:.12em;color:#8194ab}.dash-chart-row ul{list-style:none;margin:0;padding:0;flex:1}.dash-chart-row li{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:10px;color:#9aaac0}.dash-chart-row li i{width:7px;height:7px;border-radius:2px}.dash-chart-row li i.green{background:#50ca96}.dash-chart-row li i.blue{background:#4a8ddb}.dash-chart-row li i.gold{background:#c49a47}.dash-chart-row li i.slate{background:#65768d}.dash-chart-row li b{color:#fff}
+.dash-bottom{margin-top:18px;background:linear-gradient(90deg,#12364a,#10213a);border:1px solid rgba(80,202,150,.2);border-radius:15px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:20px}.dash-bottom strong{display:block;color:#fff;font-size:13px;margin-top:4px}.dash-bottom p{margin:0;color:#8fa1b6;font-size:10.5px}
+#page-satis{--sales-navy:#0d1b30;--sales-green:#318f69}.sales-shell{background:#fff;border:1px solid var(--rule);border-radius:16px;overflow:hidden}.sales-toolbar{background:linear-gradient(120deg,#0b192d,#152c49);padding:20px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px}.sales-toolbar h2{font-family:'Fraunces',serif;margin:0 0 4px;font-size:20px}.sales-toolbar p{margin:0;color:#98abc2;font-size:11px}.sales-badge{background:rgba(72,203,151,.12);border:1px solid rgba(72,203,151,.4);color:#65d6a6;border-radius:20px;padding:8px 12px;font-size:10px;font-weight:800}.sales-drop{margin:22px;border:1.5px dashed #a9b7c8;border-radius:14px;background:#f5f8fb;padding:38px;text-align:center;color:#263b55}.sales-drop strong{display:block;font-size:15px;margin-bottom:7px}.sales-drop span{display:block;font-size:11px;color:#76879b}.sales-plan{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 22px 22px}.sales-plan article{border:1px solid #dbe3eb;border-radius:12px;padding:14px}.sales-plan b{display:block;color:#16304e;font-size:11px;margin-bottom:5px}.sales-plan small{color:#7b8a9b;font-size:9.5px;line-height:1.4}
+@media(max-width:1050px){.dash-grid{grid-template-columns:1fr}.dash-metrics{grid-template-columns:repeat(2,1fr)}.sales-plan{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){#page-home{padding:24px 18px 60px!important;margin:-24px -18px -60px!important}.dash-hero{flex-direction:column}.dash-date{min-width:0;width:100%}.dash-metrics{grid-template-columns:1fr 1fr}#page-home .fc-home-cards{grid-template-columns:1fr}.dash-chart-row{flex-direction:column}.dash-bottom{align-items:flex-start;flex-direction:column}.sales-plan{grid-template-columns:1fr}.dash-date .analog{width:62px;height:62px}}
+
+/* v76 — Ana Sayfa tam genişlik/tam yükseklik lacivert zemin düzeltmesi.
+   Yalnızca body.fc-home-full sınıfı (showPage() Ana Sayfa'yı gösterirken
+   ekler/kaldırır) aktifken devreye girer; diğer modüllerin arka planı,
+   genişliği veya içeriği bu kuraldan ETKİLENMEZ. html/body/main/aside/
+   #page-home dışında hiçbir seçici değiştirilmedi. */
+body.fc-home-full{height:auto;background:#081426}
+body.fc-home-full main{max-width:none}
+body.fc-home-full aside{height:auto}
+
+/* v76 — Aylık satış faturası özeti (İşlem dağılımı panelinin altında,
+   panel yüksekliğini bozmayacak küçük bir alt bölüm). */
+.dash-sales-note{margin-top:14px;padding-top:12px;border-top:1px dashed rgba(255,255,255,.1);font-size:11px;line-height:1.5;color:#9aaac0}
+.dash-sales-note b{color:#58d39f;font-weight:700}
+
+/* v79 - Satış Faturaları / Pusula PDF -> Logo XML çalışma alanı.
+   Yalnızca #page-satis içinde etkilidir; diğer modüllerin stillerini değiştirmez. */
+#page-satis{--s79-navy:#0d1b30;--s79-navy2:#17324f;--s79-green:#318f69;--s79-gold:#b8862e;--s79-red:#a3481f;--s79-blue:#3976a8}
+#page-satis .sales-shell{overflow:visible;background:#f8fafc}
+.s79-top{background:linear-gradient(120deg,var(--s79-navy),var(--s79-navy2));border-radius:16px 16px 0 0;padding:20px;color:#fff}
+.s79-topline{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}.s79-top h2{font-family:'Fraunces',serif;margin:0 0 5px;font-size:21px}.s79-top p{margin:0;color:#9eb0c5;font-size:11.5px}
+.s79-company{display:flex;gap:9px;margin-top:16px}.s79-company button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#cbd6e3;border-radius:10px;padding:10px 14px;font:700 11px inherit;cursor:pointer}.s79-company button.active{background:#fff;color:#17324f;border-color:#fff}.s79-company button.disabled{opacity:.45;cursor:not-allowed}.s79-company small{display:block;font-size:8.5px;font-weight:600;margin-top:2px;opacity:.75}
+.s79-stats{display:grid;grid-template-columns:repeat(5,minmax(86px,1fr));gap:8px;min-width:min(100%,540px)}.s79-stat{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:9px 11px;text-align:center}.s79-stat b{display:block;font-family:'Fraunces',serif;font-size:20px}.s79-stat span{display:block;color:#9eb0c5;font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+.s79-actions{display:flex;align-items:stretch;gap:12px;padding:18px;background:#fff;border:1px solid #dbe3eb;border-top:0;flex-wrap:wrap}.s79-drop{position:relative;flex:1 1 430px;min-height:94px;border:2px dashed #a7b5c5;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px;color:#263b55;cursor:pointer;background:#f7fafc}.s79-drop.drag{border-color:var(--s79-green);background:#edf8f3}.s79-drop input{display:none}.s79-drop strong{font-size:14px}.s79-drop span{font-size:10.5px;color:#718299;margin-top:4px}.s79-action-buttons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.s79-btn{border:1px solid #cbd6e1;background:#fff;color:#17324f;border-radius:9px;padding:10px 13px;font:700 11px inherit;cursor:pointer}.s79-btn:hover{border-color:#8298ae}.s79-btn:disabled{opacity:.4;cursor:not-allowed}.s79-btn.primary{background:var(--s79-green);border-color:var(--s79-green);color:#fff}.s79-btn.danger{color:var(--s79-red)}
+.s79-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 18px;background:#fff;border:1px solid #dbe3eb;border-top:0;flex-wrap:wrap}.s79-filters{display:flex;gap:7px;flex-wrap:wrap}.s79-filter{border:1px solid transparent;border-radius:18px;padding:7px 12px;font:700 10px inherit;cursor:pointer;transition:filter .15s,box-shadow .15s,transform .15s}.s79-filter[data-filter="all"]{background:var(--s79-blue);color:#fff}.s79-filter[data-filter="ready"]{background:var(--s79-green);color:#fff}.s79-filter[data-filter="review"]{background:#fff0cf;color:#111;border-color:#e6c66f}.s79-filter[data-filter="error"]{background:#b63b32;color:#fff}.s79-filter:hover{filter:brightness(1.04);transform:translateY(-1px)}.s79-filter.active{box-shadow:0 0 0 2px #fff,0 0 0 4px currentColor}.s82-report-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:10px;color:#65768a}.s82-report-controls select{border:1px solid #d5dee7;border-radius:8px;padding:7px 27px 7px 9px;background:#fff;color:#203751;font:700 10px inherit}.s82-report{margin:0 18px 14px;border:1px solid #dbe3eb;border-radius:12px;background:#fff;padding:14px;display:none}.s82-report.show{display:block}.s82-report-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.s82-report-head h3{margin:0;color:#17324f;font-size:13px}.s82-report-head p{margin:4px 0 0;color:#718299;font-size:9.5px}.s82-kpis{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:9px;margin-top:12px}.s82-kpi{border-radius:10px;padding:11px;background:#f3f7fb;border:1px solid #e0e8f0}.s82-kpi b{display:block;color:#17324f;font:700 17px 'Fraunces',serif}.s82-kpi span{display:block;color:#748599;font-size:8px;text-transform:uppercase;margin-top:3px}.s82-kpi.green{background:#edf8f3;border-color:#cce9dc}.s82-kpi.blue{background:#edf5fb;border-color:#cfe1ef}.s82-kpi.gold{background:#fff7df;border-color:#ecdca9}.s82-kpi.red{background:#fff0ed;border-color:#efcbc3}.s82-chart{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:14px;margin-top:14px}.s82-chart-box{border-top:1px solid #e4eaf0;padding-top:10px}.s82-chart-title{font-size:9px;font-weight:800;color:#51677d;margin-bottom:8px}.s82-bar-row{display:grid;grid-template-columns:75px 1fr 105px;gap:8px;align-items:center;margin:7px 0;font-size:9px;color:#586d82}.s82-track{height:11px;background:#edf1f5;border-radius:7px;overflow:hidden}.s82-fill{height:100%;border-radius:7px;min-width:2px}.s82-fill.a{background:linear-gradient(90deg,#3976a8,#62a8d5)}.s82-fill.b{background:linear-gradient(90deg,#b8862e,#e0b85d)}.s82-new-list{margin-top:10px;padding:9px 11px;border-radius:8px;background:#f7fafc;color:#52687d;font-size:9px;line-height:1.55}.s82-new-list:empty{display:none}@media(max-width:850px){.s82-kpis{grid-template-columns:repeat(2,1fr)}.s82-chart{grid-template-columns:1fr}}@media(max-width:540px){.s82-kpis{grid-template-columns:1fr}.s82-bar-row{grid-template-columns:65px 1fr 80px}}
+.s83-report-actions{display:flex;gap:7px;flex-wrap:wrap}.s83-history{display:none;margin-top:12px;border-top:1px solid #e4eaf0;padding-top:10px}.s83-history.open{display:block}.s83-history-row{display:grid;grid-template-columns:130px minmax(180px,1fr) 120px auto;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid #edf1f5;font-size:9px;color:#52687d}.s83-history-row b{color:#203751}.s83-history-empty{padding:12px;text-align:center;color:#8291a2;background:#f7fafc;border-radius:8px}.s83-commit{background:#2f6f9f!important;border-color:#2f6f9f!important;color:#fff!important}@media(max-width:650px){.s83-history-row{grid-template-columns:1fr 90px auto}.s83-history-row span:first-child{grid-column:1/-1}}
+.s84-view-tabs{display:flex;gap:5px;padding:3px;border:1px solid #d7e0e9;border-radius:10px;background:#f4f7fa}.s84-view{border:0;border-radius:7px;background:transparent;color:#65778a;padding:7px 10px;font:800 9px inherit;cursor:pointer}.s84-view.active{background:#17324f;color:#fff;box-shadow:0 2px 6px rgba(23,50,79,.18)}.s84-select-wrap{display:flex;gap:7px;align-items:center}.s84-vcharts,.s84-vcharts.annual{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}.s84-vchart{border:1px solid #e0e7ee;border-radius:11px;background:linear-gradient(180deg,#fbfdff,#f6f9fb);padding:12px;min-width:0;overflow-x:auto}.s84-vchart h4{margin:0 0 12px;color:#405970;font-size:9.5px}.s84-columns{height:205px;display:flex;align-items:flex-end;gap:8px;border-bottom:1px solid #cfd9e3;padding:0 5px}.s84-vcharts.annual .s84-columns{min-width:560px}.s84-column{height:100%;flex:1;min-width:28px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:pointer;position:relative}.s84-value{font-size:7.5px;font-weight:800;color:#51677d;margin-bottom:5px;white-space:nowrap}.s84-vbar{width:min(42px,72%);min-height:2px;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,#65abd5,#3976a8);box-shadow:0 3px 8px rgba(57,118,168,.2);transition:filter .15s,transform .15s}.s84-column:hover .s84-vbar{filter:brightness(1.08);transform:translateY(-2px)}.s84-column.compare .s84-vbar{background:linear-gradient(180deg,#e3bd66,#b8862e);box-shadow:0 3px 8px rgba(184,134,46,.2)}.s84-label{height:28px;padding-top:6px;font-size:8px;font-weight:800;color:#61758a;text-align:center}.s84-legend{display:flex;gap:14px;align-items:center;margin-top:9px;font-size:8px;color:#718299}.s84-dot{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:4px;background:#3976a8}.s84-dot.compare{background:#b8862e}.s85-empty-chart{margin-top:14px;padding:42px 18px;border:1px dashed #cbd7e2;border-radius:11px;background:#f8fafc;text-align:center;color:#718299;font-size:10px}.s85-empty-chart b{display:block;color:#29445e;font-size:13px;margin-bottom:5px}@media(max-width:760px){.s84-vcharts,.s84-vcharts.annual{grid-template-columns:repeat(2,minmax(280px,1fr));overflow-x:auto}.s84-columns{overflow-x:auto}.s84-column{min-width:42px}}@media(max-width:650px){.s84-view-tabs{width:100%}.s84-view{flex:1}.s82-report-controls{align-items:stretch}}
+.s79-notice{margin:14px 18px 0;padding:10px 12px;border-radius:9px;background:#fff7df;border:1px solid #ecd48a;color:#775a13;font-size:10.5px;display:none}.s79-notice.show{display:block}
+.s79-list{padding:16px 18px 20px}.s79-empty{text-align:center;padding:42px 18px;color:#718299;border:1px dashed #c8d3de;border-radius:12px;background:#fff}.s79-card{background:#fff;border:1px solid #dbe3eb;border-radius:12px;margin-bottom:10px;overflow:hidden}.s79-card.status-ready{border-left:4px solid var(--s79-green)}.s79-card.status-review{border-left:4px solid var(--s79-gold)}.s79-card.status-error{border-left:4px solid var(--s79-red)}.s79-summary{display:grid;grid-template-columns:minmax(210px,1.7fr) 120px 120px 115px auto;gap:12px;align-items:center;padding:13px 14px;cursor:pointer}.s79-title strong{display:block;color:#172e49;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.s79-title small{display:block;color:#7a8a9b;font-size:9.5px;margin-top:3px}.s79-cell label{display:block;color:#8795a6;font-size:8px;text-transform:uppercase;letter-spacing:.05em}.s79-cell b{display:block;color:#263b55;font-size:11px;margin-top:2px}.s79-status{font-size:9.5px;font-weight:800;border-radius:13px;padding:5px 9px;white-space:nowrap;text-align:center}.s79-status.ready{background:#dff0e7;color:#286b4d}.s79-status.review{background:#fff0cf;color:#8a5e12}.s79-status.error{background:#f8dfdc;color:#8d3227}.s79-expand{border:0;background:#edf2f6;color:#38516b;width:30px;height:30px;border-radius:7px;cursor:pointer}
+.s79-detail{display:none;border-top:1px solid #e4eaf0;padding:15px;background:#f8fafc}.s79-card.open .s79-detail{display:block}.s79-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px}.s79-field label{display:block;font-size:8.5px;font-weight:800;color:#6f7f91;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.s79-field input,.s79-field select{width:100%;box-sizing:border-box;border:1px solid #cbd6e1;border-radius:7px;background:#fff;padding:8px;font:11px 'IBM Plex Mono',monospace;color:#21384f}.s79-field.wide{grid-column:span 2}.s79-field.bad input,.s79-field.bad select{border-color:var(--s79-red);background:#fff2f0}.s79-warnings{margin:11px 0 0;padding:9px 11px;border-radius:8px;background:#fff4d9;color:#785917;font-size:10px}.s79-warnings:empty{display:none}.s79-row-head{display:flex;align-items:center;justify-content:space-between;margin-top:14px}.s79-row-head b{font-size:11px;color:#263b55}.s79-lines{display:none;margin-top:9px}.s79-lines.open{display:block}.s79-line{display:grid;grid-template-columns:105px minmax(250px,2fr) 82px 82px 135px minmax(210px,1.35fr);gap:8px;padding:9px;border:1px solid #dbe3eb;border-radius:8px;background:#fff;margin-bottom:7px}.s79-line label{display:block;font-size:7.5px;color:#7d8b9a;text-transform:uppercase;margin-bottom:3px}.s79-line input{width:100%;box-sizing:border-box;border:1px solid #cbd6e1;border-radius:6px;padding:7px;font:10px 'IBM Plex Mono',monospace}.s79-line .s80-desc input{font-family:inherit}.s79-card-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.s79-pdf-link{margin-right:auto}
+.s80-pdf-modal{position:fixed;inset:0;z-index:10050;background:rgba(8,18,31,.78);display:none;align-items:center;justify-content:center;padding:28px}.s80-pdf-modal.open{display:flex}.s80-pdf-frame{width:min(1400px,96vw);height:min(900px,92vh);background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.4);position:relative}.s80-pdf-frame iframe{display:block;width:100%;height:100%;border:0}.s80-pdf-close{position:absolute;right:12px;top:12px;z-index:2;border:0;border-radius:8px;background:#172e49;color:#fff;padding:9px 12px;font:700 11px inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+/* v90 - Satış kontrol alanı vurguları ve tarayıcıdan bağımsız PDF önizleme. */
+.s79-field.s90-issue input,.s79-line .s90-issue input{border-color:#d29a22;background:#fff1bf;box-shadow:0 0 0 2px rgba(210,154,34,.18)}.s79-field.s90-issue label,.s79-line .s90-issue label{color:#76520c;font-weight:900}
+.s80-pdf-frame{width:min(1660px,96vw);height:min(960px,92vh)}.s80-pdf-frame iframe{display:none}.s90-pdf-stage{width:100%;height:100%;overflow:auto;display:block;text-align:center;background:#eef2f5;padding:18px;box-sizing:border-box}.s90-pdf-stage canvas{display:block;margin:0 auto;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.18)}.s90-pdf-tools{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:8px;background:rgba(24,31,38,.88);border-radius:10px;padding:7px 9px;color:#fff;box-shadow:0 3px 12px rgba(0,0,0,.3)}.s90-pdf-tools button{width:35px;height:35px;border:1px solid rgba(255,255,255,.35);border-radius:8px;background:transparent;color:#fff;font:800 22px/1 inherit;cursor:pointer}.s90-pdf-tools span{min-width:48px;text-align:center;font:700 10px inherit}.s80-pdf-close{z-index:4}
+@media(max-width:1100px){.s79-summary{grid-template-columns:1fr 100px 110px auto}.s79-summary>.s79-cell:nth-of-type(3){display:none}.s79-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}.s79-line{grid-template-columns:1fr 1fr}.s79-stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.s79-summary{grid-template-columns:1fr auto}.s79-summary>.s79-cell{display:none}.s79-grid{grid-template-columns:1fr}.s79-field.wide{grid-column:span 1}.s79-line{grid-template-columns:1fr}.s79-stats{grid-template-columns:repeat(2,1fr)}}
+
+/* v78 — Ana Sayfa saati: referans JPEG'in kendisi kullanılır (kadran,
+   rakamlar, dakika çizgileri, dış kasa, SEIKO yazısı AYNEN korunur).
+   Görselin üzerindeki SABİT ibreler, yalnızca görsel dosyasının
+   İÇİNDE (piksel düzeyinde) temizlendi; kadranın geri kalanına
+   dokunulmadı. Üstte GERÇEK çalışan ibreler (mevcut tick()/#clock0
+   mantığı, hiç değişmeden) döner. Çerçeve (.dash-date) büyütülmedi/
+   taşınmadı: saat yalnızca mutlak konumla çerçevenin İÇİNE, sağa
+   hizalı ve dikeyde ortalanmış biçimde yerleştirildi; tarih/saat
+   metni sol tarafta, mevcut akışında, dokunulmadan kalıyor. */
+.dash-date{ position:relative; }
+.dash-date .analog{
+  display:block; position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  width:clamp(76px,7vw,86px); aspect-ratio:1/1; height:auto;
+  border-radius:50%; overflow:hidden; flex-shrink:0; z-index:1;
+  background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCADwAPADASIAAhEBAxEB/8QAHgAAAQMFAQEAAAAAAAAAAAAAAAcICQECAwUGBAr/xABTEAABAwMDAgMFBAYFBgsHBQABAgMEBQYRAAcSCCETIjEJFEFRYRUycYEjQlJikaEWJHKCohczQ2OxwSY0NURTc4OSk7LTGCU2haOk8LO0wtHx/8QAGAEBAQEBAQAAAAAAAAAAAAAAAAECAwT/xAAeEQEBAQEBAQEBAQEBAAAAAAAAARECITFBElETYf/aAAwDAQACEQMRAD8AlT0aNGgNGjRoDRo0aA0aNeWo1KNSob0qW+1FispK3X31hDbaQMlSlHsAPmdB6tWqWE+p/H6aaJvR7Rey7I8aFaLAuyckEe/LcLEBB/dXgre/7NPH97TFt3esq/8Addx9qp1x5NNXkCmw8xoYGf8Ao0HK/wDtFL/3aCUe/uq/bLbtx6PPuWPOntA5g0kGY8CPUK4ZSg/21DTcr49p5T4ynGrbtlpJTni/WJfJX/hMBQ/i4NRpz7nkykcHHv0I9G04SgfgkYA/hrUqq6nlFDaVuEfBI0Dzrq9o/uNVFO+51JumNq9E0+CyzgfIKc8VWkrrXWPubVl4fumrqTnuj7VfSO//AFakD+Wm/uOSOPJfFkH0LiwNeRTyDy5T0II/ZSVf/wC6B7tCoF8XTs3R7rRclRkXBXf6xDhocDsdhgzkQguQFSQ/x5qUoutoKGxwCiSrtzm/twV7Z9VJkW/dc6qQJc+r0d41JosuiXTpKWHlIDbuC0vklSc+ZPcEk99IZReo26KPYkez4dahxYTTaobFU+zGhUI8ZclMlcdEo+ZLJeQlwowe49cdtYt5d3qruzUqZJuS4afI92S8WmqJAajsJced8WQ6ptsgeK64Staz3Ufwxqp+u2pnV7uLS+Aj1mW0Ac4j1Kazn8g8R/LSgW77RPcii4DtVqTyM90qkMSx/B5nl/iGNNLS3CKVFFZbSQcYeZUPn8s/LWdmkypP/FJkCcr9lqRxV/BYH+3UVIdZXtTJzBaRXYdOnJBwoyI7tPWP77Zeb+PyGnG2H1+7b3Y0j7QMygE+shaUy4oP/WsFfEfVaU6hemxKjSklcyFIjo/bLZKf+8Mj+evNFqLkV9MmI8qM+O6X47hQsf3k4Og+iu2bvot50xFRoVWg1mAsdpMCQl5H4ZSTg/Q99bfOdfP3ZO/V3WLVUVCnVOSxMB7zITyosoj5FxvAWPo4lQ09/Yj2oMtCo9PveF9vNnCTMjIRGqCBn1U1kNP/ADJQUK/dOgkm0a47bbdu1N26Oqp2rWo1WjIIS6hslL0dR/VdaUAttXb0UBrsdAaNGjQGjRo0Bo0aNAaNGjQGjRo0BqhOBnVFLCR699Mn6vuvaPt6ufZ230hmZcTZUzOrQAcZp6/QttD0dfHxz5EfHkfKAXPqA6qrM6fqepFVk/aVwONlyNQYS0mQ4PgtZPZlvP66/XvxCj20xm+Lv3G6nLapt8XE9Mm2H9qpBtS1I7zwZhMPpRNfdWBwQttBKkl7mtfcobQkZ0zm6bnn3LU5dRqcyRPmSXC9IkynVOOvr+K3Fnuo/U/lgAa6Xavf2btI147VPaqr0CUajRH59RkNxqTPLZaW+I7agh9SmyElKxg8E/DkCHd9TO3lCpFNYvu1pKo9vzaoaKzAepUiAh0Nx0utS4in3FrlMuNkFTxIJWQeIC06bs/NwnLjiWgfTP3j88J9dZ65eMyvUqKmpVuqVV+I17vEE6Qt0xkZ9EcyQ0j48U/4dYbb26r92eKuDEKY47Lkyl+A0VHxEpBWr15ONKaB9PEKEEpKhlaka1+rNhRS0x4qx6F45Tn4eUdv4nVoeqVWK0xw84EclFuMg4SlI5KJ4D4AEnPYAZPbSjXFZtm7XzXqfU1zrpqD0dMiNIYQYsUsPMvKYkICieQUh2FIRnlhTbzSxgg6UChwtx98LZpUfbSyKnDeDkyNORSIKGqYmKtT5jhEl3CRhufOYUnlnwi2DniMY/o+kqb2MvD7Llz58BFJixStLv2nIDLiVpTMyjh3IVzp8lvBx50pSfvg629ubF0m4LjTQ4180+p1JYkBuNSmlPF5bYmnyFRAKSIsdzOMlEoY7oILpLC9njulVaTWol433R6PAr/gLqTCA5V5a1tOl5CgvyoSvmpWVBZzyV886VCz/ZkbfW86zJm3Zd1SmskqS/CfZpwScEZTwQtY9T+t8dLTDG9q9uNtb73Mte3m65XKk3V6vDhNJRFEYuNOTEJWCvieJMdSlA+oWnHfIGlW6venPa7YK+bYprKrip9NqdO97dBke9uZTPabdPmSCAI/jFIx3WEfXTxaR7PLY2kLbcTa9VmLRx4qlV2WruPQjgpGPy1t5PQdsjOBUvb91bmMeKKrUVrAznsS+dTVRgu7X2K3Z9u1566KpTGas8uIl6TBC0eKyim+8lKQkK4NuS5h5Z8yYyQMlWT46Psu1dEaW/b93UmY5FiIlrbkBbLjYV7ujgrBPE+NKZa5Hy8g4c4QcyUVr2c2y8xlDX2PcVLSCotBmuPlKM4KuKXUrAzgZx641wdY9mRQY1Nq0K09xa9Q41TZRHmRqjDYmNPoQ6HUIUpHhq4haEK7epSPX00lwMHdsS/bPa94jMyZEUo8UPU54SG1ICFrCikd+JaR4ncdkLbJxzSDppFxRn57sW4reR762otyHI2YcttaSUqBTjHIEEEKT6g6dtTOhfd3ZC8aZcFHZh7j0anvCQ5SqNUzEdlFBSttLkd8JCkeI0wVJSVFQbA+WG9165bjoFRaoW6NlPSpKChlaKhBVCqCscQS2pQHJfEyCk9x4slThKiE41o5VFpMVtBXbVURUF5/5NnAR5gPyTk8HfyIP00u/RjtJGuG8361X7ej1ximyxTZECepsfYa3GitNWmxXgEvRGgFghSgPECfXKcJ7dezdvSLskW/alww03BDWiLIpsmSSy5K/Qh1DD59UJdedQCSQlqE66tXnSNeSdTboty2aFI3ItKpTbXq8VL9JrTrRSvwV+imZAHooYIQs9wUnjgjSdDYR9+6paG6U247PCLYZZeKIn9H5T3BtCcJJaU8pSlMuEFwMu8kgL4jsBqRnpj9ovQdwBDod+riUSrOlLLNbZyiDIcJwEPAnMZw/Ulsn0UMgaitq1llFJcrdAmivUJH+dcSjjKh/ISGhniP305Sf3dc7T6lIpz3jRnQlwjBBwpK0n1Soeikn5H560PpLQ4lwApUFD6HV2om+jD2gE7bhyHal4uvVG0DhCHnVqdk0kegLfxdjj4t/eQO6cgcdSp0Gv0+5qREqtLmx6jTZjSX40uK4HGnm1DKVJUOxBHx0Gx0aNGgNGjRoDRo0aA1ao4Se+PrqpOBpnnXV1ZHbGjv2Ta84tXLNZHv0xhXnp7KwcJQfg8seh/UT5vUp0HF9cXWt9jpqG39iTuEsco9XrUZeFNH0XHYUP1/ULcH3M8U+bJTGrUaiVq7kBKRgJHokfIay1eqKeWtbhCQB2AOAkfIa0s+WmlpStxKXJq8KbYcGQ0k+jix/sToMU+X7okGQnm4sZbjhWFEftKP6o/mda1mNPuSehqO0uS+20t7g0g8WmW08nF8R9xCEgqUr0CQSo4GttZtk1jcivpg0xl2VIcVlxxKea1K4qWEJGR4jykoc8NkHk4UcUZOBruaLckq06zTrc2zjOVKve/MkVOMx707OlNqHFLCCnJb5JWUnihRZkusupUBy1m0dp07sWNsxvPQU7hpp9QmLfVBlx57Adj0N1Q4pkOEkp8Rl5tSVcgpBafbebJ74VfczYmp9Xe7Uus7YOS4e3csqen1+stri0t6apSfeHYTZ/SSEueCwtWEhJcQVds50p2wnQFRaRVnbv3IpVPeqsh9UqNZsFZdplKJVyDa1Ekv8c4CMltOACXMdtP1p9Y98bQ3U7YFpUgWs43GadbuGQEPLfYUDxMRvBbabBBQScqBQoAI1gK3tX0M7c7efZ8utsP7hVuGwiOzMuP9JHjoRnihmLktoSnkogK54yfTTiUILLDTKAEMtAJbaQAlDYHoEpHZI+gxridlN0IW9G1dtXnBSloVON/WWE/83lIPB9r6BK0nH7qkn467rQA8oONMUqu5V2H2mFMtMXVWxbSqvFQqjCoOiGUe4JWU+CFccFRJIx3On1K+6fw1HXNd8T2s8EfBFcjpx+FOToHG9RHT1uLu9eMCsWjus9Y1NYpjcRyntOTEhx4OOKU7hlQT3C0jv38v4aR+X0Jb1TyA91EyCj5ePVcn/wCqNLL1R9YNE6Z41Jp32Su5LoqbHvDFND3gMssBRT4rzgClAFQUEpSMnio5AHdFW+sLqalp8WP08cmHBzbUKLVSOJ7juXBntjvgaBJ96KVvH0IV61atE3Xk3O1WfeF+C65KXHcUx4ZW0+xIWtK0KDqO4OfXHEgHUl1pXCi6rSoNdQyYyKrTo1QDBVnww8yhzjn445Yz9NRzblWJ1E9cF1WzCufb1vb+iUcPN+/SojsWPHDxR4rqvGWpx5WGkAIQD6fDkSJGbdose2LepNFiLcci0yExBZW7jmpDTSW0lWPiQkE/joNrz5ZBA4n1zrV3Za9DvuirpFy0eBcNLWMGHVIyZDY+oCslJ+qcH669/L4fHWGZU4tJgyp0+QmHBiNLkSJKzhLLSElS1n6BIJ/LQM13b9mXbc+W3WtuX26Y426l1Vs15112mSwk5Uyl8fpWkqA44PMAE90+uk/6yuqKtzabQdv7o21n2eykrkVmlTHQ5ElLQjw4hiuN4EiM0VeME5SFKQ2gkAElJqV1Vbt7k9U02s7a1KXHnXPUURKfQ3v0sJyKjyx232VZTxS0nkpfZSfOoEalGvbbS3t17MRbt80iDcEVSEqcSApCG3+I5uxlZLjJ5ZKSFcsY5E99BD7JsKdbVNiX7t7Pn/ZbviuMxpIJltspd8NfLyhLzaCuM0tRAS4+8ptpLgbUrWqFGpu6LTz9uQmqRdzaS5It5rysz8ffciZ+6sepYP14/Ir11PdLe4nTpUod5WxXqrcNmUxpuJEnhf8AW6Kyjn4bTqR2ShJcc4PoAAUvl5FkHSZVnb+LetJodYo3udG3Anxm6lHt+lPA+IzyUlkoQjJaWQEeG2MqSyw6/JcBcSTqXAibTzjLoUkrZebV690qSQf4ggjTweifrXn7G1tFEra3JlkzHecyGnKlwFE+aXHHxHxcaA8wBUnzZ5IK6lG9cFTzLKGdxYrZddYQkITXWUpyVoA7CSlIyR/pQMjvpOYklbLiHGlqbdQoKBHYgj/ZrUuj6SKRVoldpsWoQJLU2DKaS/HkMLC23W1DKVJUOxBByDr26it9nZ1if0JqMXby6ZiWbYnvcYMp1XkpktauzZJ+6w6onHwQ4fko4lQQsOJyNUXaNGjQGjRrG++3GaW46tLbaElSlrOAkDuST8tAmHUbvfB2H24m114tO1N0GPTYbqsB+QQSM/HgkArWR6JHzI1Crft5TLurk2rVGS5MmS3lvuyHu63HFnKln6k/D4DAHYaeVu5eMLqe3dqDtUROkWzHjvQbWpzU9umJrEltbSlx25byFNoeW2sv8SAVJSyjI7nTWeoXaKNtVcdMCXavDotSp6qp9nXDETFq1PQl5TRYkNpPErUpB4OI8riTyAGO4JRKlohtImPIS44okRWVDIWR6uKH7Ce34nA157TtaobgV73NhxoOKHiyp01zw2WUk8Q486QUtpKlJbC14QlS0BSkp7jwoTOuqtNMMMKdmSVBtmOw2pfBIBISEoSThKeROATgKONKTdNr1S0GqLY9FpcuVU6ylt/3uM14hqanctpTEcSVJcbUFKb8Rlzg82tCXG0uIVrNrL1O2/cVQu2LtRY1HqjdXEn3Z1txC4k6S8lSXFKdyQWG0ltp1SFqWhpxpTrSwhQzJZ0+9NtN2e99uGqyW7l3IrPN2sXGpAAUpw8nG46cDg2T95WApw5KsDCR5ul3pyb2Ltf3isyjWb7qMdtmpVRxwveAygANwmVnv4TYSkEj75SP1UpAXRDeMAemsW60oAdIV1idOKOoXa5bVPYb/plRAuVRXuwU6SMuxCf2XQBjPo4lB9CdL3xHy1XGgje9mRu85bl5V/a6sKdjpq5VPpzL6eJanMpIfaIP3StpOcftMY9TqSBOfjqPnry2Kqe2m4VJ35sRCmJAqLD9UZjoP6CelY8KThPfg8QEL/fP+s0/K0rgN2WtR62qnyqSupQ2ZiqdOZU0/FUtAUppaFAFJSSR3+AB+OoNiV+RWT8NRzvKLvta2/ilNwtIB+R+zk6kbKRj01yyds7PTdxuoWnQ/wClBe95+3PcGzN8Xjx5+Njly4+XOfTQRz+0dqjdJ6qrOnPhao8Kj0qS7wGSUImPLUAPicJ9NOLn+1E2YemvrEa73A44pQH2Q0OxUT8ZH104m5dqbIvSpoqVxWZb9wVFDKY6ZlVpjMl1LaSSlAUtJISCpRA+p15Gtkdt2B+i27tFv4ZTQovb/BqhurvtQ9nUJUU0+7TxBOfs5gfD/r9OsotVZr1Ep1UjpcRHnxWZjSXQAsIdbS4kKAJAOFDOCe/xOtMjamyGBhFk2wkfIUOJ/wCnro2WW47SGmm0NNNpCENtpCUoSBgAAdgAAAAOw1LcF2NNA9pVvaLA2jj2PT5HhVm7ioSeJGWqa0oeKT8vEc4IH0S5p4ATzITyCMkDkRnH1xpiDPTveHUV1oXHde59uSaNZFvutCFAmAKbnx2yREjtrSSlaFYU86UkjupJwVDGZdHVezt6ZDtnaCdxriiFu6rhjYp7DyfPAp68HOD6OP8AZR+Ib4j9dWnlaxcirv6fQdtVCyD89a2D1lKHmltOpS62tJbUhxIUlSSMFJB7EEEgg9jnUbHWd0SnasS9yNs4ikW0yVPVShtI8Q00frONJOecY+ikHPAEg8kHyyRIVn10nm68Oo3BCFPgckhZ/SEHAI+R+YPxHx1NEV18Qafebbdao9cjzNxqXEZqlVmUl0pjurwFrWHlABTrZOXHitDaVqZjR2l4Ctcrd8ZvcSgSb0gRkxa7AUEXNTWkFHcnimehH6qVq8rqceVffsFHS39THS7Vtib3tq/LXlRbft2pzmwqYlS0MUCaST5iErUhkgFTagCpJBSnzJRlO7pn0q3axG3IsdTVVpKJCqdWWCwuPGkhwcS2ppzkW0PJ5AIW69IXxU+5w5Y1uX/Aj1ImOx5SVNtqeBBDjSQSFox5gR+Hf6Y1Mp7PnqeO8u3wtauThJuygMoAfWsFc+Fni2+fmtHZtw/Pio/f0xHYOg29Ye4EWq2dS5tcueUw9WLdqlaqiafb1IpSWv08metBDjqmCXGnGiUoICCeRcxrfVGsVbY/cSzN66HeEe73K3VJQWWaEuisTS0237yiMyrAdiuNq4JeCUjxEAnJ766CYnRrRWNeFM3AtGkXHRZImUqqRm5cV4eqm1jIyPgoehHwII1vdAabP107xt7e7Vro8R8t1KuocaWWz5kRE48Uj5FZKWx/bV8tOXJwNRFdcG7B3B3TqfgveJAjLMWKEq7BlpRSk/31+Kv80/LQaPbnqtRaNGo1ErkVuFFpkpx1dWplNZmSZUJS1OvU5TD/AOiCX3SAp8FKuCUpIVxTptt/XFEq1Yq6ktGOp6UuT7qXVOJYK1FTbXNRyUstlKBn+HbVr0kNvSJq/M3DTzCeOQtwnDaT9CrBP0GtRatuO3TccWE44EtOO8pUlxbaUhJOVHk4ttGVHskLWgKUQkKBI0tTC9Wn0z35aW1A3Jj0RFTlSacqaxCbdCZdLYGViU40sJUctgOoWw4h1opQSFJUoacX7PnYKVAocfc+6VyJUuV4ybbjS3FKEdpwn3ialJOEreUCAodykKXk804SPY28L16hrllbPR6m7/kzlLRIqKnS65IiUphaS4w086ovJaeUENhpxSyjxAkKIScqz1v9Uld2fui2LK2/kKoEymtNVGY+hgFot8CiPDSlQ4uNJR5lgDHdtOcpOOSnustjiO2MfDWcJx+Omu9NPXdae8hhW/c4YtG9XAltDbi+MCoL9MMOKPkWf+icPf8AVUr006RQKVEEEEEggjBB1BTRo0amwH/5/PP+0A/lqgzlRJySckn1Oq6NM30WrJA1zMjci1IlRRAfuKCzMXMFPQ0vxMLklYQGEr4cC5yITxCic9vXI11I7KB+R+Gk1hbd1yDUWXGKpEgtCtfaalwZlRbaLQll8sGApZi81J8q3AAOSlOBPLGrRt4e7dl1FMRUS5YklMt4xoym2ZHF50cgW0KLQCl5QscQc5SRjPbV0DdO1KsuCmFWUSROgv1OOsRZCUORWc+M8FKbACE4wSSO5TjPJOePsfae6bIqaagxWqM/LclPSJBfcqMppSVyn5QQ0y84W2D4jyQXGwlXFJ7ZV28c3YOp3JBtim3JWabUaZR6DLo70eEiZG97cdW2428cPeja2GFBCsjkFK9QnCWfg65G9FnSqdGnsVSTKhvxffw7HpM1zw4pJAkOpDPJpo8VcVrCQoJUU5CSR2EeQ1LjtPsOtvsPIS6060sLQ4hQCkqSodiCCCCPUHXDUS074oq5M7+l9Jk16pNR0VOoPUd3it5hotNymWw+AlwoI5NrKmypII4gqSett2hxrYt+l0aGXDEp0VqIyXlBSyhCQkFRAAycZOABknAA7az18Gw1aRxGB2Gc4GrtWnJOuEor66qO3rqnZIydaapVfw1+GnW5RtXJQT2B1iBSpWSMnWrhPLmOBLYK1n5d9NV6lPaC27tQZtu2F7td12o5NOzzhymwF+mCQf6w4CD5UngP1lK7p1cv4HU3hb9uX3Qpll3H7tKhV6G8hdMW6kPvsJKebjSSeWW1FCgsDyqCdMQ6dOjamUfeLcyy72uSTworLbv2VGbRHRWaS6eQlGUrKmmThKHktFCjkpUsJ7aRLYB/fbeHfqmbkW5HqV23DClpdk1qpOeFBDf3XGHXiA2hpSCpHhozgHyp7DT0vaNbJO7ibPf0zpaXGa5azKlSm2VFRk0xwpL7KiMcw2vi6MjBCXDjvrr8DTjOVtnuXdtp7XXQqazEXJq9l1hpoOtSUKb/AK5Tv0iC3JQttK0ei0KcjJIJJ7INeO6d07o3ILjumvTK/WSlATKlrzwSO6UIQMJbSM/dSAPppR6nRLoTtzbN6vByBdlttM1CG4t0vy5NPSpPgvLQlTrjbSRxwp0x2EoSUtpWpZVrgN3KRDpt6iqUlkMUK4ozdcp7aTkNIeyXGfxbdDreP3RrpP8AESV+y53yTVKRU9uJkjkG0rrFHCiPK2pYEpgf2XFBwD5OK+WpANQE9M+6cvancCj3HEUou0OYicptI/zkZX6OS1/ebUr8yD8NT1UiqRa1S4k+E8mTDlMofYeSchxtaQpKh+IIOtK4nfy9zt9tPcNXacDUwR/dopzg+M6Q2gj8Crl/d1CRfFVFRq0uQlZU2VcWyr14Dyp/kB/HUm3tFr4VSbLo9FZcKVOF2c4B+6A03/idUf7uoqq2DIWiMjsXlBoH5ZONBzdbeKYcSLju7mY5+ZKWx/AKV+euvsSuzdt7Rn16mT3KdXqk4mHEW0sJX7sDycVx8RKi2opIIW08y5jirgtI1xFRdXVKw/7ulTinXgww2kEkhOG0AAdznHoO/fSzSIUG/a9ae1NOpLUicqXEp0WrQ6i4lDLzykCSSyh1yO5lIJLiUMuck/pE8kkHPSHx9B23j1C2xl3xVYcWNX72ke/KTGitx0NwkEpYShtACUBavEeKUgDzJONL/e+3dtbnUNVGuyhQbgpqgcMTmuRbP7Tax5m1fvIIOtnS6bEpEGLT6e2GKdDZRFitAYCGW0hDY/JKRrZIHbHqdYUwrej2YcZ8SajtjXfBJyoUCvr5JP7rcoDt+DqT9V64Wx+o/ffp+lNbc31RJ03ACYK622syWG0fBmQCUyGsHAyVce2FAdtSaoyB8teOq02PWYRhy2kSGOXLw3EhQB+YB9D9RqWxcJfsnu0/uBSgZkRyNJSBySoHSrkZ14KVbUGjp4xWEMj5JSBraFvtrlfUYvQfPRq4pxq0jOrLkBqik576qDnRp/coxfPRjV6k576s1OOs8FCMjGsesucax4z6+upb6KY1RRCfXVyjxGdeJ5wqPrrmKuvcuw1z1bpzvhqeYTzV8U/PW6BJVga9LbPbvoGOdRZ6h95twqztXY1uPW1ZsZDSJdZQ/wCDHqDTqAtK3pigMIIJ/q7eTkEK5nXT7J+zQsGxVsVC+Zar9qzfEiGEKjUtojvjw883gP3ylP7mngkkADJIT6DPYfhq9JBHbXfnqYK06JHpNPjwIUdmHBjp4MRYzSWmWk/JCEgJSPwGvW+wxOjOx5bCZMV9tTT7KxkOtqSUrQfoUkj89YE+mdepvukfDVsEMdQ2/e2S6lLj21nNe/Ux6WuAlCkJUH2FpK4r4Cm3UhYbWgeIWnVI5LKE8sEaG6bYmRNr6lRahGeiViwa8WFNSWXWnfs+d3QSh1KVpAebSoBSUnD4ykEkadn7TKPcG3N5WnflrVafQ3a/THaBUn6ZIXHW8Y6w60ha0EK4lDh9D3DePhpAIlLTXbvDcaGW6duFaEqG0BFDTKpzLfvDXAIjss8g4032bL2CrzuKUTjcoRi0KiKdXITq/wDNKX4bg/dV2/36mt6Ar+VeXTzS6dKd8So22+5RnuSsngg8mD/4K2x/dOoN4rxWylaDglIUPpkZ1J17MO/C3uBcNBcd4sVyjsVRtCvi8yoJXj6lL38E/TXUa72jt0rl7jKp3MFMZqNHAH0Qp1X83UfwGmIzJYZnqkKI4RmnXyPjlKDx/wARTpz/AFt1/wC2N6K+oKzwnSUAn91SWh/+kdNRqxzEqgzgqbaZCv7Toz/JJ0Gba+mRp990VqesIhNOeO+sqaSkBCSrKi642gDIGcrT64CgcHTrejG06NePVXKuen1adXIdJpkiql2bEWw4zKcxGbbJU++XAlLilJX4qsgDucHTcNlafKkV6ryoM1mJUGKe6iIF1NqEtx5zypShSpkVXwOeKnMD7zagdPQ9mnZj1vxNy5U6OlioNTYVJUErQ5x8Ntx1aOaFFBAK2/ukj66x19SHuspyB8PwGvQ2gj8NJFvh1P2N09tQ2bkkSpdXltl6PSKW2lyQprJHiLKlJS2gkEBSj5ik4BwcIc97VPbeOgf8ErkXn0HvkJOf8esKenqhGdNm2h9oNtnu1dEK3vd6ra1TqDqWIRq3hOR5DqjhLfjNKIQpRwEhQAJIGcnTmiMHGpn+taoDqudGqEZHfXO/+MjOdWqSdAONXg5Gua4x8dUI1m451jUMaiLNWOdxq5QzqgToLAMaMauVhPrrAtzQWPq+A151Jz66zKOfXVoSNBay0En07azat1UKwMaQVIzq4DiNYyo4OPXHbTTd29/Opa2Ny7lpFmbLNXJa0KapinVZVImOmUyAkhfNL6Uq7k9wAO3prtzz4Hdp9Br0t+p0wpXUT1lSSfB2Ljxs+hVQ5GR/3pOvbtp17XzbW7NOsLfCxo9qyp7rLCZseO7EejKdVxbccaWtaXGiSAVIII7nzYxq50FT9oja7Ne6ZqhVHIjUxy26rBq6W3SQlbfi+A8hRSQripD4B4kHt6jGmD02/wCJPp23d2xaNSaA5b9zxIyoNJZPBMYqCeJKw49jifR18JJUeLZzyEpHUzQk1vp63Pp0hKk5t2cVBHchTbZdGPwLY1Eko2mz0+3FGpVw1OoVRhUWqONSY7ERuPKITlDAVMLjqU8SC4hjJwMlI9OnPg4O8qB/RK+rmoXHgaXVZcEJ+jby0j+QGnWdAdzGi737XSStQbekyqS5k+ocadSkH+94f56b5vvGMrfC7XIzTr5nzW5aEISVKcU+y052A9SVOfmTrvul2oqpN8WRIWoMrhXXCV5+3H9O12P8Va6hwl3x9sKreV3S77qsJisQKhImQ6XOqD8MVVlLctQjhbaTgrk+7gnsviFBPrpsfULS7apl6So1qxkQYvGAqdAjyXpLMKb4SlyY7TryQ4tDa+IysZB5D4DTkq5vrV9lt1LojNtGVRKjKWZjLQbbltlMh0B2O8pCuDgA+6oKQodlDvyDat/905G7m5Vz3a8uQtufVAIrcwI8RiLh0MtKKOxKUqxnvn4k6qM+zNh3heNkXwxa9vV2u++tMU9YpcZ1xhS8lZbcUl9CAeJyA426DntxOSXy+zot6RbmytwxpcZcKopuqbHkRlp4qaW0zHbKVD5ghQ/LTTemXf6ubJWLeDlKodLq8dibGnufaDUonmpIaSkONLShA7Z8+SfQaeT0FXA7dW0Fw1uQ00zIqF31WY80znghbvgOKSMknAK8DPfGNcr9Dc974sWue0ro1PqzTU2lqrlvxHY8xIUytr3dglCgrsUkqPY9u5+epIk2dBACv6OQwSM/8ktf+npAeovoztfqHqzFfNVk2xdLTKIy58ZhL7UltH3A80Sk8kgkBaVA4wDnAwlCvZwV9Z7711b8EwX/APfK1n8UkPtHKbCpPU7abVNix6dLcpFOck+6NJZV4pmuhKlhIGFcAnBIzjj9NSiTCffJGfXxFZ/idQ49QGwb2w3UBatsybicud2oJp1RVPeYUyv9JLLfFQK15x4Prn4/TUxs9WZ0of65ff8AvHWerkWTWLI1Q/H5at76v9U65Wt5lWJHrq8fd+uqAY1drNTpUaqU5GgaotYSNRhiI76t9NUUvJ1TOdBhdXk6wnWdxHx1iKM6DCo4OhJJPofx1m4Dt8dBGB2GgsA76CMemrtGrLgoBjB+OsrbQcdQhKQCpQT/ABONY841iVUojLhSudDacScFLkxpKkkfMFWQfoddZZQ1B72nWz8N95ldNunxGlqbWBCjY5JJB/0/f003+6ql/wC3/wBWFuy7Jimk0GjRoTUmRWJTLb/gNPLeccQyFlSz5lJCG+R8uVcQe0iDdpWEwTii2cjPc/1Wnd/r6ajW663KNb/Vpb8vb4U+FVmI9OddXbvhpLc/3hQBHheUOlPhZA7ntn11uCUHdENz9v72J+4/R6iVJPcYVGdOP56jcs7o2uCN0qV+7o16wW4Fw2x9vP0oont8UtR3HUtnwpCGnFYyMutrSD6D11I9vRPRSNtNwpashuNRao4eI7gCM72A1DxaO7V9Sthr2hG7bgeolIpzNNZht1GYI0ZpxK0FopaPhBJBxxdGCOwPrrU9C/W/R6mbnor0OwNs6tNrFTpVMo9WvF2WzNcmpo0V9QaUy4MNtFLfnxkLeQBn1HI3ubib3vqFQuWkUCg1ydWaZVHWLYe8aC74wacTIbXyVku9nFHPcqzgZ1xl8b9X/tJuHe9s2pc0ik0x1UaM8yy025wW3BYYLjSlpUplwoTxK2ylWO2ew1ftFUavuJcFs/ak92fMcrVMpTTr5GUsMqjtNIGAOyUAJHx7d8nXVCkdX9PcgbwXG2UgJE+WkAfAe8LUP5LT/HTY6qge7TU5+6th0D8HAD/5hp7ftArb+yt3qq8lPlkPJkJynHZ1lBP+Jtf/AODTK6wwpbklpPZTjDgB+OUjmP5p0V1e0iID1LvJE+jOV5pmAiWqKyVtqLbalFeXkRHlNJ+6SrxGB27qV6B8ns4q7FqO2d7RIUb7PYjXIX2onjKe8Ft6M3xSFq7qx4RHIjJxphmzdOj168vs11LavtCG8xHK4wkEOFGU8EiLJXyxnHhthfyWj72nHdGm6Fv7JVm/qMqtN1OFJjQH25iobkPlIaccbdbS275vKHfUgE8ScDWOkhet5tkOoS8dx67VbO3Zbtq1pDraoNNNYlxzHQGkJUOLbKkpysLV2J9dIZuZtx1Fba0Z6o1PfmVUOI7RqZW6gtxX0yptKR/HT4bN3KpN/QPFgPIe7dwk65zcjbGTfURyMhPFC/iBnWNxUZO3E+pV/eChXJdkyXclThTGZLi6vIXILpaUChK1KPJSQQCBnHbHpnUu9l3eLrpLMxSgp10clY+Z7nTeLM6IabSasKhNcBc5csLOf5DTkrctWHbMJuPGBKUDHy1i3Wp563Q0Zxq3OjU/kvWruWreR0eo1QjuNTyIuK+2sRVk6vPYawk9+3fWPqLidCVA6poz21kVUe2sZOrlZPprGdAapnvqurSDnOrkARqmrj6asJxqAIyCPgdNL3O9m7ZO6249zXlUrvr0GdXag9UHY0OFFLTSnFZKUlQJIHzPc6doT2zq5Hprtz7PAytn2UG3CU//ABrdAJ+USEP/AOOlP2P6A9r9lbpi3Kx9p3NXYSw7CerLjYZiuA9nEMtoSkrHqFKKsHuAD304tP3Rr0NJAHz1uXQkXWBcP9Ful7cyalZQ6ujOQ2lDuechaGB/Jw6jHtys3Bfe09IpVUQiexUa/At6nuuUdlKUshbQKfHFPJUQBjKZaXMZ5IUnuXte04vuPbeyVvW/IZ96br9eZckRkueGpyNFSXXAF4JRlS2hyAOPkdNNt821b1YsqZb9Il02HSok68n4dReakSGUsxFKZDjwjsOqHjLbCeaVoIwULV3GrzMCH7qVpFz7sXtVmhhmdXJzzYByAgvrCQP7oGls6T6OapuNtNBSjl73c7EhSCQMobf5q7/2WidNpjpU02CrJcSMqPzV8T/HT7+gGzF1bqQshot82rdpMipPDGQlXg+Cn8PPI/lrsF79pTZ/I0SuIayh+IplSh6hbKwof4HXPySdRs1n+qSm384DawpX1Hx/lnUz/WjZwurZKfJCAtykPInHt38Lu27+QQ4pX93UOl10xcR+RHfGVNKLawfp2Og5G3pibfuaC682l1iJMCXULQhYW1ywrKVgoOUH0WCn5gjI13tz7WVuiXe3Il0x6NTKnUUs0950paVIW6cpLbSm2HCjzcfESwhv0CcApymk1KkvJUrP6RPBXf8AWT2/mnify129xNP3FbNAueG24ZrbgpcuSzHJX70PM2oqQwlKnFdyAt155XZSghPEax0nxKd0+bQp21taM1JbUmepALqVjulWO4P4aWRvAGNJ3sduY3u5tZbd15xLnRQme2RgtTWz4clBB7ghxKjj5KGu8l1CLS4MmdNlMQYMZJW/LlOpaZZSPitaiEpH4nXG+tS49We+qhJWlZSCQkZUQPTTPd6faS2PZCJEGxYyr6q6cpE0lUemNn5hzHN7HyQEpP7ek02btjqD6trwoV/XRd86zrOpkxqpU5bDQYadW2vkn3OGMBYPcF53knBIyv00nOfVt1IXxPH1ydGMDvq9xQU4pSQEpJJCR6D6atV93Wb3+LmTVoOPT00ZzoHpo1i5fYzquc6t4gfDVdWKVn01MxAeONW6NUV6HUFCrGNWHudGc6NAaNGqE40FCdUCeWg6BjkCRnHfHwP46DAzMjynZTLEhl92Jx95aacStbHJIUnxEg5RkEEcgMg69COyR/HTE+pHo63GoG4VY3f2cuqtSrkmPrmz6YmWUVDkfve7uDAfRjsGF+YAAJ5jsOR2Y9p5XLdfTRt3Lf8AtJLLhZdq9LYEWcyodiHox4oWQfXj4avmDrvOc+CSBI74Ppr0owlJJ9NcLtXvLY+9VLVOsq5YVeShPJ2M0oolRx/rWF4cR+JGPqdbrcC+6btbYdeu6srSim0WG5MdSr/SFI8jQx3ytZQgfVWs5ZRHx13VGn719S7Fif0ljUMWtS0RWPeGZDrcma8Q/IaC2GnC0pKC2OaklILZzjGkPv6oR6Xa95y4TjZjTH4ln0v3d1tbXuzITLmlstOLaI5JioJa4oVzJ4IUSNYINFuej3NWd0L6gLYfnsvVqBLdUhbVQlvqLgLC0uoDiklQBSy8mQ2SkhJ4qTrlt3ZkiFPpFqyH3H5Nvx1CouLcKy5U5CvHmqKj94hakNZPc+Cc67wcpbNMNXrsCGB2ddHLA/VHmV/IHUpfswrQ96qe4d6rbwhTjFFjL/sgvPf+dkflqNjbiKI/2jWHQAzGaLKCe3mV3UfySP56mv6K9t3NsenK0YEprwqnPYNXnA/eD0k+LxV9UoKEf3ddAs1Xpcet0yXT5jYeiSmVsPNqH3kKSUqH8DqFTqE29l2Df1WpEsEuRJC4ilkffKMcF/32y2v8zqbfTE/aNbPLlR4F6U+L4i30iFL4fF5AJjqP9oc2s/2NBF1Voi2y4lI+8eSe36w//sZGuz2OueoU2qz6LTKhIpM6rR1tw50BGJbT4H3GnENqdHIDuhC2UqICnHAlOC6x7Ymy5Vu1C1beo1Cu2r1GivOUSfGqgl3DV53gJcTJZabcSzTobS88kvZWviUkclaZDUKbJsu6VtToMSTLpU8okwJATIjqdac87S+JKXEEpIOCQpJIB0s8TTz/AGeG5FUtWtTrMrrMlmjXLIek0Oc6lRjv1FhIEllp77jhW3xPlJyppP7WuP63rV3WuLf1q0HJ1Yu+kVnE216XGQSwGT2W2GkAI5sqCgtxQzjioqAVrZ9RXVfF3K2zoP8AQu3/ALNj02oxZ7NTedHvVHkM44hhhrs00Fq8EOOlIdzhDZAKg9Hp53rpu/W3FNumMhhirBBiVaI2Byhy/KXUA+obcwlxPzSU57oOOG5cUhfTX7PSi2QYlxbloj3HcSMON0NKg5Toax3BcP8AzhY7HH+bHyX66eYfMR9BgfQfAD6fTWJKvj6gayA5GdY7/BU9jjVD6aNGuV+ro0aDkAnBIHcn5aNKg1YsADV+rXPTQWaor7p1XVFemNQY9GgjGjQGrVDvnV3p6nGhaVJxySpII5AqSRkfPQWaNBONHqM6uCqRkd++kN6j+jmyOpCO7Omt/wBH7xSjizccJoFxzA8qZKMgPI+vZY+CsdtLqhIOszSfMDjtrpOrJoiu2c6F9zLZ6mqDRK4zNotHgFVTfueiyFoYdiNKGRHkJwpLjiihsIOFJ5ElOBnThevCfe28pmbU7Z0mRXVUBhq4LpYgrHMcjiHETk+deOTxbGVHynBKTpxHUVvtSunja6o3RODcqcSY9LpqyR77LKCUpx+wkedZ+CUkeqhqPXpo6rL22th3dc9Wbi3PR61WW5k6FIZKZtSnvevgyG+SmXCnu2h5BacCXEoUlSDnrPRw1BUxYdNRToivfafbTSa3WWYyV8J1T5H3SK4jDalBDyVOKbkM+IyGV4cUg6Ql+S9NkPSpTqn5MhxTrry+6nFqUVKUfqVEn89SJ7YVS9376d3BkUOhXdclbluShAVV2UTpSEvoYqfuMNwD3lDMRBgtHmCCl9XFXiabluVtnttZs+lMWtcLFyVCDOqEmpyYReEdEZTw+z47jbqElqQ2kOBxsZ48AD3OuuTNRvul/Z1W5W6VlWIprnEL/wBpVopTkCO3hx0KPyPkaH9samvaQEIAACe3oPQaZ37ODZJVp7eStxauziuXaEri804UzTkkloD5eIrLh+Y8P5aePqqNc7f9k0/cW0KrbtURyhVBhTK1D7zZ9UrT8lJUAofVI10WjQRJVbcO9OlKtVq1Y1EoHNuppkTX3obrb0h5BStoqfYdaWtpQ4uIQolI5EYOMaadfMxdw3FVaq5GiQDUpbstyPBa8KOytayshtGTxSCTgZOBqW/ro6fE7hWkq7KXHU7VqUwUzWmU5XIhglXIAdytokqGPVJWPlqKS4aK5AfdjupBUk9lfqrSfRQ+YPw0Gp2+uaLb9UdgV1hUu3p2RLil3w0hfEpS6FlKw0cEpU8ltbqW1OeFhZB0su2+/FY6cN9ZdTNNjJtWohmLUKRSIgisuxEoT4S0NFayiQ2hSXOLii75yHSC4cIDLiFR4H/OJ7NjOM/un/drvdrL0pqnYNFuKGzUVwlg0T3+MZMeO7lRS0pkHK0eIsqSwjgl55xJfc8NsDWOkTG21clNu636dW6NNaqVHqLCZMSYx9x9tXoofLvkEHuCCD3BGtsF4HpqK7pp6o69003a9bl2B2o2XPkrdkMRFJdEVxSylUyGpPkcbKkqCkt+RziSg8kjMoFBrVPuSjQatSZzFTpU5pL8SbFXzafbPopJ+I9e3qDkEAgjXLqaraA5GqgFSglIKlKOAkepPwA1h017ry6mTspt6LaoEvwb2uNhTbTjavPAhnKXJH7q1d0N/Xmr9UZ5Tm6Ex3p6grx3r6rLT2r2kuKTRIVHqRTMrNPcAS++gH3p1XwWww2HUhKspWrkSDlOn6qxzVxzxz5c+uPr9dMX9mJsoaBaVZ3LqUYJk1nlS6PyT3TDbV+ndH9t1IQD8mVfPT5VnsNXsHPv6ap3cISlJUonslIyT+A1cpOfpps3tCdzK5th08Kdt6Y7TZ9bqzFIXOjOFt5hlTTzrnhqHdJUGggkEHCjj11iTbgX2o3nblHmriVC5aFT5aPvx5dXjMup/FC3AofmNeVe41njGbxtof8Az2H/AOrphXTh7OKy96tk7Zvqu1m5E1KutOyVNU5iOGWkpecbCcraWpSsN5Ksj73p27qSfZKbZpSVKrV4AAZJLcTA/wDttd/+cDvqdWKfW2DIplRhVSOFFBfgSm5LYUACUlTalDOCDjOcEfPXr0mvT9sFb/ThY0q17bm1CfAk1BdSW7UvC8QOKabbIHhoSnjhpJ9M5J76UrXHqSAwk/fKwj0UWzhQHxIyD3HqPrqPPYzfG5+nPqtvDbDdK4pdapdbqYSiu1R5SiiSsD3WXyV91t5stoWBhKTxOAEHUhmmJ+1F2SVXbWo251OjlyTSeNIq4QnJVFWomO6r6IcKmz9HUfLWuL+B9akYWtKgQUqIIPwI9dVCc4AGmqez+6mTvRYCrTuGZ416W0whJddUCufBGEtv5+K2/K2v4n9Go/eVp2CUjOPTWepZQIR8B668N2XZRrAtepXFcNQapVFprJflTHvRCfQAD1UpRwlKR3USANWXfeFD27tqfcVy1SPRaJBb8SRMlKwlPySB6qUfRKE5Uo9gNRW9SfUDeHVluMm3afFmW9Z9LUuTFpkhpYW02lPJc+YhAK1KS0rxOKAottg8ArzKO+ed9Hg3E36u7qW37jXZBlP2xSLd/SU1PjpSmkxefHm65wWhC3lkIW6tJaSpxIWQ2M65rcDcFhbkO4ITKIqW23mLaitseAhkLWfHqIY5LEbkSUoYbUWUuh1xtKU9j79wb/j12G47NCX4bD3/AL0qMYsoeuCoJbDSm0raBTnjzQ9KZUG5DJaUtAdxlGKzWZVxVN+pT1pU87jytp4NtISMJbQn0ShKQEpT8ANenmbQpe1W/wBW7JoEa0plvUW+babmCZT6PXmXCqDLKgfGiyGlpdYWSBnirB7kj1Olt2P2trHVf1Arj1YJeiSpq69dc+K34TfFa8qaRj7viKw2kZyE8j3KTpv1gWpLD0VTMR2XW6ktuNToTSOTqlLISMD9pZVgfIH6nU0nSZ08RunjbFimPKbk3LUVibWprfcOSCMBtJ/6NseVPz8yvVR1oLPAhM06GzFjtNsMMoS2200kJQhIGAlIHoAAAB9NejRo0Bo0aNBa4gLSRqNjri6Tk2fMduu3IwRb8xwlbbacIp76j3QQPRlw/dPohXl9CnUlOvDWqLCuCly6dUYrc2DKaUy/GeTyQ6hQwUqHxBGg+fCs0otOOtPNlC0kpWhXYg/I65+XCE4KbUhLshQI/Sejgx8f3gP46e/1g9Is3aqqKqlNDkq2pK+MOe6MqZUfSNIV8FfBDh7KHY+Yd2dVWnLYecZcQpt1tXFSVdik6DsNv91SmE9TavMMKtqjuw6fcbgR4kVDjXglCnFj9GSgNNeOokMR23UtN+I5z13PTrvNuP013fIokSmyLmth5C50uiK5NN+ChkPrlMqX/wAWcDCkOKSvB4rbDqAVJ0gDzDclXGQpLLoGA+R5VfRfb/F/H566q19x5ls0yTbdaZM6hzG/AcSrKltNKWXDxwR4jXiqD6msp8VxhgLXwRx1zsEvm0m9Vob32ymuWnU01FpAHvUJ39FKhrI+4+33Uj6KGUn1STqNnejpx3ov3qTjQ7yppXVLtqaWY9bg8n6YlkD/AEbg+4hllJPhrCVAI7gk5PedI3TM7fVXrV62pfFctSnw0oh0irU1KVPpnLIdUw6VBKX22Wi0l3shK3HFBI4t5Ko7be0WotMrtQtncdxh0Q5TkRF420w4afOS2spDq4x/SICsZy3yHf7oGsfPA8C2rXpllW1SrfojHutHpUVqFDZxgpabSEpz+8ccj8yonW2HoNaW0b0oW4FCbrVsVmBcNIWARNpshL7YyPRRT90/RQB+mtzkHB9fljXnv0V0z/2o6Srp6t8D1N0Mf/tJOngpwE5AxpufXvtPcO7mwvutsRHKnVaPVGqt9nMJ5PSWktutrDY/WWkOBXEdyAQMnA1rn6Gu7A9Btxbm7O2zdf8AlVmW7HrEdUqPTIrDzqWWvEUkZIeQASUkkAYGfUnOvRvT0XXlsPtrV9wKVvHVJsihBqQWUJkxXClTqGyUOB9WFAuA4IwRnXs2M6/W9m9qLesWubbVaZMt5lUESI0wR+aA4tY5tONEpWOZBGcds9s4159++vL/AC5bXVewLf20rEadXy1GLzsr3lSUpdQ5htptrK1EoA+gJPftrv7oc50Oby13fHYWPWLmdMuuUyov0iROKQlUwNoacQ6sDtzKXQlRGMlOfUnS+lPc6QToX2drmyvT/EpNyxlU+t1OoyKu/Adx4kQOIbbQ0vHovi0FKHw5AHuCA4Hw/rrPV8GNCcgDWqvCzaXftpVq2q034tJrERyDKTjuG1jBUP3knCx9UjW5wEnOdctuVuvZ2z1J+0r1uSBbcYpKm0THf072Pg0yMuOf3UkfUa5zfwRrdOPSHvZae/qp9EYbtxFpVVyK/cdVSpMKShJKXEtIGFSEutHulHbC+6knuH/b+dStj9OdHVKuWaZFVdbLkK3YBC50ofAhP+jR6fpF4Hy5HtptF1+0L/ynX3RbIsOUbApFVmogP3xW4wkSIqFK4hbUblwaBJSOTilFPLJCcaTrrC6Xbc2Vuqh3VWa5cVwUesNqZmKqEsOVGoVJpaS4guhOUeKypZQoJUlt1oJVhKwddfv0cDv1eW6fUdfzKLuR9jW5DZZqEOnwFh6BFjPx1PtrZUVBMl9xhDykkrBcLLjaSkp4a5q7dxWZ9swqeme+9QYTTNPNbQ6VTK0YxIaZjLUkHwmzyLclSUOssyFR1FYAB0F4X3IfpkOk1VhlqDCa8GNa8M+GniVIWr3spUS22p5v3gRQSEOOulPhhZBTypVOVWZfvU13xXOIbSAkIQ2geiEJHZKR8Ejt+ffW+Zoy1eqyKzJbW621Hjst+BFhxxxZjNA5DaB8viSe6jkkknW6te32+IqlR4iE15mmlHBeUPmP2R/P8AdY6Db7a0CdUR4cQd0tH/Sj17/JPxz/ALtSP9DnRdIqMumbmbh09UeOypMig0B9rjkjuiU8gjsBgFtsgH0WofdA6DsegzpDk2p7vuhfURTVyyUFVIpT6cGnMqTjxlj4PLSSAn9RBOcKUQl8IGBqiEBAIGrtAaNGjQGjRo0Bo0aNBr67QoFyUmXTKpEZn0+W2WX4shAW24g9ilQPqNRp9XnQ/KsMS7kthl+o2skeItQSXZFKA+DgHd1gft/eQPvZHmMnmrVtpcSQoZB0HzwVqiyYDwaeZWpakhTYZ8wdz6BJHrn5evfS9VjpagptC3YNtya1WLpqkWHOjLmttIodXDrRdmIhyMDwDDTguqeWM4XlII097qI6BYFzzHLn20datyvtPCZ9lFRaiOPpVzS6wtPeK6FAEFPkyB2T97TWV7nXZZu5dWj7wRqmisNUZ2mQXVUWI9IpxdcCpUhMRZRHlqktlbTj+SSCk+buNEpvEli/9iK7XbepNZn27OnQTHn0+LMQRLiPN5S42pBLbzakKJS62eQB8pHfV1ubj27LuOnz7ztlh2oU5xEptcVvwm5CmUqLMd5sDytEtw2QMcW2W3jhS3M642uvzKzJZE+VKm+5x24Ub3xZUpqM0ClpofspSnsEjsPh21j+05YSG5iGqpGAwG5eStI/dcT5h/Ej6azZpHcw6Pc9s1ypXlt3e5mvIdeluT6O+YEpaQZTq1rZBAA8KK4+pCuyEOspI5LCdL7I68N1djbsk23dzdI3DZhFtt+XJhKp73i8E+M2h9ryueG7za5FByptXp6BojMWkKfQ/FnS6FLTggyAXGwQc4DrY5AZwfMnHz12zN13/KizECfEu+PKS4l3LrctzK0SklXqFhQM6W4CUnDjpXgqAxixT8LV9pLt/UKXEmXHbFz2tHlrdbYlhhudGdU3x8RKFoKFEp5oz5OxUPnpRKP1x7E1YJI3FgU5ZOOFVjSYivn+s1j+eoz7u3DptYpsSDXdvV0sQEzBGahuuxmY633Jr6ghBA4p8aRDBBJw3DwMlw6vpNx7XRKPdtOYkVqnMVgMtNmRHQ+8w03KdeSEHJ4qUluKlRJ7l1wDsnJz/E0SpR+qjZ+oHmjdW03c9uS6ugE/97GrZXVds7TBzc3XtRjH6yKolRx/cBJ/DTAej+t7NWPuZOmXJccCXT5FGkMf8J6cFNIfC4RbLYU2oFSsy/hkJbHfzd+O39l7S3LvleFXptxe6W+7Nb9zbt6ElMdbKW4IKmxwABPKd2wPMyj9rvc/A/6u9eGxVCSAL5RVFj9SkU6TJz3+fhpT/PSZ3r7S+2aTRftK27Cr9dguSFwmalUnm4ERchKErLfl8VZIStCiPKcKGmR3Rc+31yqpq2YFaq1SjUSLTv6qgNIDrEYtNrKR3XlaGipXxStX6ye+6k3CYNrVCkUfb9qiUSTKdktv3NNDYQpTc9hLuHMEuhiXGHIejkNChnkRp/OBVXutHebe5m4m6PV4lgw4VIlVGKigU5Slylstl5Ucy3CpaVqYbkLSU4z4JAHqUovFodSsG+I92XrdsaNclPlmQhmc8ak+9JZW+A2+cklBeZYSsDllmWhxGQCNeat7oVWVJkPzr3cDjylumHaMXwkpK3X3SkPK4pSkLlSsAcsB5aR5VY1xKbkRT1D7DpjFLWAAJb597mEDsP0qxhB/sJH461gUCu16lUtNQbtKitWnb1Q8dtubXGvEmyozvvCPBbj5KlZYkJZUPuKVGZdSULzpdNvtsxV987apO8NUqlfr1QLcJhlivR5dRZQylSpLU5xC1KpyGmUcvBaHiOEkeICFHTM3VvSZS5Ul91+UohSpDrilOEj0PInORp083q5mVva57xWvd9zJdXi1Q12l0yPTkxpMUlLc1bieTkyQ60otqCg22EqV5SSSrcgbfd1tSqXVGJSaNKpFMriHKrRWXxkvQHHnAytJySpOElOT3PEk69Vt2m7MnQ46YrlSqcl5DcWnxkFxTi1Hyp4pBKlH4JAOl4212T3c6xLwVV20PVBsBMWRc1VSGIcZtHYNNBCQkBOThphPbJzxznUmfTX0b2V05xEzIbaq5djjfCRX5rYDoBGFJYR3DKD8QCVK/WUdUIf0hez/AEWy7DvXdGOibXwUPwLfcCXGYKhgpW/jKVug9wkZQg/tK7pfalIQO2qgAemq6A0aNGgNGjRoDRo0aA0aNGgNGjRoDXIbkbT2pu1RDSbrocWswwSpsPpIcZV+004CFNq+qSDrr9Ggji3s9mdVoPjT9v6im4YgyU0msOJZlo/dbfACHPwXxP1OmS31tZXbEqy6dXaXNoM9KsCLVGFMqP8AZV91Q+qSR9dT7EBQwdae57Ood6UxdOr1Ig1mCr1jT46XkfwUDg/UaD58JdJdYGXGVD649Pz1rnqegKCwByT6KHqPz9dTE7g+zd2suxbj9DTUrNlr74pkjxY+fq07yAH0SRpu98eyuvOF4rlt3RQ6+2nuluosuQnlfmnmnP8ADQMLj3FXqU2G4taqMdsejYkrKMf2VEj+WvQzdVx1WUxFXKiTVvOIaQJ1PjOJ5KUEpyS36ZIzpebp6EN57eUou7fTZyMdnKRKZlBX4BKyr+Wk6qnTtuTQiXZVh3XBDah+kVSX/KoHIIUEYyCAc/TQOEldL9IZu5mFTK5InxafJrNJqENm2aempVGo05lp1TFNRngoPJdWUhzCgGV5zkaa5fNzNUu76kxadVj1GhocHulQft+LDkrSQCpLiOBwtKipBIOFFPIdjpZqtvPu/Uq9EqEu022y2ieiZCFrvNRqouc2huY7KQCCtx1DaAVIUjGPKBk5Te4LCvfcW6p1XXZdTE2e6FGJSKC5GjNYSEJQ22hGEpCUpAHc9skkknQcC7eFzSUlC6/UUtkYKGXyynHyw3xGtK5DC3i66S64e5cdPNR/M99LxQuj/d2vKSIm2dxkH9aXFMZOfllwp0pdt+zZ3orLjQk0Gl0NCj3VUKk0SgfMhsrP5Y0DQ24K3M+GhS/rjOvS1SyRlaggDuQnzED/AHfnqSawvZPqKmXb2vgqQMcodBj/AE7/AKV3t6/6vTottei7aDa7wHqZZ0OdUGh2n1gma9n9oeJlKT/ZSNBErs/0r7ibySWlWpasqRCUfNVZo8CIkfPxl4Sr8Ecz9NP92L9mJaVnOsVTcOb/AEyqiMKFOaSpunIPyUCeb34K4pPxQdPZajtsoSlCQlKRxSkdgkfID4DWXQeOl0mHRYMeFAiswocdAbZjx20tttpHolKUgBI+gGvZo0aA0aNGgNGjRoDRo0aD/9k=');
+  background-size:contain; background-repeat:no-repeat; background-position:center;
+  box-shadow:0 0 0 1px rgba(255,255,255,.14);
+}
+.dash-date .clock-widget{ padding-right:96px; box-sizing:border-box; }
+.dash-date .analog .face{ fill:none; stroke:none; }
+.dash-date .analog .roman{ display:none; }
+.dash-date .analog line:not([class]){ display:none; }
+.dash-date .analog .hh{ stroke:#161616; stroke-width:2.6; }
+.dash-date .analog .mh{ stroke:#161616; stroke-width:2; }
+.dash-date .analog .sh{ stroke:#7a7a7a; stroke-width:0.9; }
+.dash-date .analog .pin{ fill:#161616; }
+
+/* 140: Excel benzeri Hücreleri Biçimlendir > Kenarlık penceresi */
+.nt138-border-dialog{width:500px;max-width:92vw;border:1px solid #868686;border-radius:2px;background:#f5f5f5;color:#111;box-shadow:0 14px 42px #0008}
+.nt138-border-dialog header{padding:10px 13px;background:#fff;color:#111;border-bottom:1px solid #d0d0d0;font:600 15px Arial,sans-serif}.nt138-border-dialog header button{color:#111;background:transparent;border:0;font-size:20px}.nt138-border-dialog form{margin:0}.nt138-border-dialog footer{padding:10px 14px;background:#f5f5f5;border-top:1px solid #dedede}.nt138-border-dialog footer button{border:1px solid #adadad;border-radius:2px;background:#fff;color:#111;padding:5px 22px}.nt138-border-dialog footer button[value=default]{border-color:#3d78be;box-shadow:0 0 0 1px #b9d5f3}
+.nt140-tabs{display:flex;gap:0;padding:8px 12px 0;border-bottom:1px solid #d3d3d3;background:#fff}.nt140-tabs span{padding:5px 12px;border:1px solid transparent;border-bottom:0;font:12px Arial,sans-serif;color:#444}.nt140-tabs .active{position:relative;top:1px;border-color:#b9b9b9;background:#f5f5f5;color:#111}
+.nt140-border-body{display:grid;grid-template-columns:138px 1fr;gap:12px;padding:13px 14px 16px;background:#f5f5f5;font:12px Arial,sans-serif}.nt140-border-body h4{margin:0 0 6px;font:600 12px Arial,sans-serif}.nt140-line-box{height:170px;overflow:auto;border:1px solid #c8c8c8;background:#fff;padding:5px}.nt140-line-style{display:grid;place-items:center;width:100%;height:20px;padding:0;border:0;background:#fff}.nt140-line-style:hover,.nt140-line-style.active{background:#d9eafb}.nt140-line-style i{display:block;width:100px;height:0;border-top:var(--sample);pointer-events:none}.nt140-color-row{display:flex;align-items:center;gap:5px;margin-top:9px}.nt140-color-trigger{width:26px;height:22px;padding:2px;border:1px solid #999;background:#fff}.nt140-color-trigger i{display:block;width:100%;height:100%;background:var(--chosen,#152334)}.nt140-color-palette{display:grid;grid-template-columns:repeat(10,16px);gap:2px;max-height:0;overflow:hidden;opacity:0;transition:max-height .15s,opacity .15s}.nt140-color-palette.open{max-height:118px;opacity:1;margin-top:6px}.nt140-color-swatch{width:16px;height:16px;border:1px solid #9e9e9e;background:var(--c);padding:0}.nt140-color-swatch.active{outline:2px solid #2475bd;outline-offset:1px}.nt140-custom-color{width:100%;height:21px;margin-top:5px;padding:0;border:1px solid #aaa;background:#fff}
+.nt140-border-right{display:grid;grid-template-rows:auto 1fr;gap:8px}.nt140-presets{display:flex;gap:12px;align-items:flex-start}.nt140-preset{display:grid;justify-items:center;gap:4px;border:0;background:transparent;color:#222;padding:0;font:11px Arial,sans-serif}.nt140-preset:hover .nt140-preset-icon,.nt140-preset.active .nt140-preset-icon{outline:2px solid #76a9dd;outline-offset:2px}.nt140-preset-icon{position:relative;display:block;width:30px;height:30px;background:#fff;border:1px solid #aaa}.nt140-preset-icon.none:before{content:'';position:absolute;inset:3px;background:linear-gradient(135deg,transparent 47%,#d32929 48%,#d32929 53%,transparent 54%)}.nt140-preset-icon.outer{border:2px solid #111}.nt140-preset-icon.inside:before,.nt140-preset-icon.inside:after,.nt140-preset-icon.all:before,.nt140-preset-icon.all:after{content:'';position:absolute;background:#111}.nt140-preset-icon.inside:before,.nt140-preset-icon.all:before{left:9px;top:0;width:1px;height:100%}.nt140-preset-icon.inside:after,.nt140-preset-icon.all:after{left:0;top:9px;width:100%;height:1px}.nt140-preset-icon.all{border:1px solid #111}.nt140-preview-area{display:grid;grid-template-columns:28px 150px 28px;grid-template-rows:28px 96px 28px;place-items:center;align-items:center;justify-content:center}.nt140-edge{width:23px;height:23px;padding:0;border:1px solid #b5b5b5;border-radius:2px;background:#fff;font-size:0}.nt140-edge:hover,.nt140-edge.active{background:#dcecf9;border-color:#6b9fcc}.nt140-edge.top{grid-column:2;grid-row:1}.nt140-edge.left{grid-column:1;grid-row:2}.nt140-edge.right{grid-column:3;grid-row:2}.nt140-edge.bottom{grid-column:2;grid-row:3}.nt140-preview-canvas{position:relative;grid-column:2;grid-row:2;width:146px;height:92px;display:grid;place-items:center;background:#fff;color:#111;border:1px solid #9c9c9c}.nt140-preview-canvas:before,.nt140-preview-canvas:after{content:'';position:absolute;display:none;background:#152334}.nt140-preview-canvas.inner-h:before{display:block;left:0;right:0;top:46px;height:var(--preview-width,1px)}.nt140-preview-canvas.inner-v:after{display:block;top:0;bottom:0;left:73px;width:var(--preview-width,1px)}.nt140-inner-controls{display:flex;justify-content:center;gap:6px}.nt140-inner-controls button{border:1px solid #b5b5b5;background:#fff;padding:4px 7px;font:11px Arial,sans-serif}.nt140-inner-controls button.active{background:#dcecf9;border-color:#6b9fcc}
+\n/* Excel penceresinde koyu sayfa düğme kuralları kullanılmaz. */\n.nt138-border-dialog .nt140-border-body,.nt138-border-dialog .nt140-border-body h4,.nt138-border-dialog .nt140-border-body label{color:#111!important}.nt138-border-dialog .nt140-line-box{background:#fff!important;border-color:#c8c8c8!important}.nt138-border-dialog .nt140-line-style{background:#fff!important;color:#111!important}.nt138-border-dialog .nt140-line-style:hover,.nt138-border-dialog .nt140-line-style.active{background:#d9eafb!important}.nt138-border-dialog .nt140-line-style i{border-top:var(--sample)!important}.nt138-border-dialog .nt140-color-trigger,.nt138-border-dialog .nt140-color-swatch,.nt138-border-dialog .nt140-edge,.nt138-border-dialog .nt140-inner-controls button{background:#fff!important;color:#111!important}.nt138-border-dialog .nt140-color-swatch{background:var(--c)!important}.nt138-border-dialog .nt140-color-swatch.active{outline:2px solid #2475bd!important}.nt138-border-dialog .nt140-preset{background:transparent!important;color:#111!important}.nt138-border-dialog .nt140-preview-canvas{background:#fff!important;color:#111!important}.nt138-border-dialog .nt140-preview-canvas:before{background:transparent!important;height:0!important;border-top:var(--preview-style)!important}.nt138-border-dialog .nt140-preview-canvas:after{background:transparent!important;width:0!important;border-left:var(--preview-style)!important}.nt138-border-dialog .nt140-tabs span{background:transparent!important;color:#444!important}.nt138-border-dialog .nt140-tabs .active{background:#f5f5f5!important;color:#111!important}\n

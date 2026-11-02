@@ -22,6 +22,38 @@
       "sha256": "2bbd70e4e33d639bcbdbfcce893878a4801c1bb1b4bf9f0cd0c893a3529cabe6"
     },
     {
+      "file": "app/inline-script-2da854a6ddba829c.js",
+      "sha256": "2da854a6ddba829ce31aafb22a395be87b5caaf870df15179c505f8d16f1e595"
+    },
+    {
+      "file": "app/inline-script-54e63816b09f9121.js",
+      "sha256": "54e63816b09f912124b455f3855bbd36d75246ce31e00847b5834033ec9b0809"
+    },
+    {
+      "file": "app/inline-script-b27fe8453274c010.js",
+      "sha256": "b27fe8453274c0101374179909ef2c310dfb638dbd01e23c2ea3c1e059c51d2a"
+    },
+    {
+      "file": "app/inline-script-c400975437a21304.js",
+      "sha256": "c400975437a213047f9dc67c1b919ef491615f85f11fbd8afc1db3388df5b0d2"
+    },
+    {
+      "file": "app/inline-script-de4a7661b2d15539.js",
+      "sha256": "de4a7661b2d1553918b5fe70b2c39aad939857b61a201a9b176fa48cea03c018"
+    },
+    {
+      "file": "app/inline-script-fdc56bff1a1adfa0.js",
+      "sha256": "fdc56bff1a1adfa09729fabfda62ecf5e03daa39a9deb5575cf8aae0872bfba3"
+    },
+    {
+      "file": "app/inline-style-5b1ac1266f60f414.css",
+      "sha256": "5b1ac1266f60f41420069919059d84a8346b7e79389b0f5b0225ac77e55399ab"
+    },
+    {
+      "file": "app/inline-style-a66b32c361e7fe07.css",
+      "sha256": "a66b32c361e7fe0787f701dec53f4bbeaa47198af971be81097af809ccf332c4"
+    },
+    {
       "file": "app/izibiz.css",
       "sha256": "ac4ad94d19c8df83e1f8b6b2a0348216221a686cbaa9ae3e330a8dfd2c58123e"
     },
@@ -40,6 +72,10 @@
     {
       "file": "app/pdf-loader.mjs",
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
+    },
+    {
+      "file": "app/portable-template-aa76281fc992903e.json",
+      "sha256": "aa76281fc992903e9fb5cd886e716f2fd5813bb7b7fcbc43d73fe2c3358f8fe4"
     },
     {
       "file": "app/runtime.js",
@@ -211,7 +247,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "702a6e26054a8ac1c8dc7a209e59d0b872e1da8411341830282389e9e8061e60"
+      "sha256": "845243e4b98b03d674c2ca657f3e709a8c02cf565b82c25a971c9bb2e92ff3d8"
     },
     {
       "file": "manifest.webmanifest",
@@ -219,7 +255,7 @@
     },
     {
       "file": "portal/index.html",
-      "sha256": "15553d5391c538abf808264bbbfaee8522c3b6be1b80e0dfb60bcb3f8f781dbc"
+      "sha256": "c3fcdbe03c7138284045c9d5ba5a35d8a99365aad1d0c68de97e70257f323ac9"
     },
     {
       "file": "portal/passkeys.js",
@@ -227,11 +263,11 @@
     },
     {
       "file": "portal/portal.css",
-      "sha256": "a3b6a8e817bd37df4744b12d797d5c2e63686a5651fd920e9b0f9d12f0bd1d46"
+      "sha256": "1292608c1dc379d662256cfc276498af55b00c060102e527983f83272c5b381e"
     },
     {
       "file": "portal/portal.js",
-      "sha256": "6d8972bef0835d8eb1f6a8bc26d548b6d8d8ca47a41529d8f3f5464d8e769309"
+      "sha256": "3639bc1cc7eba0d0155c1945e9a8156f16e3c9ce07d937220c7ee69dfa04da46"
     },
     {
       "file": "push-sw.js",
