@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import {createHash} from 'node:crypto';
+import {formatNotificationMonths,formatCompanyNotificationLine,normalizeNotificationMonths} from './notification-format.mjs';
 
 const COMPANY_IDS=['PUSULA','COMED','KIB','DIJITAL_GARAJ','KIB_DIJITAL'];
 const touchDevice=(storage,id,revision)=>storage.transaction(async tx=>{const device=await tx.get('push:device:'+id);if(device&&device.revision===revision)await tx.put('push:device:'+id,{...device,lastSent:Date.now()});});
@@ -38,7 +39,7 @@ export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   }
   if(action==='test'&&method==='POST'){
     const device=await storage.get('push:device:'+body.id);if(!device||device.revision!==body.revision)fail('Önce bu cihazda bildirimleri açın.');
-    const result=await deliver(device.subscription,{id:'test-'+Date.now(),title:'Tüm Firmalar · Bildirim Testi',body:'Telefon bağlantısı çalışıyor. Planlı özetlerde firma adları, gelen ve bekleyen fatura sayıları burada görünecek.',url:'/takip?company='+body.company+'&view=notifications',kind:'test'},keys,origin,fetcher);
+    const result=await deliver(device.subscription,{id:'test-'+Date.now(),title:'Bildirim Testi',body:'Telefon Bağlantısı Hazır\nTüm Firmalar Tek Seferde Bağlandı',url:'/takip?company='+body.company+'&view=notifications',kind:'test'},keys,origin,fetcher);
     if(result==='expired'){await storage.delete('push:device:'+device.id);fail('Bildirim iznini bu cihazda yeniden açın.',409);}
     await touchDevice(storage,device.id,body.revision);return json({ok:true});
   }
@@ -67,15 +68,24 @@ export function digestNotification(cycle){
   const fresh=companies.reduce((sum,company)=>sum+(Number(company.result?.fresh)||0),0);
   const pending=companies.reduce((sum,company)=>sum+(Number(company.result?.pending??company.pending)||0),0);
   const newCompanies=companies.filter(company=>company.result?.fresh>0);
-  const names=newCompanies.map(company=>company.name).join(', ');
   const incomplete=companies.some(company=>company.connected&&company.enabled&&!company.result),limited=companies.some(company=>!company.connected||!company.enabled||company.result?.error);
-  const title=fresh?(newCompanies.length===1?newCompanies[0].name+' · '+fresh+' Yeni Fatura':fresh+' Yeni Fatura · '+names):incomplete?'Tüm Firmalar · Kontrol Sürüyor':limited?'Tüm Firmalar · Kontrol Özeti':'Tüm Firmalar · Yeni Fatura Yok';
-  const body=companies.map(company=>{
-    if(!company.connected)return company.name+': İzibiz bağlantısı yok';
-    if(!company.enabled)return company.name+': otomatik takip kapalı';
-    if(!company.result)return company.name+': kontrol sürüyor';
-    if(company.result.error)return company.name+': kontrol tamamlanamadı';
-    return company.name+': '+(Number(company.result.fresh)||0)+' gelen · '+(Number(company.result.pending)||0)+' bekleyen'+(company.result.errors?' · '+company.result.errors+' PDF hatası':'');
-  }).join(' • ');
+  let title,body;
+  if(newCompanies.length===1){
+    title=newCompanies[0].name;
+    body=formatNotificationMonths(newCompanies[0].result?.monthly)||newCompanies[0].name+' · '+fresh+' Yeni Gelen';
+  }else if(newCompanies.length>1){
+    title=newCompanies.length+' Firmada Yeni Fatura';
+    body=newCompanies.map(company=>formatCompanyNotificationLine(company.name,company.result?.monthly)).join('\n');
+  }else{
+    title=incomplete?'Tüm Firmalar · Kontrol Sürüyor':limited?'Tüm Firmalar · Kontrol Özeti':'Tüm Firmalar · Yeni Fatura Yok';
+    body=companies.map(company=>{
+      if(!company.connected)return company.name+' · İzibiz Bağlantısı Yok';
+      if(!company.enabled)return company.name+' · Otomatik Takip Kapalı';
+      if(!company.result)return company.name+' · Kontrol Sürüyor';
+      if(company.result.error)return company.name+' · Kontrol Tamamlanamadı';
+      const monthly=normalizeNotificationMonths(company.result.monthly);
+      return monthly.length?formatCompanyNotificationLine(company.name,monthly):company.name+' · Yeni Fatura Yok';
+    }).join('\n');
+  }
   return {id:createHash('sha256').update('digest:'+cycle.id).digest('hex'),company:'ALL',title,body,url:'/companies',kind:'digest',tag:'invoice-digest',count:fresh,pending,created:cycle.created||Date.now()};
 }

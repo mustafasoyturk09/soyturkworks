@@ -7,6 +7,7 @@ import {InvoiceArchive,nextCheck,workHours,previousMonth,trackingPeriod} from '.
 import {folderName,makeExcel,supplierFromXML,unwrapDocument} from '../server/invoice-files.mjs';
 import {IzibizConnector} from '../server/izibiz.mjs';
 import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications,digestNotification} from '../server/push.mjs';
+import {notificationMonthCounts,formatNotificationMonths} from '../server/notification-format.mjs';
 
 function storage(){
  const data=new Map();
@@ -44,6 +45,15 @@ test('Istanbul weekday schedule includes month/year changes and never runs on we
  assert.equal(new Date(nextCheck(Date.parse('2026-12-31T14:00:00Z'))).toISOString(),'2027-01-01T06:00:00.000Z');
  assert.equal(previousMonth('2027-01-02'),'2026-12-01');
  assert(workHours(Date.parse('2026-11-17T06:00:00Z')));assert(!workHours(Date.parse('2026-11-17T15:00:00Z')));assert(!workHours(Date.parse('2026-10-31T06:00:00Z')));
+});
+test('Professional notification month template keeps the previous month only through the fifteenth',()=>{
+ const rows=[{tarih:'2026-10-02'},{tarih:'2026-10-31'},{tarih:'2026-11-01'},{tarih:'2026-11-02',isRet:true},{tarih:'2026-09-30'},{tarih:'2026-10-05',deletedAt:1}];
+ const firstHalf=notificationMonthCounts(rows,'2026-11-15');
+ assert.deepEqual(firstHalf,[{month:'2026-10',count:2},{month:'2026-11',count:1}]);
+ assert.equal(formatNotificationMonths(firstHalf),'Ekim · 2 Yeni Gelen\nKasım · 1 Yeni Gelen');
+ assert.deepEqual(notificationMonthCounts(rows,'2026-11-16'),[{month:'2026-11',count:1}]);
+ assert.deepEqual(notificationMonthCounts([{tarih:'2026-12-31'},{tarih:'2027-01-01'}],'2027-01-15'),[{month:'2026-12',count:1},{month:'2027-01',count:1}]);
+ assert.deepEqual(notificationMonthCounts([{tarih:'2027-01-01'}],'2027-01-15'),[{month:'2027-01',count:1}]);
 });
 test('Tracking checks at most ten days across month/year boundaries and preserves historical archives',async()=>{
  assert.deepEqual(trackingPeriod('2026-10-31','2026-10'),{startMonth:'2026-10',from:'2026-10-21',to:'2026-10-31'});
@@ -164,7 +174,7 @@ test('Automatic archive catches recent previous-month invoices, prepares Excel a
   const groups=(await(await f.engine.handle('folders','GET')).json()).folders;assert.equal(groups.length,2);assert(groups.every(g=>g.excel?.current));
   assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar (01.11.2026)'));
   assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar (01.11.2026)'));
-  assert.equal(f.events.length,1);assert.equal(f.events[0].title,'Pusula · Yeni Gelen 2 Fatura');assert(!f.events[0].title.includes('Soyturk'));assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
+  assert.equal(f.events.length,1);assert.equal(f.events[0].title,'Pusula');assert.equal(f.events[0].body,'Ekim · 1 Yeni Gelen\nKasım · 1 Yeni Gelen');assert(!f.events[0].title.includes('Soyturk'));assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
   assert(f.calls.some(c=>c.url.includes('dateType=DELIVERY')));assert(f.calls.some(c=>c.url.includes('dateType=DOCUMENT')&&c.url.includes('startDate=2026-10-22')));
   const row=(await f.engine.all())[0];
   await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:true});
@@ -369,7 +379,7 @@ test('One global test notification verifies the phone without per-company setup 
  const response=await pushAPI(db,'https://soyturkworks.com','test','POST',{id:'test-device',company:'PUSULA',companyName:'Pusula',revision:'current'},async(url,options)=>{
   payload=JSON.parse(ece.decrypt(options.body,{version:'aes128gcm',privateKey:sub.client,authSecret:sub.auth}).toString());return new Response('',{status:201});
  });
- assert.equal(response.status,200);assert.equal(payload.title,'Tüm Firmalar · Bildirim Testi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));assert.match(payload.body,/firma adları, gelen ve bekleyen/);
+ assert.equal(response.status,200);assert.equal(payload.title,'Bildirim Testi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));assert.equal(payload.body,'Telefon Bağlantısı Hazır\nTüm Firmalar Tek Seferde Bağlandı');
 });
 
 test('One phone subscription automatically covers every company and one removal disables the device',async()=>{
@@ -400,7 +410,9 @@ test('Completing an in-flight push never recreates a device removed during deliv
 });
 
 test('Two-hour digest leads with company names and includes every company count',()=>{
- const event=digestNotification({id:'cycle-one',created:1,results:{PUSULA:{fresh:2,pending:4},COMED:{fresh:1,pending:1}},companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true},{id:'COMED',name:'Comed',connected:true,enabled:true},{id:'KIB',name:'Kendine İyi Bak',connected:false,enabled:true}]});
- assert.equal(event.title,'3 Yeni Fatura · Pusula, Comed');assert.equal(event.company,'ALL');assert.equal(event.tag,'invoice-digest');assert.equal(event.count,3);assert.match(event.body,/Pusula: 2 gelen · 4 bekleyen/);assert.match(event.body,/Comed: 1 gelen · 1 bekleyen/);assert.match(event.body,/Kendine İyi Bak: İzibiz bağlantısı yok/);assert(!event.title.includes('Soyturk Works'));
- const waiting=digestNotification({id:'cycle-two',companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true}],results:{}});assert.equal(waiting.title,'Tüm Firmalar · Kontrol Sürüyor');assert.match(waiting.body,/Pusula: kontrol sürüyor/);
+ const event=digestNotification({id:'cycle-one',created:1,results:{PUSULA:{fresh:2,pending:4,monthly:[{month:'2026-10',count:4},{month:'2026-11',count:2}]},COMED:{fresh:1,pending:1,monthly:[{month:'2026-11',count:1}]}},companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true},{id:'COMED',name:'Comed',connected:true,enabled:true},{id:'KIB',name:'Kendine İyi Bak',connected:false,enabled:true}]});
+ assert.equal(event.title,'2 Firmada Yeni Fatura');assert.equal(event.company,'ALL');assert.equal(event.tag,'invoice-digest');assert.equal(event.count,3);assert.match(event.body,/Pusula — Ekim 4 · Kasım 2 Yeni Gelen/);assert.match(event.body,/Comed — Kasım 1 Yeni Gelen/);assert(!event.title.includes('Soyturk Works'));
+ const single=digestNotification({id:'cycle-single',results:{KIB:{fresh:2,pending:10,monthly:[{month:'2026-10',count:23},{month:'2026-11',count:2}]}},companies:[{id:'KIB',name:'Kendine İyi Bak',connected:true,enabled:true}]});
+ assert.equal(single.title,'Kendine İyi Bak');assert.equal(single.body,'Ekim · 23 Yeni Gelen\nKasım · 2 Yeni Gelen');
+ const waiting=digestNotification({id:'cycle-two',companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true}],results:{}});assert.equal(waiting.title,'Tüm Firmalar · Kontrol Sürüyor');assert.match(waiting.body,/Pusula · Kontrol Sürüyor/);
 });

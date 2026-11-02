@@ -2,6 +2,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {IzibizConnector,invoiceTypeLabel} from './izibiz.mjs';
 import {invoiceState,recentInvoiceDate} from './invoice-state.mjs';
 import {folderName,excelName,safeName,makeExcel,unwrapDocument,supplierFromXML,streamZip} from './invoice-files.mjs';
+import {notificationMonthCounts,formatNotificationMonths} from './notification-format.mjs';
 
 const CHUNK=512*1024,MAX_BYTES=512*1024*1024;
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -264,19 +265,19 @@ export class InvoiceArchive{
       }
       await this.requireJob(job);if(todos.length){await this.storage.setAlarm(this.now()+2000);return;}
       await this.publishArrivals(job);await this.refreshMonthlyExcels(job);
-      const rows=await this.all(),inPeriod=r=>r.tarih>=period.from&&r.tarih<=job.end,unnotified=rows.filter(r=>inPeriod(r)&&r.file&&!r.deletedAt&&!r.notified&&!r.isRet),fresh=unnotified.filter(r=>invoiceState(r,localDate(this.now()))==='new'&&r.arrivalBatch===job.id),errors=rows.filter(r=>inPeriod(r)&&!r.deletedAt&&!r.file&&!r.isRet&&r.pdfError);
+      const rows=await this.all(),today=localDate(this.now()),monthly=notificationMonthCounts(rows,today),inPeriod=r=>r.tarih>=period.from&&r.tarih<=job.end,unnotified=rows.filter(r=>inPeriod(r)&&r.file&&!r.deletedAt&&!r.notified&&!r.isRet),fresh=unnotified.filter(r=>invoiceState(r,today)==='new'&&r.arrivalBatch===job.id),errors=rows.filter(r=>inPeriod(r)&&!r.deletedAt&&!r.file&&!r.isRet&&r.pdfError);
       if(job.cycleId){
         const id=sha(this.company.id+':cycle:'+job.cycleId);
         const pending=rows.filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length;
-        await this.notify({id,company:this.company.id,cycleId:job.cycleId,kind:'cycle-result',fresh:fresh.length,pending,errors:errors.length,created:this.now()});
+        await this.notify({id,company:this.company.id,cycleId:job.cycleId,kind:'cycle-result',fresh:fresh.length,pending,errors:errors.length,monthly,created:this.now()});
       }else if(fresh.length){
         const id=sha(this.company.id+':'+fresh.map(r=>r.uuid).sort().join(','));
         const pending=rows.filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length;
         const months=[...new Set(fresh.map(r=>r.tarih.slice(0,7)))],currentMonth=localDate(this.now()).slice(0,7),notificationMonth=months.includes(currentMonth)?currentMonth:months.sort().at(-1);
-        await this.notify({id,company:this.company.id,title:this.company.name+' · Yeni Gelen '+fresh.length+' Fatura',body:'PDF’ler eklendi, aylık Excel güncellendi. İşlem bekleyen toplam: '+pending+'.'+(months.length>1?' '+months.length+' farklı aya ait fatura var.':'')+' Kontrol etmek için dokun.',url:'/workspace/'+this.company.id+'/takip/?view=invoices&month='+notificationMonth,kind:'invoices',count:fresh.length,pending,created:this.now()});
+        await this.notify({id,company:this.company.id,title:this.company.name,body:formatNotificationMonths(monthly),url:'/workspace/'+this.company.id+'/takip/?view=invoices&month='+notificationMonth,kind:'invoices',count:fresh.length,pending,monthly,created:this.now()});
         }
       for(const row of unnotified)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
-      if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});
+      if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF Hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});
       await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const state=await tx.get('status')||{};await tx.put('status',{...state,lastSuccess:errors.length?state.lastSuccess||null:this.now(),lastFinished:this.now(),lastResult:{fresh:fresh.length,pdfs:unnotified.length,errors:errors.length},error:errors.length?errors.length+' faturanın PDF’i hazırlanamadı. İzibiz Sistemini Başlat ile yeniden deneyebilirsiniz.':null,progress:null});await tx.delete('job');});
     }catch(e){
       if(e.cancelled)return;
@@ -291,8 +292,8 @@ export class InvoiceArchive{
       if(outcome.retry)await this.storage.setAlarm(this.now()+30000);
       else if(!outcome.metadata&&(await this.storage.get('archive-generation')||0)===outcome.generation){
         const errorText=e.status?e.message:'İzibiz bağlantısı veya belge doğrulaması tamamlanamadı.';
-        if(outcome.cycleId){const pending=(await this.all()).filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length;await this.notify({id:sha(this.company.id+':cycle:'+outcome.cycleId),company:this.company.id,cycleId:outcome.cycleId,kind:'cycle-result',fresh:0,pending,error:errorText,created:this.now()});}
-        else await this.notify({id:sha(this.company.id+':error:'+localDate(this.now())+':'+errorText),company:this.company.id,title:this.company.name+' · Kontrol tamamlanamadı',body:errorText+' Sonuç “yeni fatura yok” olarak kaydedilmedi. Detayları görmek için dokun.',url:'/takip?company='+this.company.id,kind:'error',created:this.now()});
+        if(outcome.cycleId){const rows=await this.all(),pending=rows.filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length,monthly=notificationMonthCounts(rows,localDate(this.now()));await this.notify({id:sha(this.company.id+':cycle:'+outcome.cycleId),company:this.company.id,cycleId:outcome.cycleId,kind:'cycle-result',fresh:0,pending,monthly,error:errorText,created:this.now()});}
+        else await this.notify({id:sha(this.company.id+':error:'+localDate(this.now())+':'+errorText),company:this.company.id,title:this.company.name+' · Kontrol Tamamlanamadı',body:errorText+' Sonuç “yeni fatura yok” olarak kaydedilmedi. Detayları görmek için dokun.',url:'/takip?company='+this.company.id,kind:'error',created:this.now()});
       }
     }finally{try{const job=await this.storage.get('job');if((cleanupPending&&!job)||(job&&runId&&job.id!==runId))await this.storage.setAlarm(this.now()+1000);}finally{this.busy=false;}}
   }
@@ -311,7 +312,7 @@ export class InvoiceArchive{
   }
   async notificationSummary(){
     const [storedRows,settings,status]=await Promise.all([this.all(),this.settings(),this.status()]),rows=storedRows.filter(r=>!r.deletedAt);
-    return {company:this.company,enabled:!!settings.enabled,pending:rows.filter(r=>!r.done&&!r.isRet).length,lastFinished:status.lastFinished||null,lastResult:status.lastResult||null,error:status.error||null};
+    return {company:this.company,enabled:!!settings.enabled,pending:rows.filter(r=>!r.done&&!r.isRet).length,monthly:notificationMonthCounts(rows,localDate(this.now())),lastFinished:status.lastFinished||null,lastResult:status.lastResult||null,error:status.error||null};
   }
   async handle(action,method,body={},params=new URLSearchParams()){
     if(action==='notification-summary'&&method==='GET')return json(await this.notificationSummary());

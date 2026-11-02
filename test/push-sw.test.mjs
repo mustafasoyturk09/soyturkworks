@@ -28,6 +28,6 @@ test('A late invoice notification preserves its invoice month when opening the c
  const f=fixture();await f.click('/takip?company=PUSULA&view=invoices&month=2026-10');assert.deepEqual(f.opened,['https://soyturkworks.com/workspace/PUSULA/takip/?view=invoices&month=2026-10']);
 });
 test('Two-hour summary shows company counts and re-alerts without an app-name title',async()=>{
- const f=fixture();await f.push({id:'digest-1',tag:'invoice-digest',kind:'digest',title:'3 Yeni Fatura · Pusula, Comed',body:'Pusula: 2 gelen · 4 bekleyen • Comed: 1 gelen · 1 bekleyen',url:'/companies',count:3});
- assert.equal(f.shown[0].title,'3 Yeni Fatura · Pusula, Comed');assert.equal(f.shown[0].tag,'invoice-digest');assert.equal(f.shown[0].renotify,true);assert.match(f.shown[0].body,/Pusula: 2 gelen/);assert(!f.shown[0].title.includes('Soyturk Works'));
+ const f=fixture();await f.push({id:'digest-1',tag:'invoice-digest',kind:'digest',title:'Kendine İyi Bak',body:'Ekim · 23 Yeni Gelen\nKasım · 2 Yeni Gelen',url:'/companies',count:2});
+ assert.equal(f.shown[0].title,'Kendine İyi Bak');assert.equal(f.shown[0].tag,'invoice-digest');assert.equal(f.shown[0].renotify,true);assert.equal(f.shown[0].body,'Ekim · 23 Yeni Gelen\nKasım · 2 Yeni Gelen');assert(!f.shown[0].title.includes('Soyturk Works'));
 });

@@ -187,7 +187,7 @@ export class AuthStore extends DurableObject {
           let summary={enabled:true,pending:0,lastResult:null,error:null};
           try{const response=await this.companyArchive(company.id,'notification-summary','GET');if(response.ok)summary=await response.json();else summary.error='Firma özeti alınamadı.';}catch{summary.error='Firma özeti alınamadı.';}
           const connected=!!await this.storage.get('izibiz:config:'+company.id);
-          return {id:company.id,name:company.name,connected,enabled:!!summary.enabled,pending:Number(summary.pending)||0,lastResult:summary.lastResult||null,error:summary.error||null};
+          return {id:company.id,name:company.name,connected,enabled:!!summary.enabled,pending:Number(summary.pending)||0,monthly:Array.isArray(summary.monthly)?summary.monthly:[],lastResult:summary.lastResult||null,error:summary.error||null};
         }));
         await this.storage.put('push:cycle:'+cycleId,{id:cycleId,created,deadline:created+8*60000,companies,results:{}});
         const starts=await Promise.all(companies.map(async company=>{
@@ -197,7 +197,7 @@ export class AuthStore extends DurableObject {
         }));
         for(const start of starts){
           if(!start.company.connected||!start.company.enabled)continue;
-          if(!start.ok||start.data.skipped)await this.recordDigestResult({cycleId,company:start.company.id,fresh:Number(start.company.lastResult?.fresh)||0,pending:start.company.pending,error:!start.ok?(start.data.error||'Kontrol başlatılamadı.'):start.company.error||null});
+          if(!start.ok||start.data.skipped)await this.recordDigestResult({cycleId,company:start.company.id,fresh:Number(start.company.lastResult?.fresh)||0,pending:start.company.pending,monthly:start.company.monthly,error:!start.ok?(start.data.error||'Kontrol başlatılamadı.'):start.company.error||null});
         }
         await this.finalizeDigest(cycleId,false);
         await this.scheduleMaintenance(created+8*60000);
@@ -359,7 +359,8 @@ export class AuthStore extends DurableObject {
     let ready=false;
     await this.storage.transaction(async tx=>{
       const cycle=await tx.get(key);if(!cycle||!cycle.companies.some(company=>company.id===event.company&&company.connected&&company.enabled))return;
-      const results={...(cycle.results||{}),[event.company]:{fresh:Math.max(0,Number(event.fresh)||0),pending:Math.max(0,Number(event.pending)||0),errors:Math.max(0,Number(event.errors)||0),error:event.error?String(event.error).slice(0,240):null}};
+      const monthly=Array.isArray(event.monthly)?event.monthly.slice(0,2).map(item=>({month:String(item?.month||''),count:Math.max(0,Math.floor(Number(item?.count)||0))})).filter(item=>/^\d{4}-(0[1-9]|1[0-2])$/.test(item.month)):[];
+      const results={...(cycle.results||{}),[event.company]:{fresh:Math.max(0,Number(event.fresh)||0),pending:Math.max(0,Number(event.pending)||0),errors:Math.max(0,Number(event.errors)||0),monthly,error:event.error?String(event.error).slice(0,240):null}};
       await tx.put(key,{...cycle,results});ready=cycle.companies.filter(company=>company.connected&&company.enabled).every(company=>results[company.id]);
     });
     if(ready)return this.finalizeDigest(event.cycleId,false);
