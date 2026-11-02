@@ -231,15 +231,15 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "294427556ab9213e5bb3d2ac18127ee87da381548943dcfe0ff8f1ce42346e93"
+      "sha256": "d29f4a20867bbbd379d91ac0ac5afe4a0503c185378d36e557266462ff4b9b0a"
     },
     {
       "file": "automation/index.html",
-      "sha256": "03b9790ac9661fb6b79a773fed34f84a91e33e7297d24322d02f5599fd1f5139"
+      "sha256": "d3e8e7c4a492c5ddb5cb473339562927c3cae28cd50db72202a390bcb579600a"
     },
     {
       "file": "automation/style.css",
-      "sha256": "8ed1d4c8f2a4fea043cbaa20f8b534f8ec522e0cc75e3860e00f49d374164753"
+      "sha256": "e2ca973f2900bc833f91e9d404f95dce4048fb7d65e6874f8130359001a5a179"
     },
     {
       "file": "favicon.ico",

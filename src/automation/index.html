@@ -7,8 +7,8 @@
 <title>Fatura Takibi · Soyturk Works</title>
 <link rel="icon" href="/favicon.ico?v=3"><link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=brand-small-2">
-<script defer src="/automation/app.js?v=push-speed-2"></script>
+<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=push-ios-1">
+<script defer src="/automation/app.js?v=push-ios-1"></script>
 </head>
 <body>
 <aside class="rail">
@@ -38,7 +38,7 @@
 <section id="foldersView" class="view" hidden><div class="section-head"><h2 id="folderHeading">Arşiv</h2><span class="subtle">PDF ve Excel dosyaları</span></div><div id="folderList" class="folder-grid"></div></section>
 <section id="notificationsView" class="view" hidden>
 <div class="section-head"><h2>Telefon Bildirimleri</h2></div>
-<div class="notification-settings settings-panel"><p>Tek kez açman yeterli. Tüm firmaların özeti hafta içi 09 · 11 · 13 · 15 · 17’de bu telefona gelir.</p><div id="pushStatus" class="connection-state">Cihaz kontrol ediliyor…</div><button id="enablePush" class="primary-button">Tüm firmaların bildirimlerini aç</button><button id="testPush" class="secondary-button" hidden>Bu telefona test özeti gönder</button><p id="pushHelp" class="fineprint"></p><h3 class="connected-devices-heading">Tüm firmalara bağlı cihazlar</h3><div id="deviceList"></div></div>
+<div class="notification-settings settings-panel"><p>Bildirim istediğin telefonda yalnızca bir kez aç. Tek telefon tüm firmaları kapsar; firma firma ayar yapmazsın.</p><div id="pushStatus" class="connection-state">Cihaz kontrol ediliyor…</div><div id="pushSetupSteps" class="push-setup" hidden></div><button id="enablePush" class="primary-button">Bu telefonda tüm firmaları aç</button><button id="testPush" class="secondary-button" hidden>Bu telefona test özeti gönder</button><p id="pushHelp" class="fineprint"></p><h3 class="connected-devices-heading">Tüm firmalara bağlı cihazlar</h3><div id="deviceList"></div></div>
 <details class="notification-history"><summary>Bildirim geçmişi</summary><div id="eventList"></div></details>
 </section>
 <section id="dashboardView" class="view" hidden><div class="section-head"><h2>Takip Durumu</h2></div><div id="dashboardContent"></div>

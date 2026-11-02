@@ -158,21 +158,27 @@ async function openFolder(id,folder){
   $('folderContent').innerHTML='<h2>'+escape(group.name)+'</h2><p class="subtle">'+group.pdfs+' PDF · '+group.fresh+' yeni · '+group.waiting+' bekleyen. </p><div class="dialog-actions">'+(group.excel?.current?'<a class="primary-button" href="'+apiURL(id,'month-excel')+'?month='+group.month+'" download>Excel’i indir</a>':'<span>Excel güncelleniyor…</span>')+'<a class="secondary-button" href="'+apiURL(id,'export')+'?folder='+folder+'" download>ZIP indir</a></div><div class="excel-note">'+(group.excel?'<strong>'+escape(group.excel.name)+'</strong><br>'+datetime(group.excel.at)+' tarihinde oluşturuldu. '+(group.excel.current?'Ayın tüm faturaları ve durumlarıyla otomatik güncel.':'Ayın faturaları değişti; Excel otomatik güncelleniyor.')+'<br><a class="text-button" href="'+apiURL(id,'export')+'?folder='+folder+'&excel=1" download>Excel’i indir ↗</a>':'Ayın bütün faturaları, Yeni gelen / Bekleniyor / İşlendi durumlarıyla otomatik Excel’e eklenir.')+'</div>'+data.rows.map(r=>'<div class="folder-file">'+icon('file')+'<a href="'+apiURL(id,'pdf')+'?id='+r.uuid+'" target="_blank" rel="noopener">'+escape(r.unvan+' - '+r.fatno)+'.pdf<small>'+escape(r.tarih.split('-').reverse().join('.'))+'</small></a><span class="status-chip '+(r.done?'done':'')+'">'+stateLabel(r)+'</span></div>').join('')+(data.total>data.rows.length?'<p class="fineprint">İlk '+data.rows.length+' dosya gösteriliyor. Dışa aktarma klasörün tamamını içerir.</p>':'')+'<button class="danger-button folder-delete" data-folder-action="delete">Klasörü sil</button><p class="fineprint subtle">Dosyaları siler. Faturaların işlem durumu korunur; aynı PDF’ler tekrar alınmaz.</p>';
   if(!$('folderDialog').open)$('folderDialog').showModal();
 }
+function pushEnvironment(){
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  return {ios,standalone,supported:'Notification' in window&&'PushManager' in window&&'serviceWorker' in navigator};
+}
 async function renderNotifications(){
   if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});
-  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-  const supported='Notification' in window&&'PushManager' in window&&'serviceWorker' in navigator;
-  const registration=await registrationPromise,subscription=registration?await registration.pushManager.getSubscription():null;
+  const {ios,standalone,supported}=pushEnvironment();
+  const registration=supported?await registrationPromise:null,usable=supported&&!!registration?.pushManager;
+  const subscription=usable?await registration.pushManager.getSubscription():null,permission=supported?Notification.permission:'default';
   const [firstDevices,history]=await Promise.all([api(pushURL('devices')),api(apiURL(company,'events')).catch(()=>({events:[]}))]);state.events=history.events;
   let data=firstDevices;devices=data.devices;deviceStateKnown=true;pushId=subscription?await subscriptionId(subscription.endpoint):null;
   let saved=devices.find(d=>d.id===pushId);
-  if(subscription&&supported&&Notification.permission==='granted'&&(!saved||saved.active===false)){
+  if(subscription&&permission==='granted'&&(!saved||saved.active===false)){
     await api(pushURL('subscribe'),{subscription:subscription.toJSON(),name:deviceName()});data=await api(pushURL('devices'));devices=data.devices;saved=devices.find(d=>d.id===pushId);
   }
-  const ready=!!saved&&saved.active!==false&&supported&&Notification.permission==='granted';
-  $('pushStatus').textContent=ready?'Bu cihaz tüm firmaların bildirimlerine bağlı.':ios&&!standalone?'Önce Safari’den Ana Ekrana Ekle.':!supported?'Bu tarayıcıda bildirim açılamıyor.':Notification.permission==='denied'?'Bildirim izni kapalı. Telefonunun ayarlarından açabilirsin.':'Bu cihazda bildirimler henüz açık değil.';
-  $('enablePush').hidden=ready;$('enablePush').disabled=!supported||(ios&&!standalone)||(supported&&Notification.permission==='denied');$('testPush').hidden=!ready;
-  $('pushHelp').textContent=ios?(standalone?'Bildirimler tüm firmalar için bu telefona otomatik gelir.':'Safari → Paylaş → Ana Ekrana Ekle. Sonra simgeden açıp buradaki bildirim düğmesine bir kez bas.'):'Bir kez açtıktan sonra firma firma ayar veya deneme yapman gerekmez. iPhone’da ana ekrandaki uygulama simgesinden açmalısın.';
+  const ready=!!saved&&saved.active!==false&&usable&&permission==='granted',needsInstall=ios&&!standalone;
+  $('pushStatus').textContent=ready?'Bu telefon tüm firmaların bildirimlerine bağlı.':needsInstall?'Telefonunda hata yok. Bu sayfa Safari sekmesinde açık.':!usable?'Bu tarayıcıda telefon bildirimi açılamıyor.':permission==='denied'?'Bildirim izni kapalı. iPhone Ayarları’ndan açabilirsin.':ios?'Doğru yerdesin. Aşağıdaki düğmeye bir kez bas.':'Bu cihazda bildirimler henüz açık değil.';
+  const setup=$('pushSetupSteps');setup.hidden=!needsInstall;setup.innerHTML=needsInstall?'<strong>iPhone’da yalnızca bir kez yap:</strong><ol><li>Safari’de Paylaş menüsünü aç.</li><li>Ana Ekrana Ekle’ye bas.</li><li>Ana ekrandaki Soyturk Works simgesini aç.</li><li>Bildirimler bölümünde “Bu telefonda tüm firmaları aç” düğmesine bas ve İzin Ver’i seç.</li></ol><p>Herhangi bir firmanın ekranı yeterli. Bilgisayardan işlem yapma; diğer firmalarda tekrarlama.</p>':'';
+  $('enablePush').hidden=ready||needsInstall;$('enablePush').disabled=!usable||permission==='denied';$('testPush').hidden=!ready;
+  $('pushHelp').textContent=ready?'Kurulum tamam. Hafta içi 09 · 11 · 13 · 15 · 17’de tüm firmaların özeti bu telefona gelir.':needsInstall?'Ana ekrana ekledikten sonra Safari’yi kapatıp mutlaka uygulama simgesinden aç.':ios?'Bu işlem tüm firmalar için tek seferliktir. Başka firmalarda yeniden açma veya test yapma.':'Telefonuna bildirim istiyorsan bu işlemi bilgisayardan değil, telefonundaki ana ekran uygulamasından yap.';
   $('deviceList').innerHTML=devices.length?devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span><strong>'+escape(d.name)+'</strong><small>'+(d.active===false?'Oturum değişti · Açınca otomatik yenilenir':d.id===pushId?'Bu cihaz · Tüm firmalara bağlı':'Tüm firmalara bağlı')+'</small></span><div class="device-actions"><button data-remove-device="'+d.id+'">Kaldır</button></div></div>').join(''): '<p class="subtle">Hesaba henüz bildirim cihazı bağlanmadı.</p>';
   $('eventList').innerHTML=state.events.length?state.events.slice(0,10).map(e=>'<article class="event">'+icon(e.kind==='error'?'alert':'notifications')+'<div><strong>'+escape(e.title)+'</strong><p>'+escape(e.body)+'</p><time>'+datetime(e.created)+'</time></div></article>').join(''):'<p class="subtle">Henüz bildirim yok.</p>';renderTrackingStatus();
 }
@@ -186,12 +192,15 @@ function loadSpreadsheetLibrary(){
 }
 async function repairPushSubscription(){
   if(pushRepairing||!('Notification' in window)||Notification.permission!=='granted')return;pushRepairing=true;
-  try{const registration=await registrationPromise,subscription=await registration?.pushManager.getSubscription();if(!subscription)return;const id=await subscriptionId(subscription.endpoint),saved=devices.find(device=>device.id===id);if(saved&&saved.active!==false)return;await api(pushURL('subscribe'),{subscription:subscription.toJSON(),name:deviceName()});devices=(await api(pushURL('devices'))).devices;deviceStateKnown=true;}
+  try{const registration=await registrationPromise,subscription=await registration?.pushManager?.getSubscription();if(!subscription)return;const id=await subscriptionId(subscription.endpoint),saved=devices.find(device=>device.id===id);if(saved&&saved.active!==false)return;await api(pushURL('subscribe'),{subscription:subscription.toJSON(),name:deviceName()});devices=(await api(pushURL('devices'))).devices;deviceStateKnown=true;}
   finally{pushRepairing=false;}
 }
 $('enablePush').onclick=()=>busy($('enablePush'),async()=>{
+  const environment=pushEnvironment();
+  if(environment.ios&&!environment.standalone)throw Error('Önce Safari’den Ana Ekrana Ekle; sonra ana ekrandaki Soyturk Works simgesinden aç.');
+  if(!environment.supported)throw Error('Bu tarayıcı telefon bildirimini desteklemiyor.');
   const permission=await Notification.requestPermission();if(permission!=='granted'){toast('Bildirim izni verilmedi. İstediğinde ayarlardan açabilirsin.');await renderNotifications();return;}
-  const registration=await registrationPromise;if(!registration)throw Error('Bildirim hizmeti açılamadı. Sayfayı yenileyip yeniden dene.');
+  const registration=await registrationPromise;if(!registration?.pushManager)throw Error('Bildirim hizmeti açılamadı. iPhone’da ana ekrandaki Soyturk Works simgesinden açıp yeniden dene.');
   await navigator.serviceWorker.ready;const config=await api(pushURL('config'));
   const sub=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicBytes(config.publicKey)});
   await api(pushURL('subscribe'),{subscription:sub.toJSON(),name:deviceName()});await renderNotifications();toast('Bu cihaz tüm firmaların bildirimlerine bağlandı.');
@@ -230,7 +239,7 @@ $('folderList').onclick=e=>{const b=e.target.closest('[data-folder]');if(b)busy(
 $('closeFolder').onclick=()=>$('folderDialog').close();
 $('folderDialog').addEventListener('click',e=>{if(e.target===$('folderDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
 $('folderContent').onclick=e=>{const b=e.target.closest('[data-folder-action]');if(!b||!currentFolder)return;const {id,folder}=currentFolder;busy(b,async()=>{if(b.dataset.folderAction==='delete')await clearFolder(id,folder);else{await api(apiURL(id,'excel'),{folder});await openFolder(id,folder);toast('Excel hazır.');}});};
-$('deviceList').onclick=e=>{const remove=e.target.closest('[data-remove-device]');if(remove)busy(remove,async()=>{await api(pushURL('unsubscribe'),{id:remove.dataset.removeDevice});if(remove.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager.getSubscription())?.unsubscribe();}await renderNotifications();toast('Bu cihazın tüm firma bildirimleri kapatıldı.');});};
+$('deviceList').onclick=e=>{const remove=e.target.closest('[data-remove-device]');if(remove)busy(remove,async()=>{await api(pushURL('unsubscribe'),{id:remove.dataset.removeDevice});if(remove.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager?.getSubscription())?.unsubscribe();}await renderNotifications();toast('Bu cihazın tüm firma bildirimleri kapatıldı.');});};
 $('baselineButton').onclick=()=>$('baselineFile').click();
 $('baselineFile').onchange=async e=>{
   const file=e.target.files[0];e.target.value='';if(!file)return;

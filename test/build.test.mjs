@@ -51,9 +51,13 @@ test('Invoice tracking starts without the Excel bundle and loads its first scree
  const page=await readFile(new URL('src/automation/index.html',root),'utf8'),app=await readFile(new URL('src/automation/app.js',root),'utf8');
  assert(!page.includes('xlsx.full.min.js'),'The 1 MB spreadsheet reader must not block first paint');
  assert(page.includes('id="testPush"'),'One global phone test must remain available without per-company test controls');
+ assert(page.includes('id="pushSetupSteps"'),'iPhone setup steps must have a dedicated visible area');
  assert(app.includes("script.src='/assets/vendor/xlsx.full.min.js'"),'Spreadsheet import must retain lazy loading');
  assert(app.includes("api(apiURL(company,'bootstrap')"),'Summary and the first invoice page must use one server round trip');
  assert(app.includes('refreshDevicesInBackground()'),'Push device checks must not block the first invoice screen');
+ assert(app.includes('registration?.pushManager?.getSubscription()'),'Missing iPhone PushManager must be handled without a raw error');
+ assert(!app.includes('registration?await registration.pushManager.getSubscription()'),'Notification rendering must never dereference a missing PushManager');
+ assert(app.includes('Herhangi bir firmanın ekranı yeterli. Bilgisayardan işlem yapma; diğer firmalarda tekrarlama.'),'iPhone setup must clearly say one phone and one company are enough');
 });
 
 test('Company selection prefetches every cached workspace chunk without downloading the portable template',async()=>{
