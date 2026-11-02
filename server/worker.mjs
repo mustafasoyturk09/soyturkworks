@@ -282,6 +282,18 @@ export class AuthStore extends DurableObject {
     if(path==='/api/automation'&&request.method==='GET'){
       fail('Önce bir firma seçin. Toplu takip ekranı kullanılmıyor.',400);
     }
+    if(path==='/api/automation/scan-all'&&request.method==='POST'){
+      await this.rate(request,'archive-scan-all',20,15);
+      const companies=(await this.companies()).filter(company=>company.active&&!company.deleted);
+      const results=await Promise.all(companies.map(async company=>{
+        if(!await this.storage.get('izibiz:config:'+company.id))return {id:company.id,name:company.name,status:'not-connected'};
+        try{
+          const response=await this.companyArchive(company.id,'scan','POST',{}),data=await response.json().catch(()=>({}));
+          return response.ok?{id:company.id,name:company.name,status:data.running?'started':'skipped',reason:data.reason||null}:{id:company.id,name:company.name,status:'error',error:String(data.error||'Kontrol başlatılamadı.').slice(0,160)};
+        }catch{return {id:company.id,name:company.name,status:'error',error:'Kontrol başlatılamadı.'};}
+      }));
+      return json({ok:true,started:results.filter(result=>result.status==='started').length,connected:results.filter(result=>result.status!=='not-connected').length,results});
+    }
     if(path.startsWith('/api/automation/')){
       const match=path.match(/^\/api\/automation\/([A-Z_]+)\/([a-z-]+)$/),company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
       if(!company)fail('Firma bulunamadı veya etkin değil.',403);

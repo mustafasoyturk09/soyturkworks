@@ -32,7 +32,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
     const sessionCookie=response=>response.headers.get('set-cookie').split(';')[0];
     const password='Qa2026!';
     await t.test('Unauthenticated requests cannot bypass login through HTML or app assets',async()=>{
-      for(const path of ['/automation/app.js','/api/automation','/api/automation/PUSULA/bootstrap?month=2026-11','/api/automation/PUSULA/clear-all','/api/automation/PUSULA/month-excel?month=2026-10','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
+      for(const path of ['/automation/app.js','/api/automation','/api/automation/scan-all','/api/automation/PUSULA/bootstrap?month=2026-11','/api/automation/PUSULA/clear-all','/api/automation/PUSULA/month-excel?month=2026-10','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
       const workspaceHtml=await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),workspaceChunk=workspaceHtml.match(/\.\/app\/(inline-script-[a-f0-9]{16}\.js)/)?.[1];assert(workspaceChunk);
       const deniedChunk=await request('/app/'+workspaceChunk);assert.equal(deniedChunk.status,401);assert.equal(deniedChunk.headers.get('cache-control'),'no-store');
       assert.equal((await request('/workspace/PUSULA/')).status,303);
@@ -74,6 +74,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
         assert.deepEqual((await request('/api/automation/'+company.id+'/events',null,cookie)).value.events,[]);
       }
       assert.equal((await request('/api/automation',null,cookie)).status,400);
+      const scanAll=await request('/api/automation/scan-all',{},cookie);assert.equal(scanAll.status,200);assert.equal(scanAll.value.started,0);assert.equal(scanAll.value.connected,0);assert.equal(scanAll.value.results.length,5);assert(scanAll.value.results.every(result=>result.status==='not-connected'));
       assert.equal((await request('/workspace/UNKNOWN/takip/',null,cookie)).headers.get('location'),origin+'/companies');
       assert.equal((await request('/api/automation/UNKNOWN/invoices',null,cookie)).status,403);
       assert.equal((await request('/api/automation/PUSULA/invoices',null,cookie)).value.rows.length,0);
@@ -90,7 +91,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/push/subscribe?company=PUSULA',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);
       const workspaceHtml=await readFile(new URL('../dist/index.html',import.meta.url),'utf8'),workspaceChunk=workspaceHtml.match(/\.\/app\/(inline-script-[a-f0-9]{16}\.js)/)?.[1];assert(workspaceChunk);
       const appAsset=await request('/automation/app.js',null,cookie),workspaceAsset=await request('/app/'+workspaceChunk,null,cookie),vendorAsset=await request('/assets/vendor/xlsx.full.min.js',null,cookie),workerAsset=await request('/push-sw.js');
-      assert.match(appAsset.headers.get('cache-control'),/max-age=300/);assert.match(workspaceAsset.headers.get('cache-control'),/immutable/);assert.match(vendorAsset.headers.get('cache-control'),/immutable/);assert.equal(workerAsset.headers.get('cache-control'),'no-cache');
+      assert.match(appAsset.headers.get('cache-control'),/max-age=300/);assert.match(appAsset.value,/\/api\/automation\/scan-all/);assert(!appAsset.value.includes("apiURL(company,'scan')"));assert.match(workspaceAsset.headers.get('cache-control'),/immutable/);assert.match(vendorAsset.headers.get('cache-control'),/immutable/);assert.equal(workerAsset.headers.get('cache-control'),'no-cache');
       assert.equal((await request('/api/automation/PUSULA/settings',{enabled:false},cookie)).status,200);
       assert.equal((await request('/api/automation/PUSULA/clear-all',{},cookie)).status,400);
       assert.equal((await request('/api/automation/UNKNOWN/clear-all',{confirm:true},cookie)).status,403);

@@ -231,11 +231,11 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "1c3b7251e27c7aa8c3faa6ee1d6298fe844d8ec8d9f4732b44f261802ae2e8ca"
+      "sha256": "13c6ea35ca9e146ae206693d9c43d26fa79d516a4e44fd368d6acf6e99905f18"
     },
     {
       "file": "automation/index.html",
-      "sha256": "d3e8e7c4a492c5ddb5cb473339562927c3cae28cd50db72202a390bcb579600a"
+      "sha256": "17dfe7d939fc682fe3404771ba22d173dc983c83c03071b77364d24aa3ad0092"
     },
     {
       "file": "automation/style.css",

@@ -7,8 +7,8 @@
 <title>Fatura Takibi · Soyturk Works</title>
 <link rel="icon" href="/favicon.ico?v=3"><link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=push-ios-1">
-<script defer src="/automation/app.js?v=push-ios-1"></script>
+<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=global-scan-1">
+<script defer src="/automation/app.js?v=global-scan-1"></script>
 </head>
 <body>
 <aside class="rail">
@@ -29,7 +29,7 @@
 <div id="monthGrid" class="month-grid" aria-label="Aylar"></div>
 </section>
 <section id="invoicesView" class="view">
-<div class="section-head invoice-section-head"><h2 id="invoiceHeading">Faturalar</h2><div class="main-actions"><a class="secondary-button" id="downloadMonthExcel" download>Excel’i indir</a><button class="primary-button" id="scanButton">İzibiz Sistemini Başlat</button><button class="danger-button" id="clearAllButton">Tümünü Temizle</button></div></div>
+<div class="section-head invoice-section-head"><h2 id="invoiceHeading">Faturalar</h2><div class="main-actions"><a class="secondary-button" id="downloadMonthExcel" download>Excel’i indir</a><button class="primary-button" id="scanButton">Tüm Firmaları Güncelle</button><button class="danger-button" id="clearAllButton">Bu Firmayı Temizle</button></div></div>
 <div class="filter-bar"><div class="segmented" id="statusFilters"><button data-status="all" aria-pressed="true">Tümü <span data-count="total">0</span></button><button data-status="new" aria-pressed="false">Yeni gelen <span data-count="fresh">0</span></button><button data-status="waiting" aria-pressed="false">Bekleniyor <span data-count="waiting">0</span></button><button data-status="done" aria-pressed="false">İşlendi <span data-count="done">0</span></button><button data-status="rejected" aria-pressed="false">Reddedildi <span data-count="rejected">0</span></button></div><label class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Firma veya fatura numarası ara" aria-label="Firma unvanı veya fatura numarası ara"></label></div>
 <div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden><span id="undoMessage"></span><button type="button" id="undoLastMark" class="secondary-button">Geri al</button></div>
 <div class="selection-bar" id="selectionBar" hidden><span id="selectedCount"></span><button data-bulk="true">İşlendi olarak işaretle</button><button data-bulk="false">İşlendi işaretini geri al</button><button id="clearSelection">Seçimi kaldır</button></div>

@@ -32,7 +32,7 @@ export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   if(action==='subscribe'&&method==='POST'){
     const subscription=validateSubscription(body.subscription),id=deviceId(subscription.endpoint);
     const devices=await storage.list({prefix:'push:device:'});if(devices.size>=10&&!devices.has('push:device:'+id))fail('En fazla 10 bildirim cihazı kaydedilebilir.');
-    const previous=devices.get('push:device:'+id);await storage.put('push:device:'+id,{id,subscription,name:String(body.name||previous?.name||'Cihazım').trim().slice(0,60),created:previous?.created||Date.now(),revision:body.revision,accountWide:true,lastSent:previous?.lastSent||null});return json({ok:true,id,accountWide:true});
+    const previous=devices.get('push:device:'+id);await storage.put('push:device:'+id,{id,subscription,name:String(body.name||previous?.name||'Cihazım').trim().slice(0,60),created:previous?.created||Date.now(),revision:body.revision,accountWide:true,lastSent:previous?.lastSent||null});return json({ok:true,id,accountWide:true,created:!previous});
   }
   if(action==='unsubscribe'&&method==='POST'){
     if(typeof body.id!=='string'||!/^[a-f0-9]{64}$/.test(body.id))fail('Cihaz kaydı geçersiz.');await storage.delete('push:device:'+body.id);return json({ok:true,remaining:0});

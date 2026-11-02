@@ -315,9 +315,9 @@ test('Legacy unmatched October 1 invoices migrate to waiting; imported processed
  await f.engine.clearAll();const original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{f.setRemote([remoteInvoice(1,'2026-10-01'),remoteInvoice(2,'2026-10-01')]);await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,0,'A reset does not pull old October 1 invoices into a November recent scan');}finally{globalThis.fetch=original;}
 });
-test('A reset can reacquire a recent invoice but does not announce it as new again',async()=>{
+test('A confirmed reset reacquires recent invoices and announces them again for phone verification',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
- try{await f.engine.start();await drain(f.engine,f.db);const events=f.events.length;await f.engine.clearAll();await f.engine.start(true);await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.fresh,0);assert.equal(summary.counts.waiting,2);assert.equal(summary.counts.pdfs,2);assert.equal(f.events.length,events);assert((await f.db.list({prefix:'monthly-excel:'})).size===2);}finally{globalThis.fetch=original;}
+ try{await f.engine.start();await drain(f.engine,f.db);const events=f.events.length;await f.engine.clearAll();await f.engine.start(true);await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.fresh,2);assert.equal(summary.counts.waiting,0);assert.equal(summary.counts.pdfs,2);assert.equal(f.events.length,events+1);assert.equal(f.events.at(-1).title,'Pusula');assert.equal(f.events.at(-1).body,'Ekim · 1 Yeni Gelen\nKasım · 1 Yeni Gelen');assert((await f.db.list({prefix:'monthly-excel:'})).size===2);}finally{globalThis.fetch=original;}
 });
 for(const action of ['clear','mark'])test('A stale monthly Excel snapshot cannot overwrite '+action+' while generation is in flight',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;

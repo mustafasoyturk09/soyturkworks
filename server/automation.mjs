@@ -30,13 +30,13 @@ export class InvoiceArchive{
       const rows=[...(await tx.list({prefix:'invoice:'})).values()],folders=[...(await tx.list({prefix:'folder:'})).values()],keys=new Set(['job','audit','izibiz:scan:'+this.company.id]);
       for(const row of rows){
         if(row.file)for(const key of fileKeys(row.file))keys.add(key);
-        await tx.put('seen:'+row.uuid,{firstSeen:row.firstSeen||this.now(),done:!!row.done,manualOverride:!!row.manualOverride,published:true});
+        await tx.put('seen:'+row.uuid,{firstSeen:row.firstSeen||this.now(),done:!!row.done,manualOverride:!!row.manualOverride,published:!!row.done||!!row.isRet});
       }
       for(const folder of folders)if(folder.excel)for(const key of fileKeys(folder.excel))keys.add(key);
       for(const [key,excel] of await tx.list({prefix:'monthly-excel:'})){keys.add(key);for(const part of fileKeys(excel.file))keys.add(part);}
       for(const prefix of ['invoice:','folder:','active-folder:','month-revision:'])for(const key of (await tx.list({prefix})).keys())keys.add(key);
       const list=[...keys];for(let i=0;i<list.length;i+=100)await tx.delete(list.slice(i,i+100));
-      const generation=(await tx.get('archive-generation')||0)+1;await tx.put('archive-generation',generation);await tx.put('totalBytes',0);await tx.put('status',{clearedAt:this.now(),error:null,progress:null});
+      const generation=(await tx.get('archive-generation')||0)+1;await tx.put('archive-generation',generation);await tx.put('totalBytes',0);await tx.put('status',{clearedAt:this.now(),notificationResetGeneration:null,error:null,progress:null});
       return {ok:true,generation};
     });
   }
@@ -178,7 +178,14 @@ export class InvoiceArchive{
     const result=await this.storage.transaction(async tx=>{
       if((await tx.get('archive-generation')||0)!==generation)return {skipped:true,reason:'generation'};
       const existing=await tx.get('job');if(existing){if(existing.metadataOnly)return {skipped:true,reason:'metadata'};if(cycleId&&!existing.cycleId)await tx.put('job',{...existing,cycleId});return {running:true};}
-      const state=await tx.get('status')||{};if(state.lastAttempt&&this.now()-state.lastAttempt<300000){if(manual)fail('Yeni kontrolü beş dakika sonra başlatabilirsiniz.',429);return {skipped:true,reason:'recent'};}
+      let state=await tx.get('status')||{};
+      const resetAfterClear=manual&&state.clearedAt&&state.notificationResetGeneration!==generation;
+      if(resetAfterClear){
+        for(const [key,seen] of await tx.list({prefix:'seen:'}))if(!seen.done)await tx.put(key,{...seen,published:false});
+        for(const [key,row] of await tx.list({prefix:'invoice:'}))if(!row.deletedAt&&!row.done&&!row.isRet)await tx.put(key,{...row,published:false,notified:false,arrivalState:'waiting',arrivalBatch:null});
+        state={...state,notificationResetGeneration:generation};
+      }
+      if(state.lastAttempt&&this.now()-state.lastAttempt<300000&&!resetAfterClear){if(manual)fail('Yeni kontrolü beş dakika sonra başlatabilirsiniz.',429);return {skipped:true,reason:'recent'};}
       for(const row of (await tx.list({prefix:'invoice:'})).values())if(row.pdfError&&!row.file&&!row.deletedAt&&row.tarih>=period.from&&row.tarih<=period.to)await tx.put('invoice:'+row.uuid,{...row,pdfAttempts:0,pdfError:null});
       const start=state.lastSuccess?[period.from,localDate(state.lastSuccess-2*86400000)].sort().at(-1):period.from;
       await tx.put('job',{id:randomUUID(),generation,manual,cycleId:manual?null:cycleId,phase:'delivery',page:0,start,end:period.to,documentStart:period.from,periodVersion:2,started:this.now(),attempts:0,received:0,seen:[]});

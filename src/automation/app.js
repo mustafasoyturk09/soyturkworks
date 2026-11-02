@@ -101,7 +101,7 @@ async function loadInvoices(append=false,prefetched=null){
   const p=new URLSearchParams({offset:String(offset),status,month,q:query}),data=prefetched||await api(apiURL(company,'invoices')+'?'+p);if(request!==invoiceRequest)return;
   const loaded=data.rows.map(r=>({...r,company:companyContext}));rows=append?[...rows,...loaded]:loaded;rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));more=data.total>offset+data.rows.length;
   const start=info(company)?.period?.startMonth,before=start&&month<start;
-  const note=query||status!=='all'?'Seçtiğin filtreye uygun fatura bulunamadı.':before?'Takip '+monthName(start)+' ayında başladı.':month===localMonth()?'İzibiz Sistemini Başlat ile şimdi alabilir veya otomatik kontrolü bekleyebilirsin.':'Bu ay için kayıtlı fatura bulunmuyor.';
+  const note=query||status!=='all'?'Seçtiğin filtreye uygun fatura bulunamadı.':before?'Takip '+monthName(start)+' ayında başladı.':month===localMonth()?'Tüm Firmaları Güncelle ile bütün bağlı firmaları tek seferde kontrol edebilirsin.':'Bu ay için kayıtlı fatura bulunmuyor.';
   $('invoiceList').innerHTML=rows.length?invoiceHeader()+rows.map(invoiceHTML).join(''):empty(monthName(month)+' için fatura yok',note);
   $('loadMore').hidden=!more;renderSelection();renderFilters();updateButtons();
 }
@@ -195,25 +195,40 @@ async function repairPushSubscription(){
   try{const registration=await registrationPromise,subscription=await registration?.pushManager?.getSubscription();if(!subscription)return;const id=await subscriptionId(subscription.endpoint),saved=devices.find(device=>device.id===id);if(saved&&saved.active!==false)return;await api(pushURL('subscribe'),{subscription:subscription.toJSON(),name:deviceName()});devices=(await api(pushURL('devices'))).devices;deviceStateKnown=true;}
   finally{pushRepairing=false;}
 }
-$('enablePush').onclick=()=>busy($('enablePush'),async()=>{
+async function connectPushForAll(){
   const environment=pushEnvironment();
   if(environment.ios&&!environment.standalone)throw Error('Önce Safari’den Ana Ekrana Ekle; sonra ana ekrandaki SW logolu uygulama simgesinden aç.');
   if(!environment.supported)throw Error('Bu tarayıcı telefon bildirimini desteklemiyor.');
-  const permission=await Notification.requestPermission();if(permission!=='granted'){toast('Bildirim izni verilmedi. İstediğinde ayarlardan açabilirsin.');await renderNotifications();return;}
+  const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();if(permission!=='granted')return {ready:false,created:false};
   const registration=await registrationPromise;if(!registration?.pushManager)throw Error('Bildirim hizmeti açılamadı. iPhone’da ana ekrandaki SW logolu uygulama simgesinden açıp yeniden dene.');
   await navigator.serviceWorker.ready;const config=await api(pushURL('config'));
   const sub=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicBytes(config.publicKey)});
-  await api(pushURL('subscribe'),{subscription:sub.toJSON(),name:deviceName()});await renderNotifications();toast('Bu cihaz tüm firmaların bildirimlerine bağlandı.');
+  const saved=await api(pushURL('subscribe'),{subscription:sub.toJSON(),name:deviceName()});pushId=saved.id;return {ready:true,created:!!saved.created,id:saved.id};
+}
+$('enablePush').onclick=()=>busy($('enablePush'),async()=>{
+  const result=await connectPushForAll();
+  if(!result.ready){toast('Bildirim izni verilmedi. İstediğinde ayarlardan açabilirsin.');await renderNotifications();return;}
+  await renderNotifications();toast('Bu cihaz tüm firmaların bildirimlerine bağlandı.');
 });
 $('testPush').onclick=()=>busy($('testPush'),async()=>{await api(pushURL('test'),{id:pushId});toast('Tüm firmalar için tek test özeti bu telefona gönderildi.');});
 async function runScan(){
   if(scanning||resetting)return;scanning=true;updateButtons();
-  try{await api(apiURL(company,'scan'),{});month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';toast('İzibiz başlatıldı. Faturalar geldikçe listeye eklenecek.');await refresh(true);}catch(e){notice(e.message);}finally{scanning=false;updateButtons();}
+  try{
+    const environment=pushEnvironment();
+    if(environment.standalone&&environment.supported&&Notification.permission!=='denied'){
+      try{const push=await connectPushForAll();if(push.created)await api(pushURL('test'),{id:push.id});}catch(e){notice('Telefon bildirimi bağlanamadı: '+e.message);}
+    }
+    const result=await api('/api/automation/scan-all',{});month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';
+    if(result.started)toast(result.started+' bağlı firmanın İzibiz kontrolü başladı. Başka firmaya girmen gerekmiyor.');
+    else if(result.connected)toast('Bağlı firmaların kontrolü zaten sürüyor. Sonuçlar otomatik gelecek.');
+    else throw Error('Henüz İzibiz bağlantısı bulunan firma yok.');
+    await refresh(true);
+  }catch(e){notice(e.message);}finally{scanning=false;updateButtons();}
 }
 async function resetAll(){
-  if(resetting||!confirm(companyContext.name+' firmasının TÜM AYLARDAKİ faturaları ve arşiv dosyaları temizlensin mi?\nİzibiz bağlantısı, bildirim izni ve işlenmiş fatura bilgisi korunur. Yeniden başlatınca güncel dönemin faturaları tekrar alınır. Otomatik takip açıksa sonraki kontrolde de yeniden alınır.'))return;
+  if(resetting||!confirm(companyContext.name+' firmasının TÜM AYLARDAKİ faturaları ve arşiv dosyaları temizlensin mi?\nİzibiz bağlantısı, bildirim izni ve işlenmiş fatura bilgisi korunur. Tüm Firmaları Güncelle’ye basınca son faturalar yeniden alınır ve telefon bildirimi yeniden oluşturulur.'))return;
   resetting=true;++invoiceRequest;++folderRequest;++refreshRequest;loading=false;clearTimeout(typeRefreshTimer);selected.clear();updateButtons();
-  try{await api(apiURL(company,'clear-all'),{confirm:true});undoEntries=[];renderUndo();month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';if($('folderDialog').open)$('folderDialog').close();toast('Tüm faturalar ve arşiv temizlendi. Yeniden başlatabilirsin.');await refresh(true);}catch(e){notice(e.message);}finally{resetting=false;updateButtons();}
+  try{await api(apiURL(company,'clear-all'),{confirm:true});undoEntries=[];renderUndo();month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';if($('folderDialog').open)$('folderDialog').close();toast(companyContext.name+' temizlendi. Tüm Firmaları Güncelle’ye bir kez basman yeterli.');await refresh(true);}catch(e){notice(e.message);}finally{resetting=false;updateButtons();}
 }
 async function handleNavigation(e){
   const go=e.target.closest('[data-go-view]'),filter=e.target.closest('[data-invoice-filter]'),toggle=e.target.closest('[data-toggle]');
