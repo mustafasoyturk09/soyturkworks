@@ -7,6 +7,7 @@ import {join} from 'node:path';
 import {createServer} from 'node:net';
 import {createHash,randomBytes,generateKeyPairSync,sign} from 'node:crypto';
 import {setTimeout as pause} from 'node:timers/promises';
+import {fileURLToPath} from 'node:url';
 import {encodeCBOR} from '@levischuck/tiny-cbor';
 
 const b64=value=>Buffer.from(value).toString('base64url');
@@ -18,7 +19,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
   const directory=await mkdtemp(join(tmpdir(),'sw-auth-test-'));
   const ownerToken=randomBytes(32).toString('base64url'),ownerDigest=sha(ownerToken).toString('hex');
   let logs='';
-  const child=spawn(process.execPath,[new URL('../node_modules/wrangler/bin/wrangler.js',import.meta.url).pathname,'dev','--ip','127.0.0.1','--port',String(port),'--var','APP_ORIGIN:'+origin,'--var','LOCAL_MAILBOX:1','--var','OWNER_SETUP_SHA256:'+ownerDigest,'--var','OWNER_SETUP_EXPIRES:'+String(Date.now()+120000),'--persist-to',directory],{cwd:new URL('../',import.meta.url),env:{...process.env,WRANGLER_SEND_METRICS:'false'},stdio:['ignore','pipe','pipe']});
+  const child=spawn(process.execPath,[fileURLToPath(new URL('../node_modules/wrangler/bin/wrangler.js',import.meta.url)),'dev','--ip','127.0.0.1','--port',String(port),'--var','APP_ORIGIN:'+origin,'--var','LOCAL_MAILBOX:1','--var','OWNER_SETUP_SHA256:'+ownerDigest,'--var','OWNER_SETUP_EXPIRES:'+String(Date.now()+120000),'--persist-to',directory],{cwd:fileURLToPath(new URL('../',import.meta.url)),env:{...process.env,WRANGLER_SEND_METRICS:'false'},stdio:['ignore','pipe','pipe']});
   child.stdout.on('data',b=>logs+=b);child.stderr.on('data',b=>logs+=b);
   try {
     let ready=false;for(let i=0;i<100;i++){try{if((await fetch(origin+'/api/session')).ok){ready=true;break;}}catch{}if(child.exitCode!==null)break;await pause(100);}
@@ -84,6 +85,8 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       const config=await request('/api/push/config?company=PUSULA',null,cookie);assert.equal(config.status,200);assert.equal(Buffer.from(config.value.publicKey,'base64url').length,65);assert.equal(config.value.privateKey,undefined);
       assert.equal((await request('/api/push/devices?company=PUSULA',null,cookie)).value.devices.length,0);
       assert.equal((await request('/api/push/subscribe?company=PUSULA',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);
+      const appAsset=await request('/automation/app.js',null,cookie),vendorAsset=await request('/assets/vendor/xlsx.full.min.js',null,cookie),workerAsset=await request('/push-sw.js');
+      assert.match(appAsset.headers.get('cache-control'),/max-age=300/);assert.match(vendorAsset.headers.get('cache-control'),/immutable/);assert.equal(workerAsset.headers.get('cache-control'),'no-cache');
       assert.equal((await request('/api/automation/PUSULA/settings',{enabled:false},cookie)).status,200);
       assert.equal((await request('/api/automation/PUSULA/clear-all',{},cookie)).status,400);
       assert.equal((await request('/api/automation/UNKNOWN/clear-all',{confirm:true},cookie)).status,403);

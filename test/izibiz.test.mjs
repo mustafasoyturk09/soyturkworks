@@ -73,7 +73,7 @@ test('Izibiz controls and Excel bridge are included in portable exports without 
   const source=await readFile(new URL('../src/app.html',import.meta.url),'utf8');
   const template=JSON.parse(source.match(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>([\s\S]*?)<\/script>/)[1]);
   const script=await readFile(new URL('../src/izibiz.js',import.meta.url),'utf8');new vm.Script(script);
-  assert(template.includes(script));assert(template.includes('SWInvoiceBridge'));assert(template.includes('sw-izibiz-ui'));
+  assert(template.replace(/\r\n/g,'\n').includes(script.replace(/\r\n/g,'\n')));assert(template.includes('SWInvoiceBridge'));assert(template.includes('sw-izibiz-ui'));
   assert(!script.includes('showDirectoryPicker'));assert(!script.includes('swIziFolder'));assert(!script.includes('indexedDB'));
   assert(script.includes("xml.documentElement.localName!=='Invoice'"));assert(script.includes('İşlem tamamlanmadı'));
   assert(!script.includes('swIziZip'));assert(script.includes("archive.generateAsync({type:'blob'"));assert(!script.includes('Guncel_Izibiz_Listesi.xlsx'));

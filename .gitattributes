@@ -1,0 +1,20 @@
+* text=auto
+
+*.css text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.jsonc text eol=lf
+*.md text eol=lf
+*.mjs text eol=lf
+*.txt text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+_headers text eol=lf
+.gitattributes text eol=lf
+
+vendor/** -text
+dist/assets/vendor/** -text
+*.ico -text
+*.png -text
+*.ttf -text

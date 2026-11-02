@@ -35,7 +35,7 @@ test('Portable and deployed app retain company guards and synchronized workspace
   const source=await readFile(new URL('../src/app.html',import.meta.url),'utf8');
   const template=JSON.parse(source.match(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>([\s\S]*?)<\/script>/)[1]);
   const web=source.replace(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>[\s\S]*?<\/script>/,'');
-  assert(template.includes(script));
+  assert(template.replace(/\r\n/g,'\n').includes(script.replace(/\r\n/g,'\n')));
   for(const app of [template,web]){
     assert(!app.includes('id="page-home"'));
     assert(app.includes('if(!window.SWWorkspace.allows(company))return;'));

@@ -6,7 +6,7 @@ import {unzipSync,strFromU8} from 'fflate';
 import {InvoiceArchive,nextCheck,workHours,previousMonth,trackingPeriod} from '../server/automation.mjs';
 import {folderName,makeExcel,supplierFromXML,unwrapDocument} from '../server/invoice-files.mjs';
 import {IzibizConnector} from '../server/izibiz.mjs';
-import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications} from '../server/push.mjs';
+import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications,digestNotification} from '../server/push.mjs';
 
 function storage(){
  const data=new Map();
@@ -75,6 +75,22 @@ test('Tracking checks at most ten days across month/year boundaries and preserve
 test('A first scan in November does not import October without an earlier tracking start',async()=>{
  const f=fixture({startMonth:null}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,1);assert.equal((await f.db.get('settings')).startMonth,'2026-11');assert((await f.engine.all()).every(r=>r.tarih.startsWith('2026-11')));}finally{globalThis.fetch=original;}
+});
+test('Opening the tracking summary never waits for monthly Excel regeneration',async()=>{
+ const f=fixture();f.engine.refreshMonthlyExcels=()=>assert.fail('Summary must not rebuild spreadsheets');const summary=await f.engine.summary();assert.equal(summary.company.id,'PUSULA');assert.equal(summary.counts.total,0);
+});
+test('Opening an invoice page reads the company archive only once',async()=>{
+ const f=fixture();let reads=0;const all=f.engine.all.bind(f.engine);f.engine.all=async()=>{reads++;return all();};
+ const page=await f.engine.handle('invoices','GET',{},new URLSearchParams({month:'2026-11'})).then(response=>response.json());assert.equal(page.total,0);assert.equal(reads,1);
+});
+test('Every scheduled cycle reports a company result even when no new invoice arrived',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  const first='a'.repeat(64),second='b'.repeat(64);await f.engine.start(false,first);await drain(f.engine,f.db);
+  assert.equal(f.events.length,1);assert.equal(f.events[0].kind,'cycle-result');assert.equal(f.events[0].cycleId,first);assert.equal(f.events[0].fresh,2);assert.equal(f.events[0].company,'PUSULA');
+  f.advanceTime();await f.engine.start(false,second);await drain(f.engine,f.db);
+  assert.equal(f.events.length,2);assert.equal(f.events[1].cycleId,second);assert.equal(f.events[1].fresh,0);assert.equal(f.events[1].pending,2);
+ }finally{globalThis.fetch=original;}
 });
 test('Invoice dates stay oldest first across pages, filters and refreshes regardless of arrival order',async()=>{
  const f=fixture(),expected=[];
@@ -343,48 +359,44 @@ test('Push outbox deduplicates events and revokes expired or old-session subscri
  await flushNotifications(db,'https://soyturkworks.com','new',()=>assert.fail('Old session must not receive notifications'));
 });
 
-test('Test notification identifies the test without repeating the app name or inventing invoices',async()=>{
+test('Test notification leads with the company without repeating the app name or inventing invoices',async()=>{
  const db=storage(),sub=subscription();await db.put('push:device:test-device',{id:'test-device',subscription:sub.value,revision:'current'});
  let payload;
  const response=await pushAPI(db,'https://soyturkworks.com','test','POST',{id:'test-device',company:'PUSULA',companyName:'Pusula',revision:'current'},async(url,options)=>{
   payload=JSON.parse(ece.decrypt(options.body,{version:'aes128gcm',privateKey:sub.client,authSecret:sub.auth}).toString());return new Response('',{status:201});
  });
- assert.equal(response.status,200);assert.equal(payload.title,'Bildirim Denemesi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));
+ assert.equal(response.status,200);assert.equal(payload.title,'Pusula · Bildirim Denemesi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));
 });
 
-
-test('Company notification preferences preserve other firms on the same device and filter queued delivery',async()=>{
+test('One phone subscription automatically covers every company and one removal disables the device',async()=>{
  const db=storage(),sub=subscription(),call=(action,company,body={})=>pushAPI(db,'https://soyturkworks.com',action,action==='devices'?'GET':'POST',{...body,company,companyName:company,revision:'current'});
  const first=await (await call('subscribe','PUSULA',{subscription:sub.value})).json(),id=first.id;
- assert.equal((await (await call('devices','COMED')).json()).devices.length,0);
- await call('subscribe','COMED',{subscription:sub.value});
- assert.equal((await (await call('devices','PUSULA')).json()).devices.length,1);
- assert.equal((await (await call('devices','COMED')).json()).devices.length,1);
+ assert(first.accountWide);assert.equal((await (await call('devices','COMED')).json()).devices.length,1);
  const event={id:'scoped',company:'PUSULA',title:'Pusula',body:'PDF hazır',created:Date.now()};
  await enqueueNotification(db,event);assert.equal((await db.list({prefix:'push:outbox:'})).size,1);
- const removed=await (await call('unsubscribe','PUSULA',{id})).json();assert.equal(removed.remaining,1);
+ const removed=await (await call('unsubscribe','COMED',{id})).json();assert.equal(removed.remaining,0);
  assert.equal((await (await call('devices','PUSULA')).json()).devices.length,0);
- assert.equal((await (await call('devices','COMED')).json()).devices.length,1);
- await flushNotifications(db,'https://soyturkworks.com','current',()=>assert.fail('Disabled company must not deliver queued events'));
- await enqueueNotification(db,{...event,id:'disabled-new'});assert.equal((await db.list({prefix:'push:outbox:'})).size,0);
- await enqueueNotification(db,{...event,id:'comed',company:'COMED'});assert.equal((await db.list({prefix:'push:outbox:'})).size,1);
- await assert.rejects(()=>call('test','PUSULA',{id}),/bu firma/);
- assert.equal((await (await call('unsubscribe','COMED',{id})).json()).remaining,0);assert.equal(await db.get('push:device:'+id),undefined);
+ await flushNotifications(db,'https://soyturkworks.com','current',()=>assert.fail('Removed device must not receive queued events'));
 });
 
-test('Existing phone subscriptions keep their prior firms when one firm is disabled',async()=>{
+test('Existing company-scoped subscriptions migrate to account-wide delivery without user action',async()=>{
  const db=storage(),sub=subscription(),id='a'.repeat(64);await db.put('push:device:'+id,{id,subscription:sub.value,revision:'current'});
- const response=await pushAPI(db,'https://soyturkworks.com','unsubscribe','POST',{id,company:'PUSULA',revision:'current'});
- assert.equal((await response.json()).remaining,4);const device=await db.get('push:device:'+id);assert(!device.companies.includes('PUSULA'));assert(device.companies.includes('KIB_DIJITAL'));
+ const devices=await (await pushAPI(db,'https://soyturkworks.com','devices','GET',{company:'KIB_DIJITAL',revision:'current'})).json();assert.equal(devices.devices.length,1);assert(devices.devices[0].accountWide);
+ await enqueueNotification(db,{id:'legacy-global',company:'COMED',title:'Comed',body:'PDF hazır',created:Date.now()});assert.equal((await db.list({prefix:'push:outbox:'})).size,1);
 });
 
-
-test('Completing a push delivery preserves company preferences changed while the request was in flight',async()=>{
+test('Completing an in-flight push never recreates a device removed during delivery',async()=>{
  const db=storage(),sub=subscription(),id='b'.repeat(64);await db.put('push:device:'+id,{id,subscription:sub.value,revision:'current',companies:['PUSULA','COMED']});
  await enqueueNotification(db,{id:'in-flight',company:'COMED',title:'Comed',body:'PDF hazır',created:Date.now()});
  await flushNotifications(db,'https://soyturkworks.com','current',async()=>{
   await pushAPI(db,'https://soyturkworks.com','unsubscribe','POST',{id,company:'PUSULA',revision:'current'});
   return new Response('',{status:201});
  });
- assert.deepEqual((await db.get('push:device:'+id)).companies,['COMED']);
+ assert.equal(await db.get('push:device:'+id),undefined);
+});
+
+test('Two-hour digest leads with company names and includes every company count',()=>{
+ const event=digestNotification({id:'cycle-one',created:1,results:{PUSULA:{fresh:2,pending:4},COMED:{fresh:1,pending:1}},companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true},{id:'COMED',name:'Comed',connected:true,enabled:true},{id:'KIB',name:'Kendine İyi Bak',connected:false,enabled:true}]});
+ assert.equal(event.title,'3 Yeni Fatura · Pusula, Comed');assert.equal(event.company,'ALL');assert.equal(event.tag,'invoice-digest');assert.equal(event.count,3);assert.match(event.body,/Pusula: 2 gelen · 4 bekleyen/);assert.match(event.body,/Comed: 1 gelen · 1 bekleyen/);assert.match(event.body,/Kendine İyi Bak: İzibiz bağlantısı yok/);assert(!event.title.includes('Soyturk Works'));
+ const waiting=digestNotification({id:'cycle-two',companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true}],results:{}});assert.equal(waiting.title,'Tüm Firmalar · Kontrol Sürüyor');assert.match(waiting.body,/Pusula: kontrol sürüyor/);
 });

@@ -150,28 +150,32 @@ fatura bilgileri, silinme bilgisi ve işlem durumu kalır. Otomatik süreli silm
 
 Standart Web Push, gerçek VAPID imzası ve aes128gcm şifrelemesi kullanılır.
 Üçüncü taraf bildirim aboneliği hizmeti veya Apple geliştirici üyeliği gerekmez.
-Bildirim aboneliği yalnızca oturum açmış sahibin kullanıcı hareketiyle eklenir.
-Aynı fiziksel cihaz birden fazla firma için bağlanabilir; bildirim tercihleri
-firma kapsamında tutulur. Bir firmada kapatma diğer firmaların bildirimlerini
-kapatmaz. Önceden kaydedilmiş cihazların mevcut kapsamı korunur; VAPID veya
-telefon aboneliği sıfırlanmaz. Gönderim kuyruğu da firma tercihini yeniden denetler.
+Bildirim aboneliği yalnızca oturum açmış sahibin ilk kullanıcı hareketiyle eklenir.
+Bir cihaz hesaba bir kez bağlanır ve etkin bütün firmaların bildirimlerini alır.
+Firma firma izin verme veya deneme gönderme adımı yoktur. Önceden firma kapsamında
+kaydedilmiş cihazlar VAPID veya telefon aboneliği sıfırlanmadan otomatik olarak
+hesap kapsamına geçirilir. Cihazı kaldırmak bütün firmaların bildirimini kapatır.
 VAPID özel anahtarı sunucuda tutulur. Bilinen HTTPS push sağlayıcıları dışındaki
 abonelik adresleri kabul edilmez.
 
 iPhone'da kullanıcı Safari Paylaş → Ana Ekrana Ekle adımını tamamlar; simgeden
-açılan uygulamada Bildirimler bölümünden izni verir. Bu adım telefon üzerinde
-kullanıcının işlemini gerektirir. Deneme bildirimi düğmesi gerçek push gönderir. Bağlı cihazların yanında
-Deneme gönder ile bilgisayardan seçilen telefona da deneme yapılabilir.
-Bağlantı durumu gerçek abonelikten alınır; örnek bildirim gösterilmez.
+açılan uygulamada Bildirimler bölümünden izni bir kez verir. Bu ilk adım tarayıcı
+güvenlik kuralı gereği telefon üzerinde kullanıcı işlemi ister. Sonraki firma ve
+oturum yenilemeleri mevcut abonelikten otomatik onarılır. Bağlantı durumu gerçek
+abonelikten alınır; firma başına deneme kaydı oluşturulmaz.
 
-Bildirim firma, hazır yeni PDF sayısı ve işlem bekleyen toplamı belirtir;
-dokununca yalnızca ilgili firmanın ilgili aydaki fatura listesi açılır. Başka firmada açık
-pencere varsa o pencerenin firması değiştirilmez. Sessiz arka plan mesajı yerine görünür bildirim
-gösterilir. Fatura içeriği ve tutarlar kilit ekranına gönderilmez.
-Yeni fatura yoksa tekrar bildirim yoktur. Olaylar benzersiz kimlikle sıraya alınır;
-geçersiz abonelikler temizlenir. Parola kurtarma/değiştirme eski cihaz
-aboneliklerinin yeni bildirim almasını engeller; cihaz yeniden bağlanabilir.
-Otomatik gönderimler hafta içi 09–18 ile sınırlıdır; deneme kullanıcı isteğidir.
+Her planlı döngü tek bir toplu bildirim üretir. Başlıkta yeni fatura gelen firma
+adları ve toplam sayı, gövdede her firmanın gelen ve işlem bekleyen sayısı vardır.
+Yeni fatura yoksa da “Yeni Fatura Yok” özeti gelir; bağlantısı olmayan, takibi
+kapalı, hata veren veya süresi içinde bitmeyen firma açıkça belirtilir. Bildirime
+dokununca firma seçimi açılır. Fatura içeriği ve tutarlar kilit ekranına gönderilmez.
+Olaylar benzersiz kimlikle sıraya alınır; eski özetler aynı bildirim yuvasında
+yenilenir, yüksek öncelikle gönderilir ve geçici sağlayıcı hataları yeniden denenir.
+Geçersiz abonelikler temizlenir. Parola kurtarma/değiştirme eski cihaz aboneliklerinin
+yeni bildirim almasını engeller; uygulama aynı telefonda açılınca abonelik otomatik
+yenilenir. Otomatik gönderimler hafta içi 09, 11, 13, 15 ve 17 saatlerindedir.
+İşletim sistemi bildirim kaynağı olarak kurulu web uygulamasının adını gösterebilir;
+bildirimin uygulama tarafından belirlenen başlık ve metninde Soyturk Works yazmaz.
 Telefonun interneti, Odak modu ve işletim sisteminin bildirim ayarları teslim
 zamanını ve görünümü etkiler.
 

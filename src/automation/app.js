@@ -10,7 +10,7 @@ if(!companyContext?.id){location.replace('/companies');return;}
 const company=companyContext.id,base='/workspace/'+company+'/takip/';
 let state={companies:[],events:[]},view=params.get('view')||'invoices',status='all',month=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||'')?params.get('month'):localMonth(),query='',rows=[],offset=0,more=false,selected=new Map(),currentFolder=null,devices=[],pushId=null,loading=false,noticeTimer,toastTimer,searchTimer;
 let undoEntries=[],undoMessage='',marking=false;
-let invoiceRequest=0,folderRequest=0,refreshRequest=0,typeRefreshTimer,periodPinned=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||''),resetting=false,scanning=false,deviceStateKnown=false;
+let invoiceRequest=0,folderRequest=0,refreshRequest=0,typeRefreshTimer,periodPinned=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||''),resetting=false,scanning=false,deviceStateKnown=false,pushRepairing=false;
 const monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 function localMonth(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit'}).format(new Date());}
 let registrationPromise='serviceWorker' in navigator?navigator.serviceWorker.register('/push-sw.js',{scope:'/'}).catch(()=>null):Promise.resolve(null);
@@ -66,12 +66,12 @@ function renderTrackingStatus(){
   const last=c.status?.lastFinished||c.status?.lastSuccess;
   $('trackingStatus').innerHTML='<div class="tracking-mode"><span class="mode-dot '+(enabled?'on':'off')+'"></span><div><strong>'+escape(title)+'</strong><p>'+escape(note)+'</p>'+(result?'<p class="'+(c.status?.error&&!c.running?'health error':'')+'">'+escape(result)+'</p>':'')+'</div><button class="text-button" data-go-view="dashboard">Ayarlar</button></div><div class="tracking-times"><span>Son kontrol <strong>'+datetime(last)+'</strong></span><span>Sonraki <strong>'+(enabled?datetime(c.nextCheck):'Kapalı')+'</strong></span></div><button type="button" class="tracking-notifications" data-go-view="notifications">'+icon('notifications')+'<span>Telefon bildirimleri<small>'+(!deviceStateKnown?'Durum alınamadı':activeDevices.length?activeDevices.length+' cihaz bağlı':'Henüz cihaz bağlı değil')+'</small></span><b>›</b></button>';
 }
-async function changeView(next){
+async function changeView(next,preloadedInvoices=null){
   if(!labels[next])next='invoices';view=next;updateAddress();
   document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==next+'View');
   document.querySelectorAll('[data-view]').forEach(n=>{n.classList.toggle('active',n.dataset.view===next);if(n.dataset.view===next)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});
   renderTrackingStatus();renderCalendar();updateButtons();
-  try{if(next==='dashboard')renderDashboard();if(next==='invoices')await loadInvoices();if(next==='folders')await loadFolders();if(next==='notifications')await renderNotifications();}catch(e){notice(e.message);}
+  try{if(next==='dashboard')renderDashboard();if(next==='invoices')await loadInvoices(false,preloadedInvoices);if(next==='folders')await loadFolders();if(next==='notifications')await renderNotifications();}catch(e){notice(e.message);}
 }
 function renderIdentity(){
   $('systemTitle').textContent='İzibiz - '+companyContext.name+' Gelen E-Fatura Takip Sistemi';$('breadcrumb').textContent=companyContext.name+' / Fatura Takibi';
@@ -81,19 +81,20 @@ function renderIdentity(){
 function renderDashboard(){
   const c=info(company);if(!c)return;const enabled=!!c.settings?.enabled,counts=monthCounts(),connected=devices.filter(d=>d.active!==false);
   const stats=[['total','Tüm faturalar','all'],['fresh','Yeni gelen','new'],['waiting','Bekleniyor','waiting'],['done','İşlendi','done'],['rejected','Reddedildi','rejected']];
-  $('dashboardContent').innerHTML='<div class="automation-settings settings-panel"><div class="automation-heading"><h3>Otomatik takip</h3><span class="mode-badge '+(enabled&&c.connected?'on':'')+'">'+(!c.connected?'Bağlantı gerekli':enabled?'AÇIK':'KAPALI')+'</span></div><p>Açıkken bilgisayarın ve bu sayfa kapalı olsa da kontrol devam eder.</p><dl class="automation-facts"><div><dt>Kontrol saatleri</dt><dd>Hafta içi 09 · 11 · 13 · 15 · 17</dd></div><div><dt>Son kontrol</dt><dd>'+datetime(c.status?.lastFinished||c.status?.lastSuccess)+'</dd></div><div><dt>Sonraki kontrol</dt><dd>'+(enabled&&c.connected?datetime(c.nextCheck):'Kapalı')+'</dd></div></dl>'+(c.status?.error?'<p class="health error">'+escape(c.status.error)+'</p>':'')+'<button class="'+(enabled?'secondary':'primary')+'-button" data-toggle="'+company+'" data-enabled="'+!enabled+'" '+(!c.connected?'disabled':'')+'>'+(enabled?'Otomatik takibi durdur':'Otomatik takibi aç')+'</button></div><div class="section-head"><h3>'+escape(monthName(month))+'</h3></div><div class="summary-grid">'+stats.map(([key,label,filter])=>'<button type="button" class="stat-card" data-invoice-filter="'+filter+'"><span class="stat-top">'+label+' '+icon('invoices')+'</span><span class="stat-number">'+(counts[key]||0)+'</span><span class="stat-note">Faturaları göster ↗</span></button>').join('')+'</div><button class="notification-link-card" data-go-view="notifications">'+icon('notifications')+'<span><strong>Telefon bildirimleri</strong><small>'+(connected.length?connected.length+' cihaz bağlı. Deneme gönderebilirsin.':'Telefonundan bildirim iznini aç.')+'</small></span><b>›</b></button>';
+  $('dashboardContent').innerHTML='<div class="automation-settings settings-panel"><div class="automation-heading"><h3>Otomatik takip</h3><span class="mode-badge '+(enabled&&c.connected?'on':'')+'">'+(!c.connected?'Bağlantı gerekli':enabled?'AÇIK':'KAPALI')+'</span></div><p>Açıkken bilgisayarın ve bu sayfa kapalı olsa da kontrol devam eder.</p><dl class="automation-facts"><div><dt>Kontrol saatleri</dt><dd>Hafta içi 09 · 11 · 13 · 15 · 17</dd></div><div><dt>Son kontrol</dt><dd>'+datetime(c.status?.lastFinished||c.status?.lastSuccess)+'</dd></div><div><dt>Sonraki kontrol</dt><dd>'+(enabled&&c.connected?datetime(c.nextCheck):'Kapalı')+'</dd></div></dl>'+(c.status?.error?'<p class="health error">'+escape(c.status.error)+'</p>':'')+'<button class="'+(enabled?'secondary':'primary')+'-button" data-toggle="'+company+'" data-enabled="'+!enabled+'" '+(!c.connected?'disabled':'')+'>'+(enabled?'Otomatik takibi durdur':'Otomatik takibi aç')+'</button></div><div class="section-head"><h3>'+escape(monthName(month))+'</h3></div><div class="summary-grid">'+stats.map(([key,label,filter])=>'<button type="button" class="stat-card" data-invoice-filter="'+filter+'"><span class="stat-top">'+label+' '+icon('invoices')+'</span><span class="stat-number">'+(counts[key]||0)+'</span><span class="stat-note">Faturaları göster ↗</span></button>').join('')+'</div><button class="notification-link-card" data-go-view="notifications">'+icon('notifications')+'<span><strong>Telefon bildirimleri</strong><small>'+(connected.length?connected.length+' cihaz tüm firmalara bağlı.':'Telefonundan bir kez bildirim iznini aç.')+'</small></span><b>›</b></button>';
 }
 async function refresh(force=false){
   if(resetting&&!force||loading&&!force)return;const request=++refreshRequest;loading=true;
   try{
-    const [summary,events,subscriptions]=await Promise.all([api(apiURL(company,'summary')),api(apiURL(company,'events')).catch(()=>({events:[]})),api(pushURL('devices')).catch(()=>null)]);
-    if(request!==refreshRequest)return;if(summary.company.id!==company)throw Error('Firma bilgisi doğrulanamadı.');state={companies:[summary],events:events.events};devices=subscriptions?.devices||[];deviceStateKnown=!!subscriptions;
-    if(!periodPinned)month=localMonth();clearTimeout(typeRefreshTimer);if(summary.running)typeRefreshTimer=setTimeout(()=>{if(!document.hidden&&!$('folderDialog').open&&!selected.size)refresh();},2000);await changeView(view);
+    const requestedView=view,requestedMonth=periodPinned?month:localMonth(),invoiceData=requestedView==='invoices'?api(apiURL(company,'invoices')+'?'+new URLSearchParams({offset:'0',status,month:requestedMonth,q:query})):Promise.resolve(null);
+    const [summary,subscriptions,prefetchedInvoices]=await Promise.all([api(apiURL(company,'summary')),api(pushURL('devices')).catch(()=>null),invoiceData]);
+    if(request!==refreshRequest)return;if(summary.company.id!==company)throw Error('Firma bilgisi doğrulanamadı.');state={companies:[summary],events:state.events};devices=subscriptions?.devices||[];deviceStateKnown=!!subscriptions;
+    if(!periodPinned)month=localMonth();clearTimeout(typeRefreshTimer);if(summary.running)typeRefreshTimer=setTimeout(()=>{if(!document.hidden&&!$('folderDialog').open&&!selected.size)refresh();},2000);await repairPushSubscription().catch(()=>{});await changeView(view,requestedView===view&&requestedMonth===month?prefetchedInvoices:null);
   }catch(e){if(request===refreshRequest)notice(e.message);}finally{if(request===refreshRequest)loading=false;}
 }
-async function loadInvoices(append=false){
+async function loadInvoices(append=false,prefetched=null){
   const request=++invoiceRequest;if(!append){offset=0;selected.clear();}
-  const p=new URLSearchParams({offset:String(offset),status,month,q:query}),data=await api(apiURL(company,'invoices')+'?'+p);if(request!==invoiceRequest)return;
+  const p=new URLSearchParams({offset:String(offset),status,month,q:query}),data=prefetched||await api(apiURL(company,'invoices')+'?'+p);if(request!==invoiceRequest)return;
   const loaded=data.rows.map(r=>({...r,company:companyContext}));rows=append?[...rows,...loaded]:loaded;rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));more=data.total>offset+data.rows.length;
   const start=info(company)?.period?.startMonth,before=start&&month<start;
   const note=query||status!=='all'?'Seçtiğin filtreye uygun fatura bulunamadı.':before?'Takip '+monthName(start)+' ayında başladı.':month===localMonth()?'İzibiz Sistemini Başlat ile şimdi alabilir veya otomatik kontrolü bekleyebilirsin.':'Bu ay için kayıtlı fatura bulunmuyor.';
@@ -158,25 +159,39 @@ async function renderNotifications(){
   const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
   const supported='Notification' in window&&'PushManager' in window&&'serviceWorker' in navigator;
   const registration=await registrationPromise,subscription=registration?await registration.pushManager.getSubscription():null;
-  const data=await api(pushURL('devices'));devices=data.devices;deviceStateKnown=true;pushId=subscription?await subscriptionId(subscription.endpoint):null;
-  const saved=devices.find(d=>d.id===pushId),ready=!!saved&&saved.active!==false&&supported&&Notification.permission==='granted';
-  $('pushStatus').textContent=ready?'Bu cihazda '+companyContext.name+' bildirimleri açık.':ios&&!standalone?'Önce Safari’den Ana Ekrana Ekle.':!supported?'Bu tarayıcıda bildirim açılamıyor.':Notification.permission==='denied'?'Bildirim izni kapalı. Telefonunun ayarlarından açabilirsin.':'Bu cihazda bildirimler henüz açık değil.';
-  $('enablePush').hidden=ready;$('enablePush').disabled=!supported||(ios&&!standalone)||(supported&&Notification.permission==='denied');$('testPush').hidden=!ready;
-  $('pushHelp').textContent=ios?(standalone?'Bildirimler bu telefona gelir. Deneme göndererek kontrol edebilirsin.':'Safari → Paylaş → Ana Ekrana Ekle. Sonra simgeden açıp buradaki bildirim düğmesine bas.'):'Telefonundan bu sayfayı açıp bildirimleri etkinleştir. iPhone’da ana ekrandaki uygulama simgesinden açmalısın.';
-  $('deviceList').innerHTML=devices.length?devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span><strong>'+escape(d.name)+'</strong><small>'+(d.active===false?'Yeniden bağlanması gerekiyor':d.id===pushId?'Bu cihaz · Bağlı':'Bağlı')+'</small></span><div class="device-actions">'+(d.active!==false&&d.id!==pushId?'<button data-test-device="'+d.id+'">Deneme gönder</button>':'')+'<button data-remove-device="'+d.id+'">Kaldır</button></div></div>').join(''): '<p class="subtle">Bu firma için henüz cihaz bağlanmadı.</p>';
+  const [firstDevices,history]=await Promise.all([api(pushURL('devices')),api(apiURL(company,'events')).catch(()=>({events:[]}))]);state.events=history.events;
+  let data=firstDevices;devices=data.devices;deviceStateKnown=true;pushId=subscription?await subscriptionId(subscription.endpoint):null;
+  let saved=devices.find(d=>d.id===pushId);
+  if(subscription&&supported&&Notification.permission==='granted'&&(!saved||saved.active===false)){
+    await api(pushURL('subscribe'),{subscription:subscription.toJSON(),name:deviceName()});data=await api(pushURL('devices'));devices=data.devices;saved=devices.find(d=>d.id===pushId);
+  }
+  const ready=!!saved&&saved.active!==false&&supported&&Notification.permission==='granted';
+  $('pushStatus').textContent=ready?'Bu cihaz tüm firmaların bildirimlerine bağlı.':ios&&!standalone?'Önce Safari’den Ana Ekrana Ekle.':!supported?'Bu tarayıcıda bildirim açılamıyor.':Notification.permission==='denied'?'Bildirim izni kapalı. Telefonunun ayarlarından açabilirsin.':'Bu cihazda bildirimler henüz açık değil.';
+  $('enablePush').hidden=ready;$('enablePush').disabled=!supported||(ios&&!standalone)||(supported&&Notification.permission==='denied');
+  $('pushHelp').textContent=ios?(standalone?'Bildirimler tüm firmalar için bu telefona otomatik gelir.':'Safari → Paylaş → Ana Ekrana Ekle. Sonra simgeden açıp buradaki bildirim düğmesine bir kez bas.'):'Bir kez açtıktan sonra firma firma ayar veya deneme yapman gerekmez. iPhone’da ana ekrandaki uygulama simgesinden açmalısın.';
+  $('deviceList').innerHTML=devices.length?devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span><strong>'+escape(d.name)+'</strong><small>'+(d.active===false?'Oturum değişti · Açınca otomatik yenilenir':d.id===pushId?'Bu cihaz · Tüm firmalara bağlı':'Tüm firmalara bağlı')+'</small></span><div class="device-actions"><button data-remove-device="'+d.id+'">Kaldır</button></div></div>').join(''): '<p class="subtle">Hesaba henüz bildirim cihazı bağlanmadı.</p>';
   $('eventList').innerHTML=state.events.length?state.events.slice(0,10).map(e=>'<article class="event">'+icon(e.kind==='error'?'alert':'notifications')+'<div><strong>'+escape(e.title)+'</strong><p>'+escape(e.body)+'</p><time>'+datetime(e.created)+'</time></div></article>').join(''):'<p class="subtle">Henüz bildirim yok.</p>';renderTrackingStatus();
 }
 async function subscriptionId(endpoint){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(endpoint));return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 function publicBytes(value){return Uint8Array.from(atob(value.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));}
+function deviceName(){return /iPhone/.test(navigator.userAgent)?'iPhone’um':/Android/.test(navigator.userAgent)?'Android telefonum':/Mac/.test(navigator.platform)?'Mac’im':/Win/.test(navigator.platform)?'Windows bilgisayarım':'Cihazım';}
+let spreadsheetPromise;
+function loadSpreadsheetLibrary(){
+  if(window.XLSX)return Promise.resolve(window.XLSX);if(spreadsheetPromise)return spreadsheetPromise;
+  spreadsheetPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/assets/vendor/xlsx.full.min.js';script.onload=()=>{if(window.XLSX)resolve(window.XLSX);else{spreadsheetPromise=null;reject(Error('Excel okuyucu başlatılamadı.'));}};script.onerror=()=>{spreadsheetPromise=null;reject(Error('Excel okuyucu yüklenemedi. İnternet bağlantını kontrol et.'));};document.head.append(script);});return spreadsheetPromise;
+}
+async function repairPushSubscription(){
+  if(pushRepairing||!('Notification' in window)||Notification.permission!=='granted')return;pushRepairing=true;
+  try{const registration=await registrationPromise,subscription=await registration?.pushManager.getSubscription();if(!subscription)return;const id=await subscriptionId(subscription.endpoint),saved=devices.find(device=>device.id===id);if(saved&&saved.active!==false)return;await api(pushURL('subscribe'),{subscription:subscription.toJSON(),name:deviceName()});devices=(await api(pushURL('devices'))).devices;deviceStateKnown=true;}
+  finally{pushRepairing=false;}
+}
 $('enablePush').onclick=()=>busy($('enablePush'),async()=>{
   const permission=await Notification.requestPermission();if(permission!=='granted'){toast('Bildirim izni verilmedi. İstediğinde ayarlardan açabilirsin.');await renderNotifications();return;}
   const registration=await registrationPromise;if(!registration)throw Error('Bildirim hizmeti açılamadı. Sayfayı yenileyip yeniden dene.');
   await navigator.serviceWorker.ready;const config=await api(pushURL('config'));
   const sub=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicBytes(config.publicKey)});
-  const name=/iPhone/.test(navigator.userAgent)?'iPhone’um':/Mac/.test(navigator.platform)?'Mac’im':/Win/.test(navigator.platform)?'Windows bilgisayarım':'Cihazım';
-  await api(pushURL('subscribe'),{subscription:sub.toJSON(),name});await renderNotifications();toast(companyContext.name+' için bu cihazın bildirimleri açıldı.');
+  await api(pushURL('subscribe'),{subscription:sub.toJSON(),name:deviceName()});await renderNotifications();toast('Bu cihaz tüm firmaların bildirimlerine bağlandı.');
 });
-$('testPush').onclick=()=>busy($('testPush'),async()=>{await api(pushURL('test'),{id:pushId});toast('Deneme bildirimi gönderildi. Bu cihazın bildirimlerini kontrol et.');});
 async function runScan(){
   if(scanning||resetting)return;scanning=true;updateButtons();
   try{await api(apiURL(company,'scan'),{});month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';toast('İzibiz başlatıldı. Faturalar geldikçe listeye eklenecek.');await refresh(true);}catch(e){notice(e.message);}finally{scanning=false;updateButtons();}
@@ -210,12 +225,12 @@ $('folderList').onclick=e=>{const b=e.target.closest('[data-folder]');if(b)busy(
 $('closeFolder').onclick=()=>$('folderDialog').close();
 $('folderDialog').addEventListener('click',e=>{if(e.target===$('folderDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
 $('folderContent').onclick=e=>{const b=e.target.closest('[data-folder-action]');if(!b||!currentFolder)return;const {id,folder}=currentFolder;busy(b,async()=>{if(b.dataset.folderAction==='delete')await clearFolder(id,folder);else{await api(apiURL(id,'excel'),{folder});await openFolder(id,folder);toast('Excel hazır.');}});};
-$('deviceList').onclick=e=>{const test=e.target.closest('[data-test-device]'),remove=e.target.closest('[data-remove-device]');if(test)busy(test,async()=>{await api(pushURL('test'),{id:test.dataset.testDevice});toast('Seçtiğin cihaza deneme bildirimi gönderildi.');});if(remove)busy(remove,async()=>{const result=await api(pushURL('unsubscribe'),{id:remove.dataset.removeDevice});if(!result.remaining&&remove.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager.getSubscription())?.unsubscribe();}await renderNotifications();toast('Bu cihazın bu firmadaki bildirimleri kapatıldı.');});};
+$('deviceList').onclick=e=>{const remove=e.target.closest('[data-remove-device]');if(remove)busy(remove,async()=>{await api(pushURL('unsubscribe'),{id:remove.dataset.removeDevice});if(remove.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager.getSubscription())?.unsubscribe();}await renderNotifications();toast('Bu cihazın tüm firma bildirimleri kapatıldı.');});};
 $('baselineButton').onclick=()=>$('baselineFile').click();
 $('baselineFile').onchange=async e=>{
   const file=e.target.files[0];e.target.value='';if(!file)return;
   busy($('baselineButton'),async()=>{
-    const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'}),numbers=new Set(),normalize=v=>String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');
+    const XLSX=await loadSpreadsheetLibrary(),workbook=XLSX.read(await file.arrayBuffer(),{type:'array'}),numbers=new Set(),normalize=v=>String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');
     let found=false;for(const name of workbook.SheetNames){const grid=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1,defval:''});const header=grid.findIndex(row=>row.some(v=>['faturano','faturanumarasi','invoicenumber','belgeno'].includes(normalize(v))));if(header<0)continue;found=true;const col=grid[header].findIndex(v=>['faturano','faturanumarasi','invoicenumber','belgeno'].includes(normalize(v)));for(const row of grid.slice(header+1)){const n=String(row[col]||'').trim();if(n&&n.length<100&&!/toplam/i.test(n))numbers.add(n);}}
     if(!found)throw Error('Excel’de Fatura No sütunu bulunamadı.');
     if(!confirm(info(company).company.name+' için bu dosyadaki '+numbers.size+' fatura numarası işlenmiş olarak kaydedilsin mi?'))return;
@@ -225,5 +240,5 @@ $('baselineFile').onchange=async e=>{
 };
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
 setInterval(()=>{if(!document.hidden&&!$('folderDialog').open&&!selected.size)refresh();},30000);
-initNav();renderIdentity();refresh();
+initNav();renderIdentity();document.querySelectorAll('.view').forEach(node=>node.hidden=node.id!==view+'View');document.querySelectorAll('[data-view]').forEach(node=>node.classList.toggle('active',node.dataset.view===view));if(view==='invoices')$('invoiceList').innerHTML=empty('Faturalar yükleniyor','Özet ve fatura listesi birlikte hazırlanıyor.');refresh();
 })();

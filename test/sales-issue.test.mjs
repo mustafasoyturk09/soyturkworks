@@ -58,7 +58,7 @@ test('Published and portable modules retain isolation, a consistent interface an
   const html=await readFile(new URL('../src/app.html',import.meta.url),'utf8');
   const template=JSON.parse(html.match(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>([\s\S]*?)<\/script>/)[1]);
   const fragment=await readFile(new URL('../src/sales-issue.html',import.meta.url),'utf8');
-  assert(html.includes(fragment));assert(template.includes(fragment));assert(template.includes(script));
+  const lf=value=>value.replace(/\r\n/g,'\n');assert(lf(html).includes(lf(fragment)));assert(lf(template).includes(lf(fragment)));assert(lf(template).includes(lf(script)));
   assert(script.includes("workspace?.companyId!=='PUSULA'"));
   assert(!/\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|\/api\//.test(script),'Preparation module must not call invoice/Logo services');
   for(const app of [html,template])assert(app.includes("pageId === 'satis-kesme' && window.SWWorkspace?.companyId !== 'PUSULA'"));

@@ -2,8 +2,8 @@ import {DurableObject} from 'cloudflare:workers';
 import {randomBytes, createHash, scrypt, timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
 import {IzibizConnector} from './izibiz.mjs';
-import {InvoiceArchive,workHours,nextCheck} from './automation.mjs';
-import {pushAPI,enqueueNotification,flushNotifications} from './push.mjs';
+import {InvoiceArchive} from './automation.mjs';
+import {pushAPI,enqueueNotification,flushNotifications,digestNotification} from './push.mjs';
 import {generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse} from '@simplewebauthn/server';
 
 const derive = promisify(scrypt);
@@ -88,7 +88,12 @@ export default {
     headers.set('Referrer-Policy','no-referrer');
     headers.set('X-Frame-Options','DENY');
     headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=(), publickey-credentials-get=(self), publickey-credentials-create=(self)');
-    headers.set('Cache-Control','no-store');
+    const path=url.pathname,staticAsset=!path.startsWith('/api/')&&/\.(?:css|js|mjs|png|ico|ttf)$/.test(path);
+    if(path==='/push-sw.js')headers.set('Cache-Control','no-cache');
+    else if(path==='/manifest.webmanifest')headers.set('Cache-Control','private, max-age=300, must-revalidate');
+    else if(path.startsWith('/assets/vendor/'))headers.set('Cache-Control','private, max-age=31536000, immutable');
+    else if(staticAsset)headers.set('Cache-Control','private, max-age=300, stale-while-revalidate=86400');
+    else headers.set('Cache-Control','no-store');
     headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
     return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
   }
@@ -176,15 +181,35 @@ export class AuthStore extends DurableObject {
         return json({saved:await this.storage.get('izibiz:config:'+id)||null,key:await this.izibizKey(),active:company.active&&!company.deleted});
       }
       if(path==='/tick'){
-        const enabled=(await this.companies()).filter(c=>c.active&&!c.deleted);
-        await Promise.all(enabled.map(c=>this.companyArchive(c.id,'tick','POST',{})));
-        if(workHours(Date.now()))await this.flushPush(account.revision);
+        const created=Date.now(),enabled=(await this.companies()).filter(c=>c.active&&!c.deleted),cycleId=hash('scheduled-digest:'+Math.floor(created/3600000));
+        const companies=await Promise.all(enabled.map(async company=>{
+          let summary={enabled:true,pending:0,lastResult:null,error:null};
+          try{const response=await this.companyArchive(company.id,'notification-summary','GET');if(response.ok)summary=await response.json();else summary.error='Firma özeti alınamadı.';}catch{summary.error='Firma özeti alınamadı.';}
+          const connected=!!await this.storage.get('izibiz:config:'+company.id);
+          return {id:company.id,name:company.name,connected,enabled:!!summary.enabled,pending:Number(summary.pending)||0,lastResult:summary.lastResult||null,error:summary.error||null};
+        }));
+        await this.storage.put('push:cycle:'+cycleId,{id:cycleId,created,deadline:created+8*60000,companies,results:{}});
+        const starts=await Promise.all(companies.map(async company=>{
+          if(!company.connected||!company.enabled)return {company,ok:true,data:{skipped:true,reason:company.connected?'disabled':'connection'}};
+          try{const response=await this.companyArchive(company.id,'tick','POST',{cycleId});return {company,ok:response.ok,data:await response.json().catch(()=>({}))};}
+          catch{return {company,ok:false,data:{error:'Otomatik kontrol başlatılamadı.'}};}
+        }));
+        for(const start of starts){
+          if(!start.company.connected||!start.company.enabled)continue;
+          if(!start.ok||start.data.skipped)await this.recordDigestResult({cycleId,company:start.company.id,fresh:Number(start.company.lastResult?.fresh)||0,pending:start.company.pending,error:!start.ok?(start.data.error||'Kontrol başlatılamadı.'):start.company.error||null});
+        }
+        await this.finalizeDigest(cycleId,false);
+        await this.scheduleMaintenance(created+8*60000);
+        await this.flushPush(account.revision);
         return json({ok:true});
       }
       if(path==='/notify'){
         const event=await readJSON(request);if(!/^[a-f0-9]{64}$/.test(event.id||'')||!COMPANIES.some(c=>c.id===event.company))fail('Bildirim geçersiz.');
-        await enqueueNotification(this.storage,event);
-        if(workHours(Date.now()))await this.flushPush(account.revision);
+        if(event.kind==='cycle-result'){
+          if(!/^[a-f0-9]{64}$/.test(event.cycleId||''))fail('Bildirim döngüsü geçersiz.');
+          await this.recordDigestResult(event);
+        }else await enqueueNotification(this.storage,event);
+        await this.flushPush(account.revision);
         return json({ok:true});
       }
       return json({error:'İşlem bulunamadı.'},404);
@@ -259,7 +284,7 @@ export class AuthStore extends DurableObject {
     if(path.startsWith('/api/automation/')){
       const match=path.match(/^\/api\/automation\/([A-Z_]+)\/([a-z-]+)$/),company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
       if(!company)fail('Firma bulunamadı veya etkin değil.',403);
-      if(match[2]==='events'&&request.method==='GET')return json({events:[...(await this.storage.list({prefix:'push:event:'})).values()].filter(e=>e.company===company.id).sort((a,b)=>b.created-a.created).slice(0,50)});
+      if(match[2]==='events'&&request.method==='GET')return json({events:[...(await this.storage.list({prefix:'push:event:'})).values()].filter(e=>e.company===company.id||e.company==='ALL').sort((a,b)=>b.created-a.created).slice(0,50)});
       if(match[2]==='summary'&&request.method==='GET'){const r=await this.companyArchive(company.id,'summary','GET');if(!r.ok)return r;return json({...await r.json(),connected:!!await this.storage.get('izibiz:config:'+company.id)});}
       if(!['summary','scan','clear-all','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','month-excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
       if(['scan','excel','clear-all'].includes(match[2])&&request.method==='POST')await this.rate(request,'archive-'+match[2]+':'+company.id,20,15);
@@ -323,9 +348,26 @@ export class AuthStore extends DurableObject {
     this.pushQueue=(this.pushQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
       await flushNotifications(this.storage,this.env.APP_ORIGIN,revision);
       const remaining=await this.storage.list({prefix:'push:outbox:'});
-      if(remaining.size){const soon=Math.min(...[...remaining.values()].map(v=>v.nextAttempt||Date.now()+60000));await this.scheduleMaintenance(workHours(soon)?Math.max(Date.now()+1000,soon):nextCheck(soon));}
+      if(remaining.size){const soon=Math.min(...[...remaining.values()].map(v=>v.nextAttempt||Date.now()+60000));await this.scheduleMaintenance(Math.max(Date.now()+1000,soon));}
     });
     return this.pushQueue;
+  }
+  async recordDigestResult(event){
+    const key='push:cycle:'+event.cycleId;
+    let ready=false;
+    await this.storage.transaction(async tx=>{
+      const cycle=await tx.get(key);if(!cycle||!cycle.companies.some(company=>company.id===event.company&&company.connected&&company.enabled))return;
+      const results={...(cycle.results||{}),[event.company]:{fresh:Math.max(0,Number(event.fresh)||0),pending:Math.max(0,Number(event.pending)||0),errors:Math.max(0,Number(event.errors)||0),error:event.error?String(event.error).slice(0,240):null}};
+      await tx.put(key,{...cycle,results});ready=cycle.companies.filter(company=>company.connected&&company.enabled).every(company=>results[company.id]);
+    });
+    if(ready)return this.finalizeDigest(event.cycleId,false);
+    return false;
+  }
+  async finalizeDigest(cycleId,force=false){
+    const key='push:cycle:'+cycleId,cycle=await this.storage.get(key);if(!cycle)return false;
+    const expected=cycle.companies.filter(company=>company.connected&&company.enabled);
+    if(!force&&!expected.every(company=>cycle.results?.[company.id]))return false;
+    await enqueueNotification(this.storage,digestNotification(cycle));await this.storage.delete(key);return true;
   }
   async izibizKey(){
     if(this.env.IZIBIZ_ENCRYPTION_KEY)return this.env.IZIBIZ_ENCRYPTION_KEY;
@@ -348,8 +390,11 @@ export class AuthStore extends DurableObject {
       if(!this.archive)await this.handle(new Request('https://invoice-store.internal/'+company+'/summary'));
       await this.archive.advance();return;
     }
-    const account=await this.storage.get('account');if(account&&workHours(Date.now()))await this.flushPush(account.revision);
-    for(const prefix of ['session:','challenge:','recovery:','rate:']){const items=await this.storage.list({prefix});const expired=[...items].filter(([,v])=>(v.expires||v.until)<Date.now()).map(([k])=>k);if(expired.length)await this.storage.delete(expired);}await this.scheduleMaintenance(Date.now()+DAY);}
+    const now=Date.now();for(const [key,cycle] of await this.storage.list({prefix:'push:cycle:'}))if(cycle.deadline<=now){await this.finalizeDigest(cycle.id,true);if(await this.storage.get(key)&&now-cycle.created>DAY)await this.storage.delete(key);}
+    const account=await this.storage.get('account');if(account)await this.flushPush(account.revision);
+    for(const prefix of ['session:','challenge:','recovery:','rate:']){const items=await this.storage.list({prefix});const expired=[...items].filter(([,v])=>(v.expires||v.until)<Date.now()).map(([k])=>k);if(expired.length)await this.storage.delete(expired);}
+    const cycles=await this.storage.list({prefix:'push:cycle:'}),nextCycle=cycles.size?Math.min(...[...cycles.values()].map(cycle=>cycle.deadline)):Infinity;
+    await this.scheduleMaintenance(Math.min(Date.now()+DAY,nextCycle));}
 }
 async function readJSON(request) {
   const reader=request.body?.getReader(),chunks=[];let size=0;
