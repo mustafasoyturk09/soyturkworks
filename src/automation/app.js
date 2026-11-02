@@ -216,7 +216,7 @@ async function runScan(){
   try{
     const environment=pushEnvironment();
     if(environment.standalone&&environment.supported&&Notification.permission!=='denied'){
-      try{const push=await connectPushForAll();if(push.created)await api(pushURL('test'),{id:push.id});}catch(e){notice('Telefon bildirimi bağlanamadı: '+e.message);}
+      try{const push=await connectPushForAll();if(push.ready)await api(pushURL('test'),{id:push.id});}catch(e){notice('Telefon bildirimi bağlanamadı: '+e.message);}
     }
     const result=await api('/api/automation/scan-all',{});month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';
     if(result.started)toast(result.started+' bağlı firmanın İzibiz kontrolü başladı. Başka firmaya girmen gerekmiyor.');
