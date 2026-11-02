@@ -32,7 +32,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
     const sessionCookie=response=>response.headers.get('set-cookie').split(';')[0];
     const password='Qa2026!';
     await t.test('Unauthenticated requests cannot bypass login through HTML or app assets',async()=>{
-      for(const path of ['/automation/app.js','/api/automation','/api/automation/PUSULA/clear-all','/api/automation/PUSULA/month-excel?month=2026-10','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
+      for(const path of ['/automation/app.js','/api/automation','/api/automation/PUSULA/bootstrap?month=2026-11','/api/automation/PUSULA/clear-all','/api/automation/PUSULA/month-excel?month=2026-10','/api/push/config','/index.html','/app/runtime.js','/app/sfOcrCoreData.js','/assets/vendor/pdf.min.js'])assert.equal((await request(path)).status,401,path);
       assert.equal((await request('/workspace/PUSULA/')).status,303);
       assert.equal((await request('/takip')).status,303);
       assert.equal((await request('/push-sw.js')).status,200);
@@ -75,6 +75,7 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/workspace/UNKNOWN/takip/',null,cookie)).headers.get('location'),origin+'/companies');
       assert.equal((await request('/api/automation/UNKNOWN/invoices',null,cookie)).status,403);
       assert.equal((await request('/api/automation/PUSULA/invoices',null,cookie)).value.rows.length,0);
+      const bootstrap=(await request('/api/automation/PUSULA/bootstrap?month=2026-11',null,cookie)).value;assert.equal(bootstrap.summary.company.id,'PUSULA');assert.equal(bootstrap.invoices.rows.length,0);
       assert.equal((await request('/api/automation/PUSULA/pdf?id=not-an-invoice',null,cookie)).status,404);
       assert.equal((await request('/api/automation/PUSULA/month-excel?month=2026-10',null,cookie)).status,404);
       assert.equal((await request('/api/automation/PUSULA/month-excel?month=bad',null,cookie)).status,400);

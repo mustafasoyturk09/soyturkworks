@@ -31,9 +31,11 @@ test('External OCR loaders preserve all embedded data and the complete portable 
  assert.equal(restored,original,'The deployed source must reconstruct the original byte for byte');
 });
 
-test('Invoice tracking starts without the Excel bundle and loads summary with invoices in parallel',async()=>{
+test('Invoice tracking starts without the Excel bundle and loads its first screen in one request',async()=>{
  const page=await readFile(new URL('src/automation/index.html',root),'utf8'),app=await readFile(new URL('src/automation/app.js',root),'utf8');
  assert(!page.includes('xlsx.full.min.js'),'The 1 MB spreadsheet reader must not block first paint');
+ assert(page.includes('id="testPush"'),'One global phone test must remain available without per-company test controls');
  assert(app.includes("script.src='/assets/vendor/xlsx.full.min.js'"),'Spreadsheet import must retain lazy loading');
- assert(app.includes('Promise.all([api(apiURL(company,\'summary\'))'),'Summary and the first invoice page must start together');
+ assert(app.includes("api(apiURL(company,'bootstrap')"),'Summary and the first invoice page must use one server round trip');
+ assert(app.includes('refreshDevicesInBackground()'),'Push device checks must not block the first invoice screen');
 });

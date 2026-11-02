@@ -83,6 +83,10 @@ test('Opening an invoice page reads the company archive only once',async()=>{
  const f=fixture();let reads=0;const all=f.engine.all.bind(f.engine);f.engine.all=async()=>{reads++;return all();};
  const page=await f.engine.handle('invoices','GET',{},new URLSearchParams({month:'2026-11'})).then(response=>response.json());assert.equal(page.total,0);assert.equal(reads,1);
 });
+test('Initial tracking bootstrap returns summary and invoices with one archive read',async()=>{
+ const f=fixture();let reads=0;const all=f.engine.all.bind(f.engine);f.engine.all=async()=>{reads++;return all();};
+ const data=await f.engine.handle('bootstrap','GET',{},new URLSearchParams({month:'2026-11'})).then(response=>response.json());assert.equal(data.summary.company.id,'PUSULA');assert.equal(data.invoices.total,0);assert.equal(reads,1);
+});
 test('Every scheduled cycle reports a company result even when no new invoice arrived',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
@@ -359,13 +363,13 @@ test('Push outbox deduplicates events and revokes expired or old-session subscri
  await flushNotifications(db,'https://soyturkworks.com','new',()=>assert.fail('Old session must not receive notifications'));
 });
 
-test('Test notification leads with the company without repeating the app name or inventing invoices',async()=>{
+test('One global test notification verifies the phone without per-company setup or invented invoices',async()=>{
  const db=storage(),sub=subscription();await db.put('push:device:test-device',{id:'test-device',subscription:sub.value,revision:'current'});
  let payload;
  const response=await pushAPI(db,'https://soyturkworks.com','test','POST',{id:'test-device',company:'PUSULA',companyName:'Pusula',revision:'current'},async(url,options)=>{
   payload=JSON.parse(ece.decrypt(options.body,{version:'aes128gcm',privateKey:sub.client,authSecret:sub.auth}).toString());return new Response('',{status:201});
  });
- assert.equal(response.status,200);assert.equal(payload.title,'Pusula · Bildirim Denemesi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));
+ assert.equal(response.status,200);assert.equal(payload.title,'Tüm Firmalar · Bildirim Testi');assert(!payload.title.includes('Soyturk Works'));assert.equal(payload.kind,'test');assert(!/\d+ Fatura/.test(payload.title));assert.match(payload.body,/firma adları, gelen ve bekleyen/);
 });
 
 test('One phone subscription automatically covers every company and one removal disables the device',async()=>{

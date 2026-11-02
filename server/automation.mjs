@@ -300,9 +300,9 @@ export class InvoiceArchive{
     const chunks=this.chunks(file),stream=new ReadableStream({async pull(c){const {value,done}=await chunks.next();if(done)c.close();else c.enqueue(value);},cancel(){return chunks.return();}});
     return new Response(stream,{headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':disposition(file.name),'Cache-Control':'private, no-store'}});
   }
-  async summary(){
-    const period=await this.period();
-    const [storedRows,storedFolders]=await Promise.all([this.all(),this.storage.list({prefix:'folder:'})]);
+  async summary(period=null,existingRows=null){
+    period=period||await this.period();
+    const [storedRows,storedFolders]=await Promise.all([existingRows||this.all(),this.storage.list({prefix:'folder:'})]);
     const rows=storedRows.filter(r=>!r.deletedAt),folders=[...storedFolders.values()].filter(f=>!f.deletedAt);
     await this.queueTypeRefresh(rows);const [job,settings,status,bytes]=await Promise.all([this.storage.get('job'),this.settings(),this.status(),this.storage.get('totalBytes')]);
     const count=items=>({total:items.length,fresh:items.filter(r=>invoiceState(r,localDate(this.now()))==='new').length,waiting:items.filter(r=>invoiceState(r,localDate(this.now()))==='waiting').length,done:items.filter(r=>r.done&&!r.isRet).length,rejected:items.filter(r=>r.isRet).length,pdfs:items.filter(r=>r.file).length,errors:items.filter(r=>r.pdfError&&!r.file&&!r.isRet).length});
@@ -315,24 +315,19 @@ export class InvoiceArchive{
   }
   async handle(action,method,body={},params=new URLSearchParams()){
     if(action==='notification-summary'&&method==='GET')return json(await this.notificationSummary());
-    await this.period(action==='baseline'&&method==='POST');
+    const period=await this.period(action==='baseline'&&method==='POST');
     if(action==='clear-all'&&method==='POST'){if(body.confirm!==true)fail('Tümünü temizleme onayı gerekli.');return json(await this.clearAll());}
-    if(action==='summary'&&method==='GET')return json(await this.summary());
+    if(action==='summary'&&method==='GET')return json(await this.summary(period));
+    if(action==='bootstrap'&&method==='GET'){
+      const storedRows=await this.all(),[summary,invoices]=await Promise.all([this.summary(period,storedRows),this.invoicePage(params,storedRows)]);
+      return json({summary,invoices});
+    }
     if(action==='scan'&&method==='POST'){
       return json(await this.start(true));
     }
     if(action==='tick'&&method==='POST')return json(await this.start(false,typeof body.cycleId==='string'&&/^[a-f0-9]{64}$/.test(body.cycleId)?body.cycleId:null));
     if(action==='settings'&&method==='POST'){if(typeof body.enabled!=='boolean')fail('Geçersiz otomasyon ayarı.');await this.storage.put('settings',{...await this.settings(),enabled:body.enabled});if(!body.enabled)await this.storage.delete('job');return json({ok:true});}
-    if(action==='invoices'&&method==='GET'){
-      const allRows=(await this.all()).filter(r=>!r.deletedAt);let rows=allRows;
-      if(params.get('month'))rows=rows.filter(r=>r.tarih.startsWith(params.get('month')));
-      if(params.get('folder'))rows=rows.filter(r=>r.folder===params.get('folder'));
-      if(params.get('status')==='new')rows=rows.filter(r=>invoiceState(r,localDate(this.now()))==='new');if(params.get('status')==='waiting')rows=rows.filter(r=>invoiceState(r,localDate(this.now()))==='waiting');if(params.get('status')==='done')rows=rows.filter(r=>r.done&&!r.isRet);if(params.get('status')==='rejected')rows=rows.filter(r=>r.isRet);
-      const q=(params.get('q')||'').toLocaleUpperCase('tr');if(q)rows=rows.filter(r=>(r.fatno+' '+r.unvan).toLocaleUpperCase('tr').includes(q));
-      rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));
-      const offset=Math.max(0,Math.min(100000,Number(params.get('offset'))||0)),limit=100;
-      return json({total:rows.length,rows:rows.slice(offset,offset+limit).map(r=>{const {file,...data}=r;return {...data,state:invoiceState(r,localDate(this.now())),tipLabel:invoiceTypeLabel(r.profile,r.tip),pdfReady:!!file};}),months:[...new Set(allRows.map(r=>r.tarih.slice(0,7)))].sort().reverse()});
-    }
+    if(action==='invoices'&&method==='GET')return json(await this.invoicePage(params));
     if(action==='mark'&&method==='POST'){
       if(!Array.isArray(body.items)||!body.items.length||body.items.length>100||new Set(body.items.map(x=>x?.uuid)).size!==body.items.length||typeof body.done!=='boolean')fail('En fazla 100 fatura seçin.');
       const result=await this.storage.transaction(async tx=>{
@@ -398,5 +393,15 @@ export class InvoiceArchive{
       return new Response(streamZip(entries,file=>this.chunks(file)),{headers:{'Content-Type':'application/zip','Content-Disposition':disposition(root+'.zip'),'Cache-Control':'private, no-store'}});
     }
     return json({error:'İşlem bulunamadı.'},404);
+  }
+  async invoicePage(params,existingRows=null){
+    const allRows=(existingRows||await this.all()).filter(r=>!r.deletedAt);let rows=allRows;
+    if(params.get('month'))rows=rows.filter(r=>r.tarih.startsWith(params.get('month')));
+    if(params.get('folder'))rows=rows.filter(r=>r.folder===params.get('folder'));
+    if(params.get('status')==='new')rows=rows.filter(r=>invoiceState(r,localDate(this.now()))==='new');if(params.get('status')==='waiting')rows=rows.filter(r=>invoiceState(r,localDate(this.now()))==='waiting');if(params.get('status')==='done')rows=rows.filter(r=>r.done&&!r.isRet);if(params.get('status')==='rejected')rows=rows.filter(r=>r.isRet);
+    const q=(params.get('q')||'').toLocaleUpperCase('tr');if(q)rows=rows.filter(r=>(r.fatno+' '+r.unvan).toLocaleUpperCase('tr').includes(q));
+    rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));
+    const offset=Math.max(0,Math.min(100000,Number(params.get('offset'))||0)),limit=100;
+    return {total:rows.length,rows:rows.slice(offset,offset+limit).map(r=>{const {file,...data}=r;return {...data,state:invoiceState(r,localDate(this.now())),tipLabel:invoiceTypeLabel(r.profile,r.tip),pdfReady:!!file};}),months:[...new Set(allRows.map(r=>r.tarih.slice(0,7)))].sort().reverse()};
   }
 }

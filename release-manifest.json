@@ -195,11 +195,11 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "7df8e16413a736e816430faac54ecfd7d45f3aed2b831105ac557527273a6b18"
+      "sha256": "294427556ab9213e5bb3d2ac18127ee87da381548943dcfe0ff8f1ce42346e93"
     },
     {
       "file": "automation/index.html",
-      "sha256": "28455114a26e181a3e6359860cad6da4d8728cfb18cc5ed8d2f1e860280331e8"
+      "sha256": "03b9790ac9661fb6b79a773fed34f84a91e33e7297d24322d02f5599fd1f5139"
     },
     {
       "file": "automation/style.css",

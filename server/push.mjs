@@ -25,9 +25,9 @@ export async function deliver(subscription,payload,keys,origin,fetcher=fetch){
 }
 export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   if(!COMPANY_IDS.includes(body.company))fail('Önce bir firma seçin.');
+  if(action==='devices'&&method==='GET')return json({devices:[...(await storage.list({prefix:'push:device:'})).values()].map(d=>({id:d.id,name:d.name,created:d.created,lastSent:d.lastSent||null,active:d.revision===body.revision,accountWide:true}))});
   const keys=await vapidKeys(storage);
   if(action==='config'&&method==='GET')return json({publicKey:keys.publicKey});
-  if(action==='devices'&&method==='GET')return json({devices:[...(await storage.list({prefix:'push:device:'})).values()].map(d=>({id:d.id,name:d.name,created:d.created,lastSent:d.lastSent||null,active:d.revision===body.revision,accountWide:true}))});
   if(action==='subscribe'&&method==='POST'){
     const subscription=validateSubscription(body.subscription),id=deviceId(subscription.endpoint);
     const devices=await storage.list({prefix:'push:device:'});if(devices.size>=10&&!devices.has('push:device:'+id))fail('En fazla 10 bildirim cihazı kaydedilebilir.');
@@ -38,7 +38,7 @@ export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   }
   if(action==='test'&&method==='POST'){
     const device=await storage.get('push:device:'+body.id);if(!device||device.revision!==body.revision)fail('Önce bu cihazda bildirimleri açın.');
-    const result=await deliver(device.subscription,{id:'test-'+Date.now(),title:body.companyName+' · Bildirim Denemesi',body:'Bu cihaz tüm firmaların iki saatlik fatura özetlerini alacak.',url:'/takip?company='+body.company+'&view=notifications',kind:'test'},keys,origin,fetcher);
+    const result=await deliver(device.subscription,{id:'test-'+Date.now(),title:'Tüm Firmalar · Bildirim Testi',body:'Telefon bağlantısı çalışıyor. Planlı özetlerde firma adları, gelen ve bekleyen fatura sayıları burada görünecek.',url:'/takip?company='+body.company+'&view=notifications',kind:'test'},keys,origin,fetcher);
     if(result==='expired'){await storage.delete('push:device:'+device.id);fail('Bildirim iznini bu cihazda yeniden açın.',409);}
     await touchDevice(storage,device.id,body.revision);return json({ok:true});
   }

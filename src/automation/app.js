@@ -10,7 +10,7 @@ if(!companyContext?.id){location.replace('/companies');return;}
 const company=companyContext.id,base='/workspace/'+company+'/takip/';
 let state={companies:[],events:[]},view=params.get('view')||'invoices',status='all',month=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||'')?params.get('month'):localMonth(),query='',rows=[],offset=0,more=false,selected=new Map(),currentFolder=null,devices=[],pushId=null,loading=false,noticeTimer,toastTimer,searchTimer;
 let undoEntries=[],undoMessage='',marking=false;
-let invoiceRequest=0,folderRequest=0,refreshRequest=0,typeRefreshTimer,periodPinned=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||''),resetting=false,scanning=false,deviceStateKnown=false,pushRepairing=false;
+let invoiceRequest=0,folderRequest=0,refreshRequest=0,typeRefreshTimer,deviceRefreshPromise,periodPinned=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||''),resetting=false,scanning=false,deviceStateKnown=false,pushRepairing=false;
 const monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 function localMonth(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit'}).format(new Date());}
 let registrationPromise='serviceWorker' in navigator?navigator.serviceWorker.register('/push-sw.js',{scope:'/'}).catch(()=>null):Promise.resolve(null);
@@ -64,7 +64,7 @@ function renderTrackingStatus(){
   const note=!c.connected?'Bağlantıyı çalışma alanındaki İzibiz ayarlarından kur.':enabled?'Hafta içi 09 · 11 · 13 · 15 · 17. Düğmeye basman gerekmez.':'İstersen elle alabilir veya Takip durumu bölümünden açabilirsin.';
   const result=c.running?c.status?.progress||'Faturalar alınıyor.':c.status?.error?'Son kontrol: '+c.status.error:'';
   const last=c.status?.lastFinished||c.status?.lastSuccess;
-  $('trackingStatus').innerHTML='<div class="tracking-mode"><span class="mode-dot '+(enabled?'on':'off')+'"></span><div><strong>'+escape(title)+'</strong><p>'+escape(note)+'</p>'+(result?'<p class="'+(c.status?.error&&!c.running?'health error':'')+'">'+escape(result)+'</p>':'')+'</div><button class="text-button" data-go-view="dashboard">Ayarlar</button></div><div class="tracking-times"><span>Son kontrol <strong>'+datetime(last)+'</strong></span><span>Sonraki <strong>'+(enabled?datetime(c.nextCheck):'Kapalı')+'</strong></span></div><button type="button" class="tracking-notifications" data-go-view="notifications">'+icon('notifications')+'<span>Telefon bildirimleri<small>'+(!deviceStateKnown?'Durum alınamadı':activeDevices.length?activeDevices.length+' cihaz bağlı':'Henüz cihaz bağlı değil')+'</small></span><b>›</b></button>';
+  $('trackingStatus').innerHTML='<div class="tracking-mode"><span class="mode-dot '+(enabled?'on':'off')+'"></span><div><strong>'+escape(title)+'</strong><p>'+escape(note)+'</p>'+(result?'<p class="'+(c.status?.error&&!c.running?'health error':'')+'">'+escape(result)+'</p>':'')+'</div><button class="text-button" data-go-view="dashboard">Ayarlar</button></div><div class="tracking-times"><span>Son kontrol <strong>'+datetime(last)+'</strong></span><span>Sonraki <strong>'+(enabled?datetime(c.nextCheck):'Kapalı')+'</strong></span></div><button type="button" class="tracking-notifications" data-go-view="notifications">'+icon('notifications')+'<span>Telefon bildirimleri<small>'+(!deviceStateKnown?'Cihaz durumu yükleniyor':activeDevices.length?activeDevices.length+' cihaz bağlı':'Henüz cihaz bağlı değil')+'</small></span><b>›</b></button>';
 }
 async function changeView(next,preloadedInvoices=null){
   if(!labels[next])next='invoices';view=next;updateAddress();
@@ -86,11 +86,15 @@ function renderDashboard(){
 async function refresh(force=false){
   if(resetting&&!force||loading&&!force)return;const request=++refreshRequest;loading=true;
   try{
-    const requestedView=view,requestedMonth=periodPinned?month:localMonth(),invoiceData=requestedView==='invoices'?api(apiURL(company,'invoices')+'?'+new URLSearchParams({offset:'0',status,month:requestedMonth,q:query})):Promise.resolve(null);
-    const [summary,subscriptions,prefetchedInvoices]=await Promise.all([api(apiURL(company,'summary')),api(pushURL('devices')).catch(()=>null),invoiceData]);
-    if(request!==refreshRequest)return;if(summary.company.id!==company)throw Error('Firma bilgisi doğrulanamadı.');state={companies:[summary],events:state.events};devices=subscriptions?.devices||[];deviceStateKnown=!!subscriptions;
-    if(!periodPinned)month=localMonth();clearTimeout(typeRefreshTimer);if(summary.running)typeRefreshTimer=setTimeout(()=>{if(!document.hidden&&!$('folderDialog').open&&!selected.size)refresh();},2000);await repairPushSubscription().catch(()=>{});await changeView(view,requestedView===view&&requestedMonth===month?prefetchedInvoices:null);
+    const requestedView=view,requestedMonth=periodPinned?month:localMonth(),initial=requestedView==='invoices',p=new URLSearchParams({offset:'0',status,month:requestedMonth,q:query});
+    const data=initial?await api(apiURL(company,'bootstrap')+'?'+p):{summary:await api(apiURL(company,'summary')),invoices:null},summary=data.summary,prefetchedInvoices=data.invoices;
+    if(request!==refreshRequest)return;if(summary.company.id!==company)throw Error('Firma bilgisi doğrulanamadı.');state={companies:[summary],events:state.events};
+    if(!periodPinned)month=localMonth();clearTimeout(typeRefreshTimer);if(summary.running)typeRefreshTimer=setTimeout(()=>{if(!document.hidden&&!$('folderDialog').open&&!selected.size)refresh();},2000);await changeView(view,requestedView===view&&requestedMonth===month?prefetchedInvoices:null);refreshDevicesInBackground();
   }catch(e){if(request===refreshRequest)notice(e.message);}finally{if(request===refreshRequest)loading=false;}
+}
+function refreshDevicesInBackground(){
+  if(deviceRefreshPromise||view==='notifications')return deviceRefreshPromise;
+  deviceRefreshPromise=api(pushURL('devices')).then(data=>{devices=data.devices;deviceStateKnown=true;renderTrackingStatus();if(view==='dashboard')renderDashboard();return repairPushSubscription();}).catch(()=>{}).finally(()=>deviceRefreshPromise=null);return deviceRefreshPromise;
 }
 async function loadInvoices(append=false,prefetched=null){
   const request=++invoiceRequest;if(!append){offset=0;selected.clear();}
@@ -167,7 +171,7 @@ async function renderNotifications(){
   }
   const ready=!!saved&&saved.active!==false&&supported&&Notification.permission==='granted';
   $('pushStatus').textContent=ready?'Bu cihaz tüm firmaların bildirimlerine bağlı.':ios&&!standalone?'Önce Safari’den Ana Ekrana Ekle.':!supported?'Bu tarayıcıda bildirim açılamıyor.':Notification.permission==='denied'?'Bildirim izni kapalı. Telefonunun ayarlarından açabilirsin.':'Bu cihazda bildirimler henüz açık değil.';
-  $('enablePush').hidden=ready;$('enablePush').disabled=!supported||(ios&&!standalone)||(supported&&Notification.permission==='denied');
+  $('enablePush').hidden=ready;$('enablePush').disabled=!supported||(ios&&!standalone)||(supported&&Notification.permission==='denied');$('testPush').hidden=!ready;
   $('pushHelp').textContent=ios?(standalone?'Bildirimler tüm firmalar için bu telefona otomatik gelir.':'Safari → Paylaş → Ana Ekrana Ekle. Sonra simgeden açıp buradaki bildirim düğmesine bir kez bas.'):'Bir kez açtıktan sonra firma firma ayar veya deneme yapman gerekmez. iPhone’da ana ekrandaki uygulama simgesinden açmalısın.';
   $('deviceList').innerHTML=devices.length?devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span><strong>'+escape(d.name)+'</strong><small>'+(d.active===false?'Oturum değişti · Açınca otomatik yenilenir':d.id===pushId?'Bu cihaz · Tüm firmalara bağlı':'Tüm firmalara bağlı')+'</small></span><div class="device-actions"><button data-remove-device="'+d.id+'">Kaldır</button></div></div>').join(''): '<p class="subtle">Hesaba henüz bildirim cihazı bağlanmadı.</p>';
   $('eventList').innerHTML=state.events.length?state.events.slice(0,10).map(e=>'<article class="event">'+icon(e.kind==='error'?'alert':'notifications')+'<div><strong>'+escape(e.title)+'</strong><p>'+escape(e.body)+'</p><time>'+datetime(e.created)+'</time></div></article>').join(''):'<p class="subtle">Henüz bildirim yok.</p>';renderTrackingStatus();
@@ -192,6 +196,7 @@ $('enablePush').onclick=()=>busy($('enablePush'),async()=>{
   const sub=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicBytes(config.publicKey)});
   await api(pushURL('subscribe'),{subscription:sub.toJSON(),name:deviceName()});await renderNotifications();toast('Bu cihaz tüm firmaların bildirimlerine bağlandı.');
 });
+$('testPush').onclick=()=>busy($('testPush'),async()=>{await api(pushURL('test'),{id:pushId});toast('Tüm firmalar için tek test özeti bu telefona gönderildi.');});
 async function runScan(){
   if(scanning||resetting)return;scanning=true;updateButtons();
   try{await api(apiURL(company,'scan'),{});month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';toast('İzibiz başlatıldı. Faturalar geldikçe listeye eklenecek.');await refresh(true);}catch(e){notice(e.message);}finally{scanning=false;updateButtons();}

@@ -155,6 +155,8 @@ Bir cihaz hesaba bir kez bağlanır ve etkin bütün firmaların bildirimlerini 
 Firma firma izin verme veya deneme gönderme adımı yoktur. Önceden firma kapsamında
 kaydedilmiş cihazlar VAPID veya telefon aboneliği sıfırlanmadan otomatik olarak
 hesap kapsamına geçirilir. Cihazı kaldırmak bütün firmaların bildirimini kapatır.
+Bildirim ekranındaki tek test özeti yalnızca açık telefona gönderilir; firma firma
+deneme kaydı veya firma başına kurulum oluşturmaz.
 VAPID özel anahtarı sunucuda tutulur. Bilinen HTTPS push sağlayıcıları dışındaki
 abonelik adresleri kabul edilmez.
 

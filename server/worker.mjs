@@ -286,7 +286,8 @@ export class AuthStore extends DurableObject {
       if(!company)fail('Firma bulunamadı veya etkin değil.',403);
       if(match[2]==='events'&&request.method==='GET')return json({events:[...(await this.storage.list({prefix:'push:event:'})).values()].filter(e=>e.company===company.id||e.company==='ALL').sort((a,b)=>b.created-a.created).slice(0,50)});
       if(match[2]==='summary'&&request.method==='GET'){const r=await this.companyArchive(company.id,'summary','GET');if(!r.ok)return r;return json({...await r.json(),connected:!!await this.storage.get('izibiz:config:'+company.id)});}
-      if(!['summary','scan','clear-all','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','month-excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
+      if(match[2]==='bootstrap'&&request.method==='GET'){const r=await this.companyArchive(company.id,'bootstrap','GET',{},url.search);if(!r.ok)return r;const data=await r.json();return json({...data,summary:{...data.summary,connected:!!await this.storage.get('izibiz:config:'+company.id)}});}
+      if(!['summary','bootstrap','scan','clear-all','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','month-excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
       if(['scan','excel','clear-all'].includes(match[2])&&request.method==='POST')await this.rate(request,'archive-'+match[2]+':'+company.id,20,15);
       return this.companyArchive(company.id,match[2],request.method,body,url.search);
     }
