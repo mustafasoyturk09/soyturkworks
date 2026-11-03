@@ -10,6 +10,7 @@ if(!companyContext?.id){location.replace('/companies');return;}
 const company=companyContext.id,base='/workspace/'+company+'/takip/';
 let state={companies:[],events:[]},view=params.get('view')||'invoices',status='all',month=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||'')?params.get('month'):localMonth(),query='',rows=[],offset=0,more=false,selected=new Map(),currentFolder=null,devices=[],pushId=null,loading=false,noticeTimer,toastTimer,searchTimer;
 let undoEntries=[],undoMessage='',marking=false;
+const selectedEvents=new Set();
 let invoiceRequest=0,folderRequest=0,refreshRequest=0,typeRefreshTimer,deviceRefreshPromise,periodPinned=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||''),resetting=false,scanning=false,deviceStateKnown=false,pushRepairing=false;
 const monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 function localMonth(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit'}).format(new Date());}
@@ -174,14 +175,26 @@ async function renderNotifications(){
   if(subscription&&permission==='granted'&&(!saved||saved.active===false)){
     await api(pushURL('subscribe'),{subscription:subscription.toJSON(),name:deviceName()});data=await api(pushURL('devices'));devices=data.devices;saved=devices.find(d=>d.id===pushId);
   }
-  const ready=!!saved&&saved.active!==false&&usable&&permission==='granted',needsInstall=ios&&!standalone;
+  const ready=!!saved&&saved.active!==false&&usable&&permission==='granted',needsInstall=ios&&!standalone,hasConnectedDevice=devices.some(d=>d.active!==false);
   $('pushStatus').textContent=ready?'Bu telefon tüm firmaların bildirimlerine bağlı.':needsInstall?'Telefonunda hata yok. Bu sayfa Safari sekmesinde açık.':!usable?'Bu tarayıcıda telefon bildirimi açılamıyor.':permission==='denied'?'Bildirim izni kapalı. iPhone Ayarları’ndan açabilirsin.':ios?'Doğru yerdesin. Aşağıdaki düğmeye bir kez bas.':'Bu cihazda bildirimler henüz açık değil.';
-  const setup=$('pushSetupSteps');setup.hidden=!needsInstall;setup.innerHTML=needsInstall?'<strong>iPhone’da yalnızca bir kez yap:</strong><ol><li>Safari’de Paylaş menüsünü aç.</li><li>Ana Ekrana Ekle’ye bas.</li><li>Ana ekrandaki SW logolu uygulama simgesini aç.</li><li>Bildirimler bölümünde “Bu telefonda tüm firmaları aç” düğmesine bas ve İzin Ver’i seç.</li></ol><p>Herhangi bir firmanın ekranı yeterli. Bilgisayardan işlem yapma; diğer firmalarda tekrarlama.</p>':'';
+  const setup=$('pushSetupSteps');setup.hidden=!needsInstall||hasConnectedDevice;setup.innerHTML=needsInstall&&!hasConnectedDevice?'<strong>iPhone’da yalnızca bir kez yap:</strong><ol><li>Safari’de Paylaş menüsünü aç.</li><li>Ana Ekrana Ekle’ye bas.</li><li>Ana ekrandaki SW logolu uygulama simgesini aç.</li><li>Bildirimler bölümünde “Bu telefonda tüm firmaları aç” düğmesine bas ve İzin Ver’i seç.</li></ol><p>Herhangi bir firmanın ekranı yeterli. Bilgisayardan işlem yapma; diğer firmalarda tekrarlama.</p>':'';
   $('enablePush').hidden=ready||needsInstall;$('enablePush').disabled=!usable||permission==='denied';$('testPush').hidden=!ready;
   $('pushHelp').textContent=ready?'Kurulum tamam. Hafta içi 09 · 11 · 13 · 15 · 17’de tüm firmaların özeti bu telefona gelir.':needsInstall?'Ana ekrana ekledikten sonra Safari’yi kapatıp mutlaka uygulama simgesinden aç.':ios?'Bu işlem tüm firmalar için tek seferliktir. Başka firmalarda yeniden açma veya test yapma.':'Telefonuna bildirim istiyorsan bu işlemi bilgisayardan değil, telefonundaki ana ekran uygulamasından yap.';
+  if(ready)$('pushHelp').textContent='Kurulum tamam. Site güncellendiğinde yeniden ana ekrana eklemen veya firmaları tek tek bağlaman gerekmez. Hafta içi 09 · 11 · 13 · 15 · 17 kontrolleri aynı telefon kaydını kullanır; yeni fatura yoksa da sonuç bildirimi hazırlanır.';
+  else if(hasConnectedDevice){$('pushStatus').textContent=needsInstall?'Safari sekmesindesin. Hesabında bildirimlere bağlı cihaz var.':'Hesabında tüm firmalara bağlı '+devices.filter(d=>d.active!==false).length+' cihaz var.';$('pushHelp').textContent=needsInstall?'Bu telefonda daha önce kurduysan mevcut ana ekran simgesinden aç; site güncellemeleri için yeniden ekleme. Yeni bir telefon kullanıyorsan yalnızca o cihazı bir kez kur.':ios?'Mevcut bağlı cihazlar için yeniden kurulum gerekmez. Bu yeni telefonu da bağlamak istersen aşağıdaki düğmeyi kullan.':'Bağlı telefon için yeniden kurulum gerekmez. Bu bilgisayarı ayrıca bağlamak zorunda değilsin.';}
   $('deviceList').innerHTML=devices.length?devices.map(d=>'<div class="device-row">'+icon('notifications')+'<span><strong>'+escape(d.name)+'</strong><small>'+(d.active===false?'Oturum değişti · Açınca otomatik yenilenir':d.id===pushId?'Bu cihaz · Tüm firmalara bağlı':'Tüm firmalara bağlı')+'</small></span><div class="device-actions"><button data-remove-device="'+d.id+'">Kaldır</button></div></div>').join(''): '<p class="subtle">Hesaba henüz bildirim cihazı bağlanmadı.</p>';
-  $('eventList').innerHTML=state.events.length?state.events.slice(0,10).map(e=>'<article class="event">'+icon(e.kind==='error'?'alert':'notifications')+'<div><strong>'+escape(e.title)+'</strong><p>'+escape(e.body)+'</p><time>'+datetime(e.created)+'</time></div></article>').join(''):'<p class="subtle">Henüz bildirim yok.</p>';renderTrackingStatus();
+  for(const id of selectedEvents)if(!state.events.some(e=>e.id===id))selectedEvents.delete(id);
+  $('eventList').innerHTML=state.events.length?state.events.map(e=>'<article class="event"><label class="event-select"><input type="checkbox" data-event-id="'+escape(e.id)+'" aria-label="'+escape(e.title)+' bildirimini seç" '+(selectedEvents.has(e.id)?'checked':'')+'></label><div><strong>'+escape(e.title)+'</strong><p>'+escape(e.body)+'</p><time>'+datetime(e.created)+'</time></div></article>').join(''):'<p class="subtle">Bildirim geçmişi boş.</p>';updateEventSelection();renderTrackingStatus();
 }
+function updateEventSelection(){const button=$('deleteSelectedEvents');button.disabled=!selectedEvents.size;button.textContent=selectedEvents.size?'Seçilenleri sil ('+selectedEvents.size+')':'Seçilenleri sil';}
+async function deleteEvents(all=false){
+  if(!all&&!selectedEvents.size)return;
+  if(all&&!confirm('Tüm firmaların bildirim geçmişi silinsin mi? Telefon bağlantısı, faturalar ve yeni bildirimler korunur.'))return;
+  const result=await api(apiURL(company,'events-delete'),all?{all:true}:{ids:[...selectedEvents]});selectedEvents.clear();await renderNotifications();toast(result.deleted+' bildirim geçmişten silindi.');
+}
+$('eventList').onchange=e=>{const id=e.target.dataset.eventId;if(!id)return;if(e.target.checked)selectedEvents.add(id);else selectedEvents.delete(id);updateEventSelection();};
+$('deleteSelectedEvents').onclick=async()=>{await busy($('deleteSelectedEvents'),()=>deleteEvents());updateEventSelection();};
+$('deleteAllEvents').onclick=()=>busy($('deleteAllEvents'),()=>deleteEvents(true));
 async function subscriptionId(endpoint){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(endpoint));return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 function publicBytes(value){return Uint8Array.from(atob(value.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));}
 function deviceName(){return /iPhone/.test(navigator.userAgent)?'iPhone’um':/Android/.test(navigator.userAgent)?'Android telefonum':/Mac/.test(navigator.platform)?'Mac’im':/Win/.test(navigator.platform)?'Windows bilgisayarım':'Cihazım';}

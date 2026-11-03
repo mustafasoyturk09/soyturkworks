@@ -8,6 +8,10 @@
   ],
   "workers_dev": false,
   "keep_vars": true,
+  "observability": {
+    "enabled": true,
+    "logs": {"enabled": true, "invocation_logs": false, "head_sampling_rate": 1}
+  },
   "vars": {
     "APP_ORIGIN": "https://soyturkworks.com",
     "OWNER_SETUP_SHA256": "584dcc25ee39a735a3a8c3a0f124a8afc164c20867500e47faa978b7265b609e",

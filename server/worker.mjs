@@ -4,8 +4,9 @@ import {promisify} from 'node:util';
 import {IzibizConnector} from './izibiz.mjs';
 import {InvoiceArchive,nextCheck} from './automation.mjs';
 import {InvoiceCycles} from './invoice-cycles.mjs';
+import {automationHealth} from './automation-health.mjs';
 import {statusNotifications} from './notification-format.mjs';
-import {pushAPI,enqueueNotification,flushNotifications} from './push.mjs';
+import {pushAPI,enqueueNotification,flushNotifications,notificationHistory,clearNotificationHistory} from './push.mjs';
 import {generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse} from '@simplewebauthn/server';
 
 const derive = promisify(scrypt);
@@ -40,6 +41,7 @@ function publicAccount(account) {return {username:account.username, recoveryEmai
 
 export default {
   async scheduled(event,env,ctx){
+    console.info(JSON.stringify({type:'automation-trigger',slot:event.scheduledTime}));
     const store=env.AUTH.get(env.AUTH.idFromName('single-owner-v1'));
     ctx.waitUntil(store.fetch(new Request('https://automation.internal/tick',{method:'POST',body:JSON.stringify({slot:event.scheduledTime})})).then(async r=>{if(!r.ok)throw Error('Otomatik kontrol başlatılamadı.');}));
   },
@@ -205,6 +207,7 @@ export class AuthStore extends DurableObject {
     if(path==='/api/local-mail'&&local(this.env))return json(await this.storage.get('local-mail')||{});
     if(path==='/api/session'&&request.method==='GET') {
       const session=await this.session(request);
+      if(account)await this.reportAutomationHealth(account.revision);
       if(session&&account)await this.armSchedule();
       return json({initialized:!!account,setupMethod:this.env.OWNER_EMAIL?'email':'owner-link',account:session&&account?publicAccount(account):null,companies:session?await this.companies():[],localMailbox:local(this.env)});
     }
@@ -292,7 +295,8 @@ export class AuthStore extends DurableObject {
     if(path.startsWith('/api/automation/')){
       const match=path.match(/^\/api\/automation\/([A-Z_]+)\/([a-z-]+)$/),company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
       if(!company)fail('Firma bulunamadı veya etkin değil.',403);
-      if(match[2]==='events'&&request.method==='GET')return json({events:[...(await this.storage.list({prefix:'push:event:'})).values()].filter(e=>e.company===company.id||e.company==='ALL').sort((a,b)=>b.created-a.created).slice(0,50)});
+      if(match[2]==='events'&&request.method==='GET')return json({events:await notificationHistory(this.storage,company.id)});
+      if(match[2]==='events-delete'&&request.method==='POST')return json(await clearNotificationHistory(this.storage,company.id,body));
       if(match[2]==='summary'&&request.method==='GET'){const r=await this.companyArchive(company.id,'summary','GET');if(!r.ok)return r;return json({...await r.json(),connected:!!await this.storage.get('izibiz:config:'+company.id)});}
       if(match[2]==='bootstrap'&&request.method==='GET'){const r=await this.companyArchive(company.id,'bootstrap','GET',{},url.search);if(!r.ok)return r;const data=await r.json();return json({...data,summary:{...data.summary,connected:!!await this.storage.get('izibiz:config:'+company.id)}});}
       if(!['summary','bootstrap','scan','clear-all','settings','invoices','mark','baseline','folders','audit','delete-folder','excel','month-excel','pdf','export'].includes(match[2]))return json({error:'İşlem bulunamadı.'},404);
@@ -356,6 +360,12 @@ export class AuthStore extends DurableObject {
       const current=await tx.getAlarm();await tx.setAlarm(current&&current>Date.now()?Math.min(current,target):target);
     });
   }
+  async reportAutomationHealth(revision){
+    if(this.healthLoggedAt&&Date.now()-this.healthLoggedAt<900000)return;
+    this.healthLoggedAt=Date.now();
+    try{console.info(JSON.stringify(await automationHealth(this.storage,revision)));}
+    catch{console.warn('automation-health-unavailable');}
+  }
   async armSchedule(){
     let next=await this.storage.get('automation:next-check');
     if(!next){next=nextCheck(Date.now());await this.storage.put('automation:next-check',next);}
@@ -395,6 +405,7 @@ export class AuthStore extends DurableObject {
     }
     const now=Date.now(),account=await this.storage.get('account');
     if(account){
+      await this.reportAutomationHealth(account.revision);
       const next=await this.storage.get('automation:next-check');
       if(next&&next<=now){await this.cycles().begin({slot:next});await this.storage.put('automation:next-check',nextCheck(now));}
       await this.cycles().maintain();await this.flushPush(account.revision);await this.armSchedule();

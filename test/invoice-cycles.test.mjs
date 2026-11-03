@@ -25,7 +25,7 @@ test('Every connected company starts from one manual request; disabled tracking 
 test('A fast company notifies immediately, zero arrivals notify too, and late results survive the old eight minute deadline',async()=>{
   const f=fixture(),{id}=await f.cycles.begin();
   await f.cycles.record({cycleId:id,company:'PUSULA',fresh:0,allMonthly:[{month:'2026-10',count:22},{month:'2026-11',count:2}]});
-  let events=await f.events();assert.equal(events.length,1);assert.match(events[0].body,/Ekim 22 Adet · Kasım 2 Adet/);assert.match(events[0].title,/Kontrol Tamamlandı/);
+  let events=await f.events();assert.equal(events.length,1);assert.match(events[0].body,/Ekim 22 Adet · Kasım 2 Adet/);assert.match(events[0].title,/Yeni Fatura Yok/);
   f.advance(9*60000);await f.cycles.maintain();assert(await f.storage.get('push:cycle:'+id));
   assert.equal((await f.events()).filter(e=>/Kontrol Sürüyor/.test(e.title)).length,4);
   await f.cycles.record({cycleId:id,company:'COMED',fresh:3,monthly:[{month:'2026-11',count:3}]});

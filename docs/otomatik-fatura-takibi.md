@@ -222,6 +222,21 @@ Kimlik doğrulama testi arşiv/API/manifest/service worker erişimlerini de sın
 
 ## 3 Kasım 2026 doğrulama kapsamı
 
+Bildirim geçmişinde seçili kayıtlar veya tüm firmaların geçmişi silinebilir.
+Silme, olay kimliğini koruyan bir gizleme işlemidir; bekleyen gönderimi,
+telefon aboneliğini ve fatura kayıtlarını değiştirmez. Yeni fatura bulunmayan
+başarılı kontrolde başlık açıkça “Yeni Fatura Yok” olur.
+
+Excel şablonu sürüm 2: referans sütun genişlikleri, orta kalınlıkta çerçeve,
+ortalı birleşik başlık ve firma adı uzunluğuna göre en fazla 47 punto kullanır.
+Eski önbellek dosyaları sonraki indirmede yeni biçimde üretilir. Beş firmanın
+sentetik Excel çıktısı görsel olarak kontrol edildi.
+
+Sunucu teknik sağlık kayıtları zamanlayıcı, firma sonuç durumu, etkin cihaz
+sayısı ve bekleyen/yeniden denenen gönderim sayısını içerir. Fatura içerikleri,
+abonelik adresleri ve anahtarlar kayda alınmaz. Geçmişte kayıt tutulmayan bir
+çalışmanın sonucu yalnızca bu yeni kayıtlardan doğrulanamaz.
+
 Yeni testler beş firmanın tek istekle başlamasını, sıfır yeni fatura sonucunu,
 sekiz dakikadan geç gelen sonuçları, aynı saat için çift tetiklemeyi, bağlantı
 hatalarını, eşzamanlı firma sonuçlarını, tüm ayların parçalara bölünmesini,

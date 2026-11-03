@@ -4,9 +4,9 @@ import {randomBytes,createECDH,verify,createPublicKey,createHash} from 'node:cry
 import ece from 'http_ece';
 import {unzipSync,strFromU8} from 'fflate';
 import {InvoiceArchive,nextCheck,workHours,previousMonth,trackingPeriod} from '../server/automation.mjs';
-import {folderName,makeExcel,supplierFromXML,unwrapDocument} from '../server/invoice-files.mjs';
+import {folderName,makeExcel,supplierFromXML,unwrapDocument,EXCEL_TEMPLATE_VERSION,excelTitleFontSize} from '../server/invoice-files.mjs';
 import {IzibizConnector} from '../server/izibiz.mjs';
-import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications,digestNotification} from '../server/push.mjs';
+import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications,digestNotification,notificationHistory,clearNotificationHistory} from '../server/push.mjs';
 import {notificationMonthCounts,formatNotificationMonths} from '../server/notification-format.mjs';
 
 function storage(){
@@ -447,4 +447,43 @@ test('A company scenario backfill cannot silently skip a full invoice cycle or l
  await f.db.put('izibiz:scan:PUSULA',{run:previous,started:Date.parse('2026-11-01T06:00:00Z')});
  const result=await f.engine.start(false,'f'.repeat(64));assert(result.running);assert(!(await f.db.get('job')).metadataOnly);
  await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='cycle-result').length,1);assert.equal(f.events[0].fresh,2);
+});
+
+test('History selection is company scoped and deleting history preserves devices, queued sends and deduplication',async()=>{
+ const db=storage();await db.put('push:device:one',{id:'one',revision:'current'});
+ const event={id:'pusula-event',company:'PUSULA',created:Date.now(),title:'Test'};
+ await enqueueNotification(db,event);await enqueueNotification(db,{...event,id:'comed-event',company:'COMED'});
+ await assert.rejects(clearNotificationHistory(db,'PUSULA',{ids:['pusula-event','comed-event']}),{status:403});
+ assert.equal((await notificationHistory(db,'PUSULA')).length,1);
+ assert.equal((await clearNotificationHistory(db,'PUSULA',{ids:['pusula-event']})).deleted,1);
+ assert.equal((await notificationHistory(db,'PUSULA')).length,0);assert.equal((await notificationHistory(db,'COMED')).length,1);
+ await enqueueNotification(db,event);assert.equal((await notificationHistory(db,'PUSULA')).length,0);
+ assert.equal((await db.list({prefix:'push:outbox:'})).size,2);assert(await db.get('push:device:one'));
+ assert.equal((await clearNotificationHistory(db,'PUSULA',{all:true})).deleted,1);assert.equal((await notificationHistory(db,'COMED')).length,0);
+ await enqueueNotification(db,{...event,id:'new-event'});assert.equal((await notificationHistory(db,'PUSULA')).length,1);
+});
+
+test('Excel export matches the bordered reference and fits every company title without changing invoice values',()=>{
+ const names=['Pusula','Comed','Kendine İyi Bak','Dijital Garaj','KİB Dijital Tek'];
+ const sizes=[];
+ for(const name of names){
+  const bytes=makeExcel(name,'2026-10','2026-11-03',[{fatno:'TEST20260000001',tarih:'2026-10-27',unvan:'Örnek Tedarikçi',profile:'TEMELFATURA',tip:'SATIS',tutar:123456.78,birim:'TRY',yanit:'Yanıt gerekmiyor',done:true}]);
+  const files=unzipSync(bytes),sheet=strFromU8(files['xl/worksheets/sheet1.xml']),styles=strFromU8(files['xl/styles.xml']);
+  const size=Number(styles.match(/<font><b\/><sz val="(\d+)"/)[1]);sizes.push(size);assert(size>=24&&size<=47);
+  assert(sheet.includes(name.toLocaleUpperCase('tr-TR')));assert(sheet.includes('<mergeCell ref="A1:H1"/>'));
+  for(const col of 'ABCDEFGH')assert(sheet.includes('r="'+col+'1" s="1"'));
+  assert.match(styles,/<left style="medium">/);assert.match(styles,/borderId="1"/);assert.match(styles,/horizontal="center" vertical="center" shrinkToFit="1"/);
+  assert.match(styles,/FF339966/);assert.match(styles,/FFFF0066/);assert(sheet.includes('<v>123456.78</v>'));assert(sheet.includes('İŞLENDİ'));
+ }
+ assert.equal(sizes[0],47);assert(sizes[2]<sizes[0]);
+ assert(excelTitleFontSize('ÇOK UZUN BİR FİRMA ÜNVANI '.repeat(4))<47);
+});
+
+test('Existing monthly Excel downloads regenerate the template once without changing invoice records',async t=>{
+ const f=fixture();t.mock.method(globalThis,'fetch',f.fetcher);await f.engine.start();await drain(f.engine,f.db);
+ const key='monthly-excel:2026-10',old=await f.db.get(key),rows=await f.engine.all();
+ await f.db.put(key,{...old,templateVersion:1});
+ const response=await f.engine.handle('month-excel','GET',{},new URLSearchParams({month:'2026-10'}));assert.equal(response.status,200);
+ const current=await f.db.get(key);assert.equal(current.templateVersion,EXCEL_TEMPLATE_VERSION);assert.notEqual(current.file.id,old.file.id);assert.deepEqual(await f.engine.all(),rows);
+ await f.engine.refreshMonthlyExcels();assert.equal((await f.db.get(key)).file.id,current.file.id);
 });

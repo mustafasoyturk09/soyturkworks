@@ -77,6 +77,14 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       const scanAll=await request('/api/automation/scan-all',{},cookie);assert.equal(scanAll.status,200);assert.equal(scanAll.value.started,0);assert.equal(scanAll.value.connected,0);assert.equal(scanAll.value.results.length,5);assert(scanAll.value.results.every(result=>result.status==='not-connected'));
       const instant=await request('/api/automation/instant-status',{},cookie);assert.equal(instant.status,200);assert.equal(instant.value.queued,false);assert.equal(instant.value.results.length,5);assert(instant.value.results.every(r=>Array.isArray(r.allMonthly)&&!r.connected));
       assert.equal((await request('/api/automation/instant-status',{})).status,401);
+      const events=(await request('/api/automation/PUSULA/events',null,cookie)).value.events;assert(events.length>=2);
+      const otherEvents=(await request('/api/automation/COMED/events',null,cookie)).value.events;
+      assert.equal((await request('/api/automation/PUSULA/events-delete',{ids:[otherEvents[0].id]},cookie)).status,403);
+      assert.equal((await request('/api/automation/PUSULA/events-delete',{ids:[events[0].id]},cookie)).status,200);
+      assert(!(await request('/api/automation/PUSULA/events',null,cookie)).value.events.some(e=>e.id===events[0].id));
+      assert.equal((await request('/api/automation/PUSULA/events-delete',{all:true})).status,401);
+      assert.equal((await request('/api/automation/PUSULA/events-delete',{all:true},cookie)).status,200);
+      assert.equal((await request('/api/automation/COMED/events',null,cookie)).value.events.length,0);
       assert.equal((await request('/workspace/UNKNOWN/takip/',null,cookie)).headers.get('location'),origin+'/companies');
       assert.equal((await request('/api/automation/UNKNOWN/invoices',null,cookie)).status,403);
       assert.equal((await request('/api/automation/PUSULA/invoices',null,cookie)).value.rows.length,0);

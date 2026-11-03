@@ -58,7 +58,7 @@ export class InvoiceCycles{
       const monthly=event.allMonthly||event.monthly||[];
       const notifications=statusNotifications(company,{...event,allMonthly:monthly,lastFinished:event.lastFinished||(!event.error?this.now():null)},'cycle:'+cycle.id,this.now(),event.error||'');
       for(const notification of notifications){
-        notification.id=hash(notification.id);notification.kind='company-result';notification.title=company.name+' · '+(event.error?'Kontrol Uyarısı':result.fresh?result.fresh+' Yeni Fatura':'Kontrol Tamamlandı');
+        notification.id=hash(notification.id);notification.kind='company-result';notification.title=company.name+' · '+(event.error?'Kontrol Uyarısı':result.fresh?result.fresh+' Yeni Fatura':'Yeni Fatura Yok');
         notification.tag='invoice-check-'+company.id+'-'+notifications.indexOf(notification);
         await enqueueNotification(tx,notification,true);
       }

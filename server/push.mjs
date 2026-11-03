@@ -54,6 +54,23 @@ export async function enqueueNotification(storage,event,inTransaction=false){
   for(const device of devices.values())await storage.put('push:outbox:'+event.id+':'+device.id,{event,device:device.id,attempts:0});
   const events=await storage.list({prefix:'push:event:'});const old=[...events].sort((a,b)=>b[1].created-a[1].created).slice(100);if(old.length)await storage.delete(old.map(([k])=>k));
 }
+export async function notificationHistory(storage,company){
+  return [...(await storage.list({prefix:'push:event:'})).values()].filter(e=>!e.historyDeletedAt&&(e.company===company||e.company==='ALL')).sort((a,b)=>b.created-a.created);
+}
+export async function clearNotificationHistory(storage,company,body){
+  const all=body.all===true,ids=body.ids;
+  if(!all&&(!Array.isArray(ids)||!ids.length||ids.length>100||ids.some(id=>typeof id!=='string'||!id.length||id.length>180)))fail('Silmek istediğiniz bildirimleri seçin.');
+  return storage.transaction(async tx=>{
+    const events=await tx.list({prefix:'push:event:'}),selected=new Set(all?[]:ids);
+    const matches=[...events].filter(([,event])=>all||selected.has(event.id));
+    if(!all&&matches.some(([,event])=>event.company!==company&&event.company!=='ALL'))fail('Başka firmanın bildirimi bu ekrandan silinemez.',403);
+    let deleted=0;
+    for(const [key,event] of matches)if(!event.historyDeletedAt){await tx.put(key,{...event,historyDeletedAt:Date.now()});deleted++;}
+    // Retain the event ID for idempotency; history deletion never cancels a push
+    // already queued or recreates an old invoice notification on retry.
+    return {ok:true,deleted};
+  });
+}
 export async function flushNotifications(storage,origin,revision,fetcher=fetch){
   const keys=await vapidKeys(storage),items=[...(await storage.list({prefix:'push:outbox:'}))].filter(([,item])=>!(item.nextAttempt>Date.now())).slice(0,20);
   // One slow/offline provider must not hold every other phone and company.

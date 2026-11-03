@@ -1,7 +1,7 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {IzibizConnector,invoiceTypeLabel} from './izibiz.mjs';
 import {invoiceState,recentInvoiceDate} from './invoice-state.mjs';
-import {folderName,excelName,safeName,makeExcel,unwrapDocument,supplierFromXML,streamZip} from './invoice-files.mjs';
+import {folderName,excelName,safeName,makeExcel,unwrapDocument,supplierFromXML,streamZip,EXCEL_TEMPLATE_VERSION} from './invoice-files.mjs';
 import {notificationMonthCounts,formatNotificationMonths,allNotificationMonthCounts} from './notification-format.mjs';
 
 const CHUNK=512*1024,MAX_BYTES=512*1024*1024;
@@ -98,16 +98,16 @@ export class InvoiceArchive{
     }),date=localDate(this.now());
     for(const month of Object.keys(versions)){
       const key='monthly-excel:'+month,revision=versions[month],previous=await this.storage.get(key);
-      if(previous?.revision===revision)continue;
+      if(previous?.revision===revision&&previous.templateVersion===EXCEL_TEMPLATE_VERSION)continue;
       const monthly=rows.filter(r=>r.tarih.startsWith(month)).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.fatno.localeCompare(b.fatno));
       const bytes=makeExcel(this.company.name,month,date,monthly),name=excelName(this.company.name,month,date);
       await this.storage.transaction(async tx=>{
         if(job)await this.requireJob(job,tx);
         if((await tx.get('archive-generation')||0)!==generation||(await tx.get('month-revision:'+month)||0)!==revision)return;
-        const current=await tx.get(key);if(current?.revision===revision)return;
+        const current=await tx.get(key);if(current?.revision===revision&&current.templateVersion===EXCEL_TEMPLATE_VERSION)return;
         const used=(await tx.get('totalBytes')||0)-(current?.file.size||0);if(used+bytes.length>MAX_BYTES)fail('Firma arşivi dolu. Excel güncellenemedi.',507);
         if(current?.file)await tx.delete(fileKeys(current.file));
-        const file=await this.saveFile('monthly-excel-'+randomUUID(),name,bytes,tx);await tx.put(key,{month,revision,file,at:this.now()});await tx.put('totalBytes',used+bytes.length);
+        const file=await this.saveFile('monthly-excel-'+randomUUID(),name,bytes,tx);await tx.put(key,{month,revision,file,templateVersion:EXCEL_TEMPLATE_VERSION,at:this.now()});await tx.put('totalBytes',used+bytes.length);
       });
     }
   }
