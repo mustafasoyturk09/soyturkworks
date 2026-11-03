@@ -361,7 +361,7 @@ export class AuthStore extends DurableObject {
     });
   }
   async reportAutomationHealth(revision){
-    if(this.healthLoggedAt&&Date.now()-this.healthLoggedAt<900000)return;
+    if(this.healthLoggedAt&&Date.now()-this.healthLoggedAt<60000)return;
     this.healthLoggedAt=Date.now();
     try{console.info(JSON.stringify(await automationHealth(this.storage,revision)));}
     catch{console.warn('automation-health-unavailable');}
