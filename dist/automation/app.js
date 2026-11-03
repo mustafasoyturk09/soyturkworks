@@ -216,14 +216,27 @@ async function runScan(){
   try{
     const environment=pushEnvironment();
     if(environment.standalone&&environment.supported&&Notification.permission!=='denied'){
-      try{const push=await connectPushForAll();if(push.ready)await api(pushURL('test'),{id:push.id});}catch(e){notice('Telefon bildirimi bağlanamadı: '+e.message);}
+      try{await connectPushForAll();}catch(e){notice('Telefon bildirimi bağlanamadı: '+e.message);}
     }
     const result=await api('/api/automation/scan-all',{});month=localMonth();periodPinned=false;status='all';query='';$('searchInput').value='';view='invoices';
     if(result.started)toast(result.started+' bağlı firmanın İzibiz kontrolü başladı. Başka firmaya girmen gerekmiyor.');
-    else if(result.connected)toast('Bağlı firmaların kontrolü zaten sürüyor. Sonuçlar otomatik gelecek.');
+    else if(result.connected)toast('Firma sonuçlarını aşağıda görebilirsin. Başlatılamayan kontroller sunucuda yeniden denenecek.');
     else throw Error('Henüz İzibiz bağlantısı bulunan firma yok.');
+    const labels={'started':'Kontrol başladı · otomatik takip açık','skipped':'Kontrol sonucu hazırlanıyor','error':'Başlatılamadı · yeniden denenecek','not-connected':'İzibiz bağlantısı yok'};
+    const panel=$('allCompanyStatus');panel.hidden=false;panel.innerHTML='<strong>Tüm firmaların kontrolü</strong>'+result.results.map(r=>'<p><b>'+escape(r.name)+'</b><span>'+escape(labels[r.status]||r.status)+(r.error?' · '+escape(r.error):'')+'</span></p>').join('');
     await refresh(true);
   }catch(e){notice(e.message);}finally{scanning=false;updateButtons();}
+}
+async function sendInstantStatus(){
+  await repairPushSubscription();
+  const result=await api('/api/automation/instant-status',{}),panel=$('allCompanyStatus');panel.hidden=false;
+  panel.innerHTML='<strong>Faturalar Anlık Durum</strong><small>Sunucudaki son kayıtlar · Yeni bir İzibiz indirmesi başlatılmaz.</small>'+result.results.map(r=>{
+    const months=(r.allMonthly||[]).map(m=>monthName(m.month)+' '+m.count+' Adet').join(' · ')||(r.error?'Güncel durum doğrulanamadı':'Kayıtlı fatura yok');
+    const note=!r.connected?'İzibiz bağlantısı yok':r.error?'Son kontrol tamamlanamadı':r.running?'Kontrol sürüyor':!r.enabled?'Otomatik takip kapalı':'';
+    return '<p><b>'+escape(r.name)+'</b><span>Gelen: '+escape(months)+'</span><small>'+escape(note)+(note?' · ':'')+'Son kontrol: '+(r.lastFinished?escape(new Date(r.lastFinished).toLocaleString('tr-TR',{timeZone:'Europe/Istanbul'})):'Henüz tamamlanmadı')+'</small></p>';
+  }).join('');
+  if(result.queued)toast('Tüm firmaların aylık durumu bağlı telefonlara gönderim sırasına alındı.');
+  else notice('Durum aşağıda hazır. Bağlı bildirim cihazı yok; telefondaki Bildirimler bölümünden bir kez açmalısın.');
 }
 async function resetAll(){
   if(resetting||!confirm(companyContext.name+' firmasının TÜM AYLARDAKİ faturaları ve arşiv dosyaları temizlensin mi?\nİzibiz bağlantısı, bildirim izni ve işlenmiş fatura bilgisi korunur. Tüm Firmaları Güncelle’ye basınca son faturalar yeniden alınır ve telefon bildirimi yeniden oluşturulur.'))return;
@@ -249,6 +262,7 @@ $('selectionBar').onclick=e=>{const b=e.target.closest('[data-bulk]');if(b)busy(
 $('undoLastMark').onclick=()=>busy($('undoLastMark'),undoLastMark);
 $('clearSelection').onclick=()=>{selected.clear();$('invoiceList').querySelectorAll('input[type=checkbox]').forEach(n=>n.checked=false);renderSelection();};
 $('scanButton').onclick=runScan;$('clearAllButton').onclick=resetAll;
+$('instantStatusButton').onclick=()=>busy($('instantStatusButton'),sendInstantStatus);
 async function clearFolder(id,folder){if(!confirm('Bu klasörün dosyaları silinsin mi? Aynı dosyalar otomatik olarak tekrar alınmaz. Tümünü Temizle ile sistemi boşaltıp yeniden alabilirsin.'))return;await api(apiURL(id,'delete-folder'),{folder});$('folderDialog').close();toast('Klasör dosyaları silindi.');await refresh(true);}
 $('folderList').onclick=e=>{const b=e.target.closest('[data-folder]');if(b)busy(b,()=>openFolder(company,b.dataset.folder));};
 $('closeFolder').onclick=()=>$('folderDialog').close();

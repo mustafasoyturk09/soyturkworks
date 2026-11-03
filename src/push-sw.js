@@ -6,7 +6,7 @@ self.addEventListener('push',event=>{
   event.waitUntil((async()=>{
     let data={};try{data=event.data?.json()||{};}catch{}
     const path=typeof data.url==='string'&&/^(?:\/takip(?:[/?]|$)|\/workspace\/[A-Z_]+\/takip\/(?:[?]|$))/.test(data.url)?data.url:'/companies';
-    const digest=data.kind==='digest';
+    const digest=['digest','status','company-result'].includes(data.kind);
     await self.registration.showNotification(String(data.title||'Firma Fatura Takibi').slice(0,120),{
       body:String(data.body||'Fatura takibinde yeni bir gelişme var. Detayları görmek için dokun.').slice(0,500),
       icon:'/assets/brand/apple-touch-icon.png',badge:'/assets/brand/favicon-48.png',

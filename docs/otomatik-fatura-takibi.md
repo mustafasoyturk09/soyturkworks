@@ -166,16 +166,43 @@ güvenlik kuralı gereği telefon üzerinde kullanıcı işlemi ister. Sonraki f
 oturum yenilemeleri mevcut abonelikten otomatik onarılır. Bağlantı durumu gerçek
 abonelikten alınır; firma başına deneme kaydı oluşturulmaz.
 
-Her planlı döngü tek bir toplu bildirim üretir. Başlıkta yeni fatura gelen firma
-adları ve toplam sayı, gövdede her firmanın gelen ve işlem bekleyen sayısı vardır.
-Yeni fatura yoksa da “Yeni Fatura Yok” özeti gelir; bağlantısı olmayan, takibi
-kapalı, hata veren veya süresi içinde bitmeyen firma açıkça belirtilir. Bildirime
-dokununca firma seçimi açılır. Fatura içeriği ve tutarlar kilit ekranına gönderilmez.
-Olaylar benzersiz kimlikle sıraya alınır; eski özetler aynı bildirim yuvasında
-yenilenir, yüksek öncelikle gönderilir ve geçici sağlayıcı hataları yeniden denenir.
-Geçersiz abonelikler temizlenir. Parola kurtarma/değiştirme eski cihaz aboneliklerinin
-yeni bildirim almasını engeller; uygulama aynı telefonda açılınca abonelik otomatik
-yenilenir. Otomatik gönderimler hafta içi 09, 11, 13, 15 ve 17 saatlerindedir.
+Her firma tamamlandığında ayrı sonuç bildirimi üretir. Yeni fatura yoksa da o
+firmanın kontrol sonucu ve aylık toplamları gelir. Bir firmanın yavaşlığı diğer
+firmaları bekletmez. Bağlantısı olmayan, takibi kapalı veya hata veren firma
+sessizce özetten çıkarılmaz. İki dakika süren iş için bekleme bilgisi gönderilir;
+iş tamamlandığında aynı firmanın bildirimi güncellenir. Sekiz dakika dolunca
+sonuçları silen eski toplu özet davranışı kaldırılmıştır. İşler 24 saat takip
+edilir; tamamlanamayan iş açık hata sonucu ile kapatılır.
+
+**Tüm Firmaları Güncelle**, bütün bağlı firmaları sunucuda kalıcı bir döngüye
+kaydeder ve otomatik takibini açar. Bir firmanın ekranına girilmesi yeterlidir.
+Süren işe yeni kontrol isteği eklenir; firma iki kez indirilmez. Beş dakika içinde
+başarıyla tamamlanan iş için yeniden indirmek yerine son sonuç gönderilir.
+İlk yeni sürüm döngüsü de bağlı firmaların otomatik takibini bir kez açar;
+sonradan kullanıcı tarafından kapatılan takip sonraki planlı döngülerde korunur.
+Eksik İzibiz bağlantısı veya başarısız başlatma ekranda firma adıyla gösterilir.
+Bağlantı testi otomatik olarak gönderilmez; gerçek sonuç bildirimi kullanılır.
+
+**Faturalar Anlık Durum**, yeniden İzibiz indirmesi başlatmadan bütün etkin
+firmaların sunucudaki son kayıtlarını, tüm arşiv aylarının gelen sayılarını ve
+son kontrol zamanını bağlı telefonlara gönderir. Örnek: Pusula — Gelen: Ekim
+22 Adet · Kasım 2 Adet. Bunlar yeni bulunan fatura sayısı değil, silinmemiş ve
+reddedilmemiş gelen faturaların aylık toplamıdır; işlenmiş faturalar dahildir.
+Uzun arşivler altışar aylık ayrı bildirimlere bölünür; aylar kesilmez. Aynı özet
+ekranda da kalır. Bağlı cihaz yoksa gönderilmiş gibi gösterilmez. Devam eden veya
+başarısız son kontrol açıkça belirtilir; eski kayıtlar anlık İzibiz sorgusu gibi
+sunulmaz.
+
+Cron ile birlikte sahibin Durable Object alarmı da sıradaki Türkiye saati
+09, 11, 13, 15, 17 kontrolünü saklar. İkisi aynı saat için çalışırsa aynı kalıcı
+döngü kullanılır; kaydedilmiş sonuçlar sıfırlanmaz. Alarm ayrıca başlatılamayan
+işleri ve bildirim kuyruğunu sürdürür. Geçici push hataları 24 saat boyunca
+artan aralıklarla yeniden denenir; beş deneme sonrasında sessizce atılmaz.
+Telefon başına bekleyen işler diğer telefonları engellemez. Bildirim olayını
+kaydetme ve cihaz kuyruklarına ekleme tek depolama işlemiyle tamamlanır.
+Geçersiz abonelikler temizlenir. Parola kurtarma/değiştirme eski cihazların yeni
+bildirim almasını engeller; uygulama aynı telefonda açılınca abonelik yenilenir.
+
 İşletim sistemi bildirim kaynağı olarak kurulu web uygulamasının adını gösterebilir;
 bildirimin uygulama tarafından belirlenen başlık ve metninde Soyturk Works yazmaz.
 Telefonun interneti, Odak modu ve işletim sisteminin bildirim ayarları teslim
@@ -192,3 +219,13 @@ Bekleniyor geçişi, aylara ayrı Excel, ilk referans aktarımı, işaretleme/ge
 sırasında devam eden liste/PDF/metadata işlerinin iptali ve gerçek şifreli push
 isteğini kapsar.
 Kimlik doğrulama testi arşiv/API/manifest/service worker erişimlerini de sınar.
+
+## 3 Kasım 2026 doğrulama kapsamı
+
+Yeni testler beş firmanın tek istekle başlamasını, sıfır yeni fatura sonucunu,
+sekiz dakikadan geç gelen sonuçları, aynı saat için çift tetiklemeyi, bağlantı
+hatalarını, eşzamanlı firma sonuçlarını, tüm ayların parçalara bölünmesini,
+cron olmadan sunucu alarmını ve beş denemeden uzun push tekrarını kapsar.
+Gerçek telefonun kilit ekranına teslim bu testlerden çıkarılamaz. Bu oturumda
+Windows tarayıcı adresini doğrulayamayan Computer Use güvenlik kontrolü görsel
+incelemeyi durdurdu; telefon/tablet/masaüstü görsel QA tamamlanmış sayılmadı.

@@ -416,3 +416,35 @@ test('Two-hour digest leads with company names and includes every company count'
  assert.equal(single.title,'Kendine İyi Bak');assert.equal(single.body,'Ekim · 23 Yeni Gelen\nKasım · 2 Yeni Gelen');
  const waiting=digestNotification({id:'cycle-two',companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true}],results:{}});assert.equal(waiting.title,'Tüm Firmalar · Kontrol Sürüyor');assert.match(waiting.body,/Pusula · Kontrol Sürüyor/);
 });
+
+test('Manual and scheduled cycles share an active scan and both get results, including zero-new follow-up',async t=>{
+ const f=fixture(),first='a'.repeat(64),second='b'.repeat(64);
+ t.mock.method(globalThis,'fetch',f.fetcher);
+ await f.engine.start(false,first);await f.engine.advance();
+ await f.engine.start(true,second);await drain(f.engine,f.db);
+ const results=f.events.filter(e=>e.kind==='cycle-result');assert.equal(results.length,2);assert.deepEqual(new Set(results.map(e=>e.cycleId)),new Set([first,second]));
+ assert(results.every(e=>e.allMonthly.length===2));
+ assert.equal((await f.engine.start(true,'c'.repeat(64))).reason,'recent');
+});
+
+test('Push retries remain durable after five failures and delayed outbox items cannot starve a ready company',async()=>{
+ const db=storage(),sub=subscription();await db.put('push:device:one',{id:'one',subscription:sub.value,revision:'current'});
+ await enqueueNotification(db,{id:'zz-ready',company:'COMED',title:'Comed',body:'Gelen 2',created:Date.now()});
+ for(let i=0;i<20;i++)await db.put('push:outbox:aa-delayed-'+i,{event:{created:Date.now()},device:'one',attempts:1,nextAttempt:Date.now()+60000});
+ let attempts=0;for(let i=0;i<6;i++){
+   const key='push:outbox:zz-ready:one',item=await db.get(key);assert(item);await db.put(key,{...item,nextAttempt:0});
+   await flushNotifications(db,'https://soyturkworks.com','current',async()=>{attempts++;return new Response('',{status:503});});
+ }
+ assert.equal(attempts,6);assert.equal((await db.get('push:outbox:zz-ready:one')).attempts,6);
+ const key='push:outbox:zz-ready:one';await db.put(key,{...await db.get(key),nextAttempt:0});
+ await flushNotifications(db,'https://soyturkworks.com','current',async()=>new Response('',{status:201}));assert.equal(await db.get(key),undefined);
+});
+
+test('A company scenario backfill cannot silently skip a full invoice cycle or leave its cooldown behind',async t=>{
+ const f=fixture();t.mock.method(globalThis,'fetch',f.fetcher);
+ const previous='11111111-2222-4333-8444-555555555555';
+ await f.db.put('job',{id:previous,metadataOnly:true,generation:0});
+ await f.db.put('izibiz:scan:PUSULA',{run:previous,started:Date.parse('2026-11-01T06:00:00Z')});
+ const result=await f.engine.start(false,'f'.repeat(64));assert(result.running);assert(!(await f.db.get('job')).metadataOnly);
+ await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='cycle-result').length,1);assert.equal(f.events[0].fresh,2);
+});

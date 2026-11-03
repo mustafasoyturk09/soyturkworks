@@ -20,7 +20,7 @@ export async function vapidKeys(storage){
 }
 export async function deliver(subscription,payload,keys,origin,fetcher=fetch){
   const digest=payload.kind==='digest';
-  const req=webpush.generateRequestDetails(subscription,JSON.stringify(payload),{TTL:digest?43200:86400,urgency:'high',topic:digest?'invoice-digest':deviceId(payload.id).slice(0,28),vapidDetails:{subject:origin,publicKey:keys.publicKey,privateKey:keys.privateKey}});
+  const req=webpush.generateRequestDetails(subscription,JSON.stringify(payload),{TTL:digest?43200:86400,urgency:'high',topic:deviceId(payload.tag||payload.id).slice(0,28),vapidDetails:{subject:origin,publicKey:keys.publicKey,privateKey:keys.privateKey}});
   const response=await fetcher(req.endpoint,{method:'POST',headers:req.headers,body:req.body,redirect:'manual',signal:AbortSignal.timeout(20000)});
   if(response.ok)return 'sent';if([404,410].includes(response.status))return 'expired';throw Error('Bildirim sağlayıcısı isteği tamamlayamadı ('+response.status+').');
 }
@@ -45,22 +45,24 @@ export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   }
   return json({error:'İşlem bulunamadı.'},404);
 }
-export async function enqueueNotification(storage,event){
+export async function enqueueNotification(storage,event,inTransaction=false){
+  if(!inTransaction)return storage.transaction(tx=>enqueueNotification(tx,event,true));
   if(await storage.get('push:event:'+event.id))return;
-  await storage.put('push:event:'+event.id,{...event,created:Date.now()});
+  event={...event,created:event.created||Date.now()};
+  await storage.put('push:event:'+event.id,event);
   const devices=await storage.list({prefix:'push:device:'});
   for(const device of devices.values())await storage.put('push:outbox:'+event.id+':'+device.id,{event,device:device.id,attempts:0});
   const events=await storage.list({prefix:'push:event:'});const old=[...events].sort((a,b)=>b[1].created-a[1].created).slice(100);if(old.length)await storage.delete(old.map(([k])=>k));
 }
 export async function flushNotifications(storage,origin,revision,fetcher=fetch){
-  const keys=await vapidKeys(storage),items=await storage.list({prefix:'push:outbox:',limit:20});
-  for(const [key,item] of items){
-    if(item.nextAttempt>Date.now())continue;
+  const keys=await vapidKeys(storage),items=[...(await storage.list({prefix:'push:outbox:'}))].filter(([,item])=>!(item.nextAttempt>Date.now())).slice(0,20);
+  // One slow/offline provider must not hold every other phone and company.
+  for(let i=0;i<items.length;i+=5)await Promise.all(items.slice(i,i+5).map(async([key,item])=>{
     const device=await storage.get('push:device:'+item.device);
-    if(!device||device.revision!==revision||Date.now()-item.event.created>86400000){await storage.delete(key);continue;}
+    if(!device||device.revision!==revision||Date.now()-item.event.created>86400000){await storage.delete(key);return;}
     try{const result=await deliver(device.subscription,item.event,keys,origin,fetcher);if(result==='expired')await storage.delete('push:device:'+device.id);else await touchDevice(storage,device.id,revision);await storage.delete(key);}
-    catch{item.attempts++;if(item.attempts>=5)await storage.delete(key);else await storage.put(key,{...item,nextAttempt:Date.now()+Math.min(3600000,60000*2**(item.attempts-1))});}
-  }
+    catch{item.attempts++;await storage.put(key,{...item,nextAttempt:Date.now()+Math.min(3600000,15000*2**Math.min(8,item.attempts-1))});}
+  }));
 }
 
 export function digestNotification(cycle){

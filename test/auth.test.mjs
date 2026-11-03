@@ -75,6 +75,8 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       }
       assert.equal((await request('/api/automation',null,cookie)).status,400);
       const scanAll=await request('/api/automation/scan-all',{},cookie);assert.equal(scanAll.status,200);assert.equal(scanAll.value.started,0);assert.equal(scanAll.value.connected,0);assert.equal(scanAll.value.results.length,5);assert(scanAll.value.results.every(result=>result.status==='not-connected'));
+      const instant=await request('/api/automation/instant-status',{},cookie);assert.equal(instant.status,200);assert.equal(instant.value.queued,false);assert.equal(instant.value.results.length,5);assert(instant.value.results.every(r=>Array.isArray(r.allMonthly)&&!r.connected));
+      assert.equal((await request('/api/automation/instant-status',{})).status,401);
       assert.equal((await request('/workspace/UNKNOWN/takip/',null,cookie)).headers.get('location'),origin+'/companies');
       assert.equal((await request('/api/automation/UNKNOWN/invoices',null,cookie)).status,403);
       assert.equal((await request('/api/automation/PUSULA/invoices',null,cookie)).value.rows.length,0);

@@ -231,15 +231,15 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "a545d502bed5cc88d6744735c5b3dc46af56dde35546f978d269913c2979cfbc"
+      "sha256": "a48754b2697fbfc7e19f83d1af9510fc241de8adc9fbe0cd0f2f81a430a4b7dd"
     },
     {
       "file": "automation/index.html",
-      "sha256": "17dfe7d939fc682fe3404771ba22d173dc983c83c03071b77364d24aa3ad0092"
+      "sha256": "b0f1bd8b12e137f99e7ccdef6d0184b092ff7048d5c84bc238dab960729bd7a2"
     },
     {
       "file": "automation/style.css",
-      "sha256": "3245e3c87d45316b4bff7ddadb5fc5aa07975645a7a292624baf55d2d2e87109"
+      "sha256": "33b1df04a94e22596382cd93011361f7032a8c3c863254aa2436f3816f93080f"
     },
     {
       "file": "favicon.ico",
@@ -271,7 +271,7 @@
     },
     {
       "file": "push-sw.js",
-      "sha256": "13cbc98ab43acb9b8b038ca1fef5f2b8add96fafacf49423161f3b08da308d95"
+      "sha256": "1b3150cae81b8c1500fbc69ef88853bb38404228b8aad58cca09b6eec30eb78b"
     },
     {
       "file": "robots.txt",

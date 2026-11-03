@@ -2,8 +2,10 @@ import {DurableObject} from 'cloudflare:workers';
 import {randomBytes, createHash, scrypt, timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
 import {IzibizConnector} from './izibiz.mjs';
-import {InvoiceArchive} from './automation.mjs';
-import {pushAPI,enqueueNotification,flushNotifications,digestNotification} from './push.mjs';
+import {InvoiceArchive,nextCheck} from './automation.mjs';
+import {InvoiceCycles} from './invoice-cycles.mjs';
+import {statusNotifications} from './notification-format.mjs';
+import {pushAPI,enqueueNotification,flushNotifications} from './push.mjs';
 import {generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse} from '@simplewebauthn/server';
 
 const derive = promisify(scrypt);
@@ -39,7 +41,7 @@ function publicAccount(account) {return {username:account.username, recoveryEmai
 export default {
   async scheduled(event,env,ctx){
     const store=env.AUTH.get(env.AUTH.idFromName('single-owner-v1'));
-    ctx.waitUntil(store.fetch(new Request('https://automation.internal/tick',{method:'POST'})).then(async r=>{if(!r.ok)throw Error('Otomatik kontrol başlatılamadı.');}));
+    ctx.waitUntil(store.fetch(new Request('https://automation.internal/tick',{method:'POST',body:JSON.stringify({slot:event.scheduledTime})})).then(async r=>{if(!r.ok)throw Error('Otomatik kontrol başlatılamadı.');}));
   },
   async fetch(request, env) {
     const url=new URL(request.url);
@@ -182,35 +184,19 @@ export class AuthStore extends DurableObject {
         return json({saved:await this.storage.get('izibiz:config:'+id)||null,key:await this.izibizKey(),active:company.active&&!company.deleted});
       }
       if(path==='/tick'){
-        const created=Date.now(),enabled=(await this.companies()).filter(c=>c.active&&!c.deleted),cycleId=hash('scheduled-digest:'+Math.floor(created/3600000));
-        const companies=await Promise.all(enabled.map(async company=>{
-          let summary={enabled:true,pending:0,lastResult:null,error:null};
-          try{const response=await this.companyArchive(company.id,'notification-summary','GET');if(response.ok)summary=await response.json();else summary.error='Firma özeti alınamadı.';}catch{summary.error='Firma özeti alınamadı.';}
-          const connected=!!await this.storage.get('izibiz:config:'+company.id);
-          return {id:company.id,name:company.name,connected,enabled:!!summary.enabled,pending:Number(summary.pending)||0,monthly:Array.isArray(summary.monthly)?summary.monthly:[],lastResult:summary.lastResult||null,error:summary.error||null};
-        }));
-        await this.storage.put('push:cycle:'+cycleId,{id:cycleId,created,deadline:created+8*60000,companies,results:{}});
-        const starts=await Promise.all(companies.map(async company=>{
-          if(!company.connected||!company.enabled)return {company,ok:true,data:{skipped:true,reason:company.connected?'disabled':'connection'}};
-          try{const response=await this.companyArchive(company.id,'tick','POST',{cycleId});return {company,ok:response.ok,data:await response.json().catch(()=>({}))};}
-          catch{return {company,ok:false,data:{error:'Otomatik kontrol başlatılamadı.'}};}
-        }));
-        for(const start of starts){
-          if(!start.company.connected||!start.company.enabled)continue;
-          if(!start.ok||start.data.skipped)await this.recordDigestResult({cycleId,company:start.company.id,fresh:Number(start.company.lastResult?.fresh)||0,pending:start.company.pending,monthly:start.company.monthly,error:!start.ok?(start.data.error||'Kontrol başlatılamadı.'):start.company.error||null});
-        }
-        await this.finalizeDigest(cycleId,false);
-        await this.scheduleMaintenance(created+8*60000);
-        await this.flushPush(account.revision);
+        const body=await readJSON(request),slot=Number(body.slot)||Date.now();
+        await this.cycles().begin({slot});
+        await this.storage.put('automation:next-check',nextCheck(Date.now()));
+        await this.scheduleMaintenance(Date.now()+1000);
         return json({ok:true});
       }
       if(path==='/notify'){
         const event=await readJSON(request);if(!/^[a-f0-9]{64}$/.test(event.id||'')||!COMPANIES.some(c=>c.id===event.company))fail('Bildirim geçersiz.');
         if(event.kind==='cycle-result'){
           if(!/^[a-f0-9]{64}$/.test(event.cycleId||''))fail('Bildirim döngüsü geçersiz.');
-          await this.recordDigestResult(event);
+          await this.cycles().record(event);
         }else await enqueueNotification(this.storage,event);
-        await this.flushPush(account.revision);
+        await this.scheduleMaintenance(Date.now()+1000);
         return json({ok:true});
       }
       return json({error:'İşlem bulunamadı.'},404);
@@ -219,6 +205,7 @@ export class AuthStore extends DurableObject {
     if(path==='/api/local-mail'&&local(this.env))return json(await this.storage.get('local-mail')||{});
     if(path==='/api/session'&&request.method==='GET') {
       const session=await this.session(request);
+      if(session&&account)await this.armSchedule();
       return json({initialized:!!account,setupMethod:this.env.OWNER_EMAIL?'email':'owner-link',account:session&&account?publicAccount(account):null,companies:session?await this.companies():[],localMailbox:local(this.env)});
     }
     const body=request.method==='GET'?{}:await readJSON(request);
@@ -284,15 +271,23 @@ export class AuthStore extends DurableObject {
     }
     if(path==='/api/automation/scan-all'&&request.method==='POST'){
       await this.rate(request,'archive-scan-all',20,15);
-      const companies=(await this.companies()).filter(company=>company.active&&!company.deleted);
+      const result=await this.cycles().begin({manual:true});
+      await this.armSchedule();await this.scheduleMaintenance(Date.now()+1000);
+      return json({ok:true,...result});
+    }
+    if(path==='/api/automation/instant-status'&&request.method==='POST'){
+      await this.rate(request,'archive-instant-status',20,15);
+      const devices=[...(await this.storage.list({prefix:'push:device:'})).values()].filter(d=>d.revision===account.revision);
+      const created=Date.now(),id=hash('status:'+token()),companies=(await this.companies()).filter(c=>c.active&&!c.deleted);
       const results=await Promise.all(companies.map(async company=>{
-        if(!await this.storage.get('izibiz:config:'+company.id))return {id:company.id,name:company.name,status:'not-connected'};
-        try{
-          const response=await this.companyArchive(company.id,'scan','POST',{}),data=await response.json().catch(()=>({}));
-          return response.ok?{id:company.id,name:company.name,status:data.running?'started':'skipped',reason:data.reason||null}:{id:company.id,name:company.name,status:'error',error:String(data.error||'Kontrol başlatılamadı.').slice(0,160)};
-        }catch{return {id:company.id,name:company.name,status:'error',error:'Kontrol başlatılamadı.'};}
+        let summary={error:'Firma özeti alınamadı'},connected=!!await this.storage.get('izibiz:config:'+company.id);
+        try{const response=await this.companyArchive(company.id,'notification-summary','GET');if(response.ok)summary=await response.json();}catch{}
+        const note=!connected?'İzibiz bağlantısı yok':!summary.enabled?'Otomatik takip kapalı':'';
+        for(const event of statusNotifications(company,summary,id,created,note))await enqueueNotification(this.storage,event);
+        return {id:company.id,name:company.name,connected,...summary,company:undefined};
       }));
-      return json({ok:true,started:results.filter(result=>result.status==='started').length,connected:results.filter(result=>result.status!=='not-connected').length,results});
+      await this.scheduleMaintenance(Date.now()+1000);
+      return json({ok:true,queued:devices.length>0,devices:devices.length,created,results});
     }
     if(path.startsWith('/api/automation/')){
       const match=path.match(/^\/api\/automation\/([A-Z_]+)\/([a-z-]+)$/),company=match&&(await this.companies()).find(c=>c.id===match[1]&&c.active&&!c.deleted);
@@ -356,33 +351,26 @@ export class AuthStore extends DurableObject {
     return json({error:'İşlem bulunamadı.'},404);
   }
   async scheduleMaintenance(at){
-    const current=await this.storage.getAlarm();await this.storage.setAlarm(current&&current>Date.now()?Math.min(current,at):at);
+    await this.storage.transaction(async tx=>{
+      const next=await tx.get('automation:next-check'),target=next?Math.min(at,Math.max(Date.now()+1000,next)):at;
+      const current=await tx.getAlarm();await tx.setAlarm(current&&current>Date.now()?Math.min(current,target):target);
+    });
+  }
+  async armSchedule(){
+    let next=await this.storage.get('automation:next-check');
+    if(!next){next=nextCheck(Date.now());await this.storage.put('automation:next-check',next);}
+    await this.scheduleMaintenance(Math.max(Date.now()+1000,next));
+  }
+  cycles(){
+    return new InvoiceCycles({storage:this.storage,companies:()=>this.companies(),archive:(...args)=>this.companyArchive(...args),connected:async id=>!!await this.storage.get('izibiz:config:'+id),schedule:at=>this.scheduleMaintenance(at)});
   }
   async flushPush(revision){
     this.pushQueue=(this.pushQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
       await flushNotifications(this.storage,this.env.APP_ORIGIN,revision);
       const remaining=await this.storage.list({prefix:'push:outbox:'});
-      if(remaining.size){const soon=Math.min(...[...remaining.values()].map(v=>v.nextAttempt||Date.now()+60000));await this.scheduleMaintenance(Math.max(Date.now()+1000,soon));}
+      if(remaining.size){const soon=Math.min(...[...remaining.values()].map(v=>v.nextAttempt||Date.now()+1000));await this.scheduleMaintenance(Math.max(Date.now()+1000,soon));}
     });
     return this.pushQueue;
-  }
-  async recordDigestResult(event){
-    const key='push:cycle:'+event.cycleId;
-    let ready=false;
-    await this.storage.transaction(async tx=>{
-      const cycle=await tx.get(key);if(!cycle||!cycle.companies.some(company=>company.id===event.company&&company.connected&&company.enabled))return;
-      const monthly=Array.isArray(event.monthly)?event.monthly.slice(0,2).map(item=>({month:String(item?.month||''),count:Math.max(0,Math.floor(Number(item?.count)||0))})).filter(item=>/^\d{4}-(0[1-9]|1[0-2])$/.test(item.month)):[];
-      const results={...(cycle.results||{}),[event.company]:{fresh:Math.max(0,Number(event.fresh)||0),pending:Math.max(0,Number(event.pending)||0),errors:Math.max(0,Number(event.errors)||0),monthly,error:event.error?String(event.error).slice(0,240):null}};
-      await tx.put(key,{...cycle,results});ready=cycle.companies.filter(company=>company.connected&&company.enabled).every(company=>results[company.id]);
-    });
-    if(ready)return this.finalizeDigest(event.cycleId,false);
-    return false;
-  }
-  async finalizeDigest(cycleId,force=false){
-    const key='push:cycle:'+cycleId,cycle=await this.storage.get(key);if(!cycle)return false;
-    const expected=cycle.companies.filter(company=>company.connected&&company.enabled);
-    if(!force&&!expected.every(company=>cycle.results?.[company.id]))return false;
-    await enqueueNotification(this.storage,digestNotification(cycle));await this.storage.delete(key);return true;
   }
   async izibizKey(){
     if(this.env.IZIBIZ_ENCRYPTION_KEY)return this.env.IZIBIZ_ENCRYPTION_KEY;
@@ -405,11 +393,14 @@ export class AuthStore extends DurableObject {
       if(!this.archive)await this.handle(new Request('https://invoice-store.internal/'+company+'/summary'));
       await this.archive.advance();return;
     }
-    const now=Date.now();for(const [key,cycle] of await this.storage.list({prefix:'push:cycle:'}))if(cycle.deadline<=now){await this.finalizeDigest(cycle.id,true);if(await this.storage.get(key)&&now-cycle.created>DAY)await this.storage.delete(key);}
-    const account=await this.storage.get('account');if(account)await this.flushPush(account.revision);
+    const now=Date.now(),account=await this.storage.get('account');
+    if(account){
+      const next=await this.storage.get('automation:next-check');
+      if(next&&next<=now){await this.cycles().begin({slot:next});await this.storage.put('automation:next-check',nextCheck(now));}
+      await this.cycles().maintain();await this.flushPush(account.revision);await this.armSchedule();
+    }
     for(const prefix of ['session:','challenge:','recovery:','rate:']){const items=await this.storage.list({prefix});const expired=[...items].filter(([,v])=>(v.expires||v.until)<Date.now()).map(([k])=>k);if(expired.length)await this.storage.delete(expired);}
-    const cycles=await this.storage.list({prefix:'push:cycle:'}),nextCycle=cycles.size?Math.min(...[...cycles.values()].map(cycle=>cycle.deadline)):Infinity;
-    await this.scheduleMaintenance(Math.min(Date.now()+DAY,nextCycle));}
+    await this.scheduleMaintenance(Date.now()+DAY);}
 }
 async function readJSON(request) {
   const reader=request.body?.getReader(),chunks=[];let size=0;
