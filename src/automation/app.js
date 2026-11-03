@@ -52,7 +52,7 @@ function renderCalendar(){
   const year=Number(month.slice(0,4)),current=Number(localMonth().slice(0,4)),stored=Object.keys(info(company)?.monthly||{}).map(m=>Number(m.slice(0,4)));
   const first=Math.min(current-5,year,...stored),last=Math.max(current+5,year),options=[];for(let y=last;y>=first;y--)options.push('<option value="'+y+'" '+(y===year?'selected':'')+'>'+y+'</option>');$('yearSelect').innerHTML=options.join('');
   $('periodHint').textContent=view==='folders'?'Arşivini görmek için ay seç.':view==='dashboard'?'Takip özetini görmek için ay seç.':'Faturalarını görmek için ay seç.';
-  $('monthGrid').innerHTML=monthNames.map((name,i)=>{const value=year+'-'+String(i+1).padStart(2,'0'),c=info(company)?.monthly?.[value]||{},n=view==='folders'?c.pdfs||0:c.total||0;return '<button type="button" class="month-tile '+(value===month?'active':'')+'" data-month="'+value+'" aria-pressed="'+(value===month)+'"><span>'+name+'</span><small>'+n+(view==='folders'?' PDF':' fatura')+'</small>'+((c.fresh||0)&&view!=='folders'?'<em>'+c.fresh+' yeni</em>':'')+'</button>';}).join('');
+  $('monthGrid').innerHTML=monthNames.map((name,i)=>{const value=year+'-'+String(i+1).padStart(2,'0'),c=info(company)?.monthly?.[value]||{},n=view==='folders'?c.pdfs||0:c.total||0;return '<button type="button" class="month-tile '+(value===month?'active':'')+'" data-month="'+value+'" aria-pressed="'+(value===month)+'"><span>'+name+'</span><small>'+n+(view==='folders'?' PDF':' fatura')+'</small>'+((c.fresh||0)&&view!=='folders'?'<em>'+c.fresh+' Yeni</em>':'')+'</button>';}).join('');
   $('invoiceHeading').textContent=monthName(month)+' Faturaları';$('folderHeading').textContent=monthName(month)+' Arşivi';renderFilters();
 }
 async function selectPeriod(value){
