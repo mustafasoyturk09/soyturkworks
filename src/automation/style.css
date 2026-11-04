@@ -90,3 +90,31 @@
 @media(max-width:900px){.invoice-section-head{align-items:flex-start;flex-direction:column}.main-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.main-actions>*{min-width:0!important;min-height:44px;padding:10px 8px;font-size:12px;white-space:normal;text-align:center;display:flex;align-items:center;justify-content:center}.main-actions #scanButton{grid-column:1;grid-row:1}.main-actions #instantStatusButton{grid-column:2;grid-row:1}.all-company-status{padding:12px}}
 .month-tile>em,.month-tile.active>em{color:var(--amber);font-weight:700;font-size:11px;text-shadow:0 1px 2px #39260e,0 0 3px #39260e99,0 0 7px #f0c58a99;white-space:nowrap}
 .history-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.history-actions button{min-height:44px;white-space:normal}.event-select{display:flex;align-items:flex-start;justify-content:center;flex:0 0 36px;min-height:44px;cursor:pointer;padding-top:2px}.event-select input{width:18px;height:18px;accent-color:var(--mint);margin:0}.event>div{min-width:0;overflow-wrap:anywhere}@media(max-width:600px){.history-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.history-actions button{font-size:11px;padding:10px 7px;min-width:0}.notification-history{padding:14px 12px}.event{gap:8px}.event-select{flex-basis:28px}}
+
+/* Invoice content only; table headings and mobile field labels keep their size. */
+.invoice-row{--invoice-row-font:13px}
+.invoice-row :is(.invoice-value,.invoice-title,.invoice-amount,.status-chip,.invoice-actions,.invoice-actions button,.invoice-actions a,.invoice-reply,.invoice-actions .health){font-size:var(--invoice-row-font)}
+.invoice-row .status-chip{white-space:normal;padding:5px;line-height:1.4}
+.invoice-row .invoice-actions .health{margin-top:0}
+@media(hover:hover) and (pointer:fine){
+  .invoice-row:hover{background:#213943;border-color:#78b7c1;box-shadow:inset 3px 0 #78b7c1}
+}
+.invoice-row:has(>input[data-select]:checked){background:#23483e;border-color:#a6dbc5;box-shadow:inset 3px 0 var(--mint),0 0 0 1px #a6dbc526}
+.invoice-row:has(>input[data-select]:checked) .invoice-reply{color:#c4dacf}
+
+/* Soft light stays inside the month picker; the page palette is unchanged. */
+.month-tile{--month-light:#89c7cf;border-color:color-mix(in srgb,var(--month-light) 28%,transparent);background:radial-gradient(ellipse at 50% 110%,color-mix(in srgb,var(--month-light) 20%,transparent),transparent 75%),linear-gradient(160deg,#1b2a36,#14212c);box-shadow:inset 0 1px 0 #ffffff08,0 3px 15px color-mix(in srgb,var(--month-light) 9%,transparent)}
+.month-tile:nth-child(3n+2){--month-light:#a6dbc5}
+.month-tile:nth-child(3n){--month-light:#a8b6dc}
+.month-tile::after{content:"";position:absolute;left:26%;right:26%;bottom:0;height:2px;border-radius:2px;background:var(--month-light);opacity:.65;box-shadow:0 -2px 10px 2px color-mix(in srgb,var(--month-light) 35%,transparent);pointer-events:none}
+.month-tile>span{text-shadow:0 0 14px color-mix(in srgb,var(--month-light) 35%,transparent)}
+.month-tile:has(>em){border-color:#a6dbc577;box-shadow:inset 0 1px 0 #ffffff0c,0 3px 16px #a6dbc51c}
+.month-tile.active{--month-light:var(--mint);color:#effff6;border-color:#b7efd5;background:radial-gradient(ellipse at 50% 110%,#a6dbc548,transparent 85%),linear-gradient(155deg,#305c50,#203f39);box-shadow:inset 0 1px 0 #dcffeb40,0 0 0 1px #a6dbc522,0 3px 22px #a6dbc536}
+.month-tile.active>small{color:#c9e8dc}
+.month-tile.active::after{opacity:1;left:18%;right:18%}
+@media(hover:hover) and (pointer:fine){
+  .month-tile:hover{border-color:var(--month-light);box-shadow:inset 0 1px 0 #ffffff14,0 3px 20px color-mix(in srgb,var(--month-light) 24%,transparent)}
+}
+@media(prefers-reduced-motion:no-preference){
+  .invoice-row,.month-tile{transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+}
