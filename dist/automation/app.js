@@ -10,6 +10,7 @@ if(!companyContext?.id){location.replace('/companies');return;}
 const company=companyContext.id,base='/workspace/'+company+'/takip/';
 let state={companies:[],events:[]},view=params.get('view')||'invoices',status='all',month=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||'')?params.get('month'):localMonth(),query='',rows=[],offset=0,more=false,selected=new Map(),currentFolder=null,devices=[],pushId=null,loading=false,noticeTimer,toastTimer,searchTimer;
 let undoEntries=[],undoMessage='',marking=false;
+let monthSpotlight=false;
 const selectedEvents=new Set();
 let invoiceRequest=0,folderRequest=0,refreshRequest=0,typeRefreshTimer,deviceRefreshPromise,periodPinned=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||''),resetting=false,scanning=false,deviceStateKnown=false,pushRepairing=false;
 const monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -54,6 +55,7 @@ function renderCalendar(){
   const first=Math.min(current-5,year,...stored),last=Math.max(current+5,year),options=[];for(let y=last;y>=first;y--)options.push('<option value="'+y+'" '+(y===year?'selected':'')+'>'+y+'</option>');$('yearSelect').innerHTML=options.join('');
   $('periodHint').textContent=view==='folders'?'Arşivini görmek için ay seç.':view==='dashboard'?'Takip özetini görmek için ay seç.':'Faturalarını görmek için ay seç.';
   $('monthGrid').innerHTML=monthNames.map((name,i)=>{const value=year+'-'+String(i+1).padStart(2,'0'),c=info(company)?.monthly?.[value]||{},n=view==='folders'?c.pdfs||0:c.total||0,pending=(c.fresh||0)+(c.waiting||0);return '<button type="button" class="month-tile '+(value===month?'active':'')+'" data-month="'+value+'" aria-pressed="'+(value===month)+'"><span>'+name+'</span><small>'+n+(view==='folders'?' PDF':' fatura')+'</small>'+(pending&&view!=='folders'?'<em title="Yeni gelen + bekleyen; işlenene kadar toplamda kalır">'+pending+' Yeni</em>':'')+'</button>';}).join('');
+  $('monthGrid').classList.toggle('spotlight',monthSpotlight);
   $('invoiceHeading').textContent=monthName(month)+' Faturaları';$('folderHeading').textContent=monthName(month)+' Arşivi';renderFilters();
 }
 async function selectPeriod(value){
@@ -266,8 +268,8 @@ async function handleNavigation(e){
 }
 $('trackingStatus').onclick=e=>handleNavigation(e).catch(e=>notice(e.message));$('dashboardView').onclick=e=>handleNavigation(e).catch(e=>notice(e.message));
 $('openNotifications').onclick=()=>changeView('notifications');$('refreshButton').onclick=()=>busy($('refreshButton'),()=>refresh());
-$('previousYear').onclick=()=>selectPeriod((Number(month.slice(0,4))-1)+month.slice(4));$('nextYear').onclick=()=>selectPeriod((Number(month.slice(0,4))+1)+month.slice(4));
-$('yearSelect').onchange=()=>selectPeriod($('yearSelect').value+month.slice(4));$('monthGrid').onclick=e=>{const b=e.target.closest('[data-month]');if(b)selectPeriod(b.dataset.month).catch(e=>notice(e.message));};
+$('previousYear').onclick=()=>{monthSpotlight=false;selectPeriod((Number(month.slice(0,4))-1)+month.slice(4)).catch(e=>notice(e.message));};$('nextYear').onclick=()=>{monthSpotlight=false;selectPeriod((Number(month.slice(0,4))+1)+month.slice(4)).catch(e=>notice(e.message));};
+$('yearSelect').onchange=()=>{monthSpotlight=false;selectPeriod($('yearSelect').value+month.slice(4)).catch(e=>notice(e.message));};$('monthGrid').onclick=e=>{const b=e.target.closest('[data-month]');if(!b)return;monthSpotlight=!(monthSpotlight&&b.dataset.month===month);$('monthGrid').classList.toggle('spotlight',monthSpotlight);selectPeriod(b.dataset.month).catch(e=>notice(e.message));};
 $('statusFilters').onclick=e=>{const b=e.target.closest('[data-status]');if(!b)return;status=b.dataset.status;renderFilters();loadInvoices().catch(e=>notice(e.message));};
 $('searchInput').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{query=$('searchInput').value.trim();loadInvoices().catch(e=>notice(e.message));},250);};
 $('loadMore').onclick=()=>busy($('loadMore'),async()=>{offset+=100;await loadInvoices(true);});
