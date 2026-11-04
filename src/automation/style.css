@@ -5,7 +5,9 @@
 .invoice-fields{display:grid;grid-template-columns:var(--invoice-columns);min-width:0}
 .invoice-column-heading,.invoice-select-label,.invoice-status-heading{padding:14px 12px;display:flex;align-items:center;justify-content:center;text-align:center}
 .invoice-column-heading+.invoice-column-heading,.invoice-status-heading{border-left:1px solid #ffffff26}
-.invoice-select-label{font-size:14px;padding:14px 6px;justify-content:center}
+.invoice-select-label{font-size:14px;padding:0;min-height:46px;justify-content:center;cursor:pointer;gap:10px}
+.invoice-select-label input{width:18px;height:18px;margin:0;accent-color:var(--mint);cursor:pointer;flex-shrink:0}
+.select-all-caption{display:none}
 .invoice-status-heading{justify-content:center}
 .invoice-row{background:var(--surface);border:1px solid #ffffff26;border-radius:13px;padding:0;overflow:hidden}
 .invoice-row.done{opacity:1}
@@ -28,7 +30,10 @@
 .invoice-actions a{color:#b8c9d5}
 .invoice-reply{color:var(--muted);font-size:12px;line-height:1.6}
 @media(max-width:1359px){
-.invoice-table-head{display:none}
+.invoice-table-head{display:flex;background:transparent;border:0}
+.invoice-table-head>.invoice-fields,.invoice-table-head>.invoice-status-heading{display:none}
+.invoice-select-label{padding:0 8px;min-height:44px;color:var(--mint)}
+.select-all-caption{display:inline;font-size:13px}
 .invoice-row{grid-template-columns:32px minmax(0,1fr) 120px}
 .invoice-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
 .invoice-field-label{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal;font-size:16px;color:#c7d7e2;margin-bottom:5px;font-weight:600}

@@ -98,16 +98,16 @@ export class InvoiceArchive{
     }),date=localDate(this.now());
     for(const month of Object.keys(versions)){
       const key='monthly-excel:'+month,revision=versions[month],previous=await this.storage.get(key);
-      if(previous?.revision===revision&&previous.templateVersion===EXCEL_TEMPLATE_VERSION)continue;
+      if(previous?.revision===revision&&previous.templateVersion===EXCEL_TEMPLATE_VERSION&&previous.date===date)continue;
       const monthly=rows.filter(r=>r.tarih.startsWith(month)).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.fatno.localeCompare(b.fatno));
       const bytes=makeExcel(this.company.name,month,date,monthly),name=excelName(this.company.name,month,date);
       await this.storage.transaction(async tx=>{
         if(job)await this.requireJob(job,tx);
         if((await tx.get('archive-generation')||0)!==generation||(await tx.get('month-revision:'+month)||0)!==revision)return;
-        const current=await tx.get(key);if(current?.revision===revision&&current.templateVersion===EXCEL_TEMPLATE_VERSION)return;
+        const current=await tx.get(key);if(current?.revision===revision&&current.templateVersion===EXCEL_TEMPLATE_VERSION&&current.date===date)return;
         const used=(await tx.get('totalBytes')||0)-(current?.file.size||0);if(used+bytes.length>MAX_BYTES)fail('Firma arşivi dolu. Excel güncellenemedi.',507);
         if(current?.file)await tx.delete(fileKeys(current.file));
-        const file=await this.saveFile('monthly-excel-'+randomUUID(),name,bytes,tx);await tx.put(key,{month,revision,file,templateVersion:EXCEL_TEMPLATE_VERSION,at:this.now()});await tx.put('totalBytes',used+bytes.length);
+        const file=await this.saveFile('monthly-excel-'+randomUUID(),name,bytes,tx);await tx.put(key,{month,revision,file,date,templateVersion:EXCEL_TEMPLATE_VERSION,at:this.now()});await tx.put('totalBytes',used+bytes.length);
       });
     }
   }
@@ -406,7 +406,7 @@ export class InvoiceArchive{
     if(action==='pdf'&&method==='GET'){
       const row=await this.storage.get('invoice:'+params.get('id'));if(!row||row.deletedAt||!row.file)fail('PDF bulunamadı.',404);
       const chunks=this.chunks(row.file),stream=new ReadableStream({async pull(controller){const {value,done}=await chunks.next();if(done)controller.close();else controller.enqueue(value);},cancel(){return chunks.return();}});
-      return new Response(stream,{headers:{'Content-Type':'application/pdf','Content-Disposition':"inline; filename*=UTF-8''"+encodeURIComponent(row.file.name),'Cache-Control':'private, no-store'}});
+      return new Response(stream,{headers:{'Content-Type':'application/pdf','Content-Disposition':(params.get('download')==='1'?disposition(row.file.name):"inline; filename*=UTF-8''"+encodeURIComponent(row.file.name)),'Cache-Control':'private, no-store'}});
     }
     if(action==='export'&&method==='GET'){
       await this.refreshMonthlyExcels();

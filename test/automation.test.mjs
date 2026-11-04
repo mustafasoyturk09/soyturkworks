@@ -4,7 +4,7 @@ import {randomBytes,createECDH,verify,createPublicKey,createHash} from 'node:cry
 import ece from 'http_ece';
 import {unzipSync,strFromU8} from 'fflate';
 import {InvoiceArchive,nextCheck,workHours,previousMonth,trackingPeriod} from '../server/automation.mjs';
-import {folderName,makeExcel,supplierFromXML,unwrapDocument,EXCEL_TEMPLATE_VERSION,excelTitleFontSize} from '../server/invoice-files.mjs';
+import {folderName,makeExcel,supplierFromXML,unwrapDocument,EXCEL_TEMPLATE_VERSION,excelTitleFontSize,excelTitle} from '../server/invoice-files.mjs';
 import {IzibizConnector} from '../server/izibiz.mjs';
 import {validateSubscription,vapidKeys,deliver,pushAPI,enqueueNotification,flushNotifications,digestNotification,notificationHistory,clearNotificationHistory} from '../server/push.mjs';
 import {notificationMonthCounts,formatNotificationMonths} from '../server/notification-format.mjs';
@@ -184,7 +184,7 @@ test('Automatic archive catches recent previous-month invoices, prepares Excel a
   await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision+1}],done:false});assert.equal((await f.engine.summary()).counts.fresh,2);
   const folder=groups.find(g=>g.month==='2026-10');await f.engine.handle('excel','POST',{folder:folder.id});
   const excel=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'})),files=unzipSync(new Uint8Array(await excel.arrayBuffer()));
-  const xml=strFromU8(files['xl/worksheets/sheet1.xml']);assert(xml.includes('YENİ GELEN'));assert(xml.includes('PUSULA EKİM 2026 GELEN E-FATURALAR'));assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,true);
+  const xml=strFromU8(files['xl/worksheets/sheet1.xml']);assert(xml.includes('YENİ GELEN'));assert(xml.includes('01.10.2026 - 31.10.2026 PUSULA GELEN E-FATURALAR'));assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,true);
   await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision+2}],done:true});
   assert.equal((await f.engine.handle('folders','GET').then(r=>r.json())).folders.find(g=>g.id===folder.id).excel.current,true);
   await f.engine.handle('excel','POST',{folder:folder.id});
@@ -348,7 +348,7 @@ test('Document validation rejects foreign recipients, wrong identities, DTDs and
  assert.throws(()=>unwrapDocument(enc('not a pdf'),'pdf'));
  assert.equal(folderName('KİB Dijital Tek','2026-10','2026-11-01'),'KİB Dijital Tek Ekim 2026 Gelen E-Faturalar (01.11.2026)');
  const bytes=makeExcel('KİB Dijital Tek','2026-10','2026-11-01',[{fatno:'<test>',tarih:'2026-10-01',unvan:'Test & <script>',tip:'SATIS',tutar:123.5,birim:'TRY',yanit:'Yanıt gerekmiyor',done:false}]);
- assert(strFromU8(unzipSync(bytes)['xl/worksheets/sheet1.xml']).includes('KİB DİJİTAL TEK EKİM'));
+ assert(strFromU8(unzipSync(bytes)['xl/worksheets/sheet1.xml']).includes('31.10.2026 KİB DİJİTAL TEK GELEN E-FATURALAR'));
 });
 function subscription(){const client=createECDH('prime256v1');client.generateKeys();const auth=randomBytes(16);return {client,auth,value:{endpoint:'https://web.push.apple.com/synthetic',keys:{p256dh:client.getPublicKey().toString('base64url'),auth:auth.toString('base64url')}}};}
 test('Push requests use real encrypted Web Push payloads and VAPID signatures without exposing private keys',async()=>{
@@ -470,13 +470,49 @@ test('Excel export matches the bordered reference and fits every company title w
   const bytes=makeExcel(name,'2026-10','2026-11-03',[{fatno:'TEST20260000001',tarih:'2026-10-27',unvan:'Örnek Tedarikçi',profile:'TEMELFATURA',tip:'SATIS',tutar:123456.78,birim:'TRY',yanit:'Yanıt gerekmiyor',done:true}]);
   const files=unzipSync(bytes),sheet=strFromU8(files['xl/worksheets/sheet1.xml']),styles=strFromU8(files['xl/styles.xml']);
   const size=Number(styles.match(/<font><b\/><sz val="(\d+)"/)[1]);sizes.push(size);assert(size>=24&&size<=47);
-  assert(sheet.includes(name.toLocaleUpperCase('tr-TR')));assert(sheet.includes('<mergeCell ref="A1:H1"/>'));
-  for(const col of 'ABCDEFGH')assert(sheet.includes('r="'+col+'1" s="1"'));
+  assert(sheet.includes(name.toLocaleUpperCase('tr-TR')));assert(sheet.includes('<mergeCell ref="A1:G1"/>'));
+  for(const col of 'ABCDEFG')assert(sheet.includes('r="'+col+'1" s="1"'));
   assert.match(styles,/<left style="medium">/);assert.match(styles,/borderId="1"/);assert.match(styles,/horizontal="center" vertical="center" shrinkToFit="1"/);
   assert.match(styles,/FF339966/);assert.match(styles,/FFFF0066/);assert(sheet.includes('<v>123456.78</v>'));assert(sheet.includes('İŞLENDİ'));
  }
- assert.equal(sizes[0],47);assert(sizes[2]<sizes[0]);
+ assert.equal(sizes[0],43);assert(sizes[2]<=sizes[0]);
  assert(excelTitleFontSize('ÇOK UZUN BİR FİRMA ÜNVANI '.repeat(4))<47);
+});
+
+test('Excel date range follows the selected month and the actual download date',()=>{
+ assert.equal(excelTitle('Pusula','2026-11','2026-11-04'),'01.11.2026 - 04.11.2026 PUSULA GELEN E-FATURALAR (04.11.2026)');
+ assert.equal(excelTitle('Pusula','2026-10','2026-11-04'),'01.10.2026 - 31.10.2026 PUSULA GELEN E-FATURALAR (04.11.2026)');
+ assert.match(excelTitle('Comed','2028-02','2028-03-01'),/^01.02.2028 - 29.02.2028 COMED/);
+ assert.match(excelTitle('Comed','2027-02','2027-03-01'),/^01.02.2027 - 28.02.2027 COMED/);
+ assert.match(excelTitle('KİB Dijital Tek','2026-12','2027-01-02'),/^01.12.2026 - 31.12.2026 KİB DİJİTAL TEK/);
+});
+
+test('Excel replaces the processing column with Yanıt and colors USD/EUR separately',()=>{
+ const rows=['TRY','USD','EUR','EURO'].map((birim,i)=>({fatno:'TEST'+i,tarih:'2026-11-01',unvan:'Synthetic',tutar:100+i,birim,done:true,yanit:'Yanıt gerekmiyor'}));
+ const files=unzipSync(makeExcel('Pusula','2026-11','2026-11-04',rows)),xml=strFromU8(files['xl/worksheets/sheet1.xml']),styles=strFromU8(files['xl/styles.xml']);
+ assert(!xml.includes('İşlem Durumu'));assert(!xml.includes('Yanıt gerekmiyor'));assert(!/<c r="H/.test(xml));
+ assert.match(xml,/<c r="G3" s="4"[^>]*><is><t[^>]*>İŞLENDİ/);
+ assert.match(xml,/<c r="F3" s="0"/);assert.match(xml,/<c r="F4" s="8"/);assert.match(xml,/<c r="F5" s="9"/);assert.match(xml,/<c r="F6" s="9"/);
+ assert(styles.includes('FF0070C0'));assert(styles.includes('FF8B0000'));assert(xml.includes('autoFilter ref="A2:G6"'));
+});
+
+test('Unchanged Excel and ZIP downloads roll the date at Istanbul midnight without altering invoices',async t=>{
+ const f=fixture({date:'2026-11-03T20:30:00Z'});t.mock.method(globalThis,'fetch',f.fetcher);await f.engine.start();await drain(f.engine,f.db);
+ const key='monthly-excel:2026-10',old=await f.db.get(key),rows=await f.engine.all();assert.equal(old.date,'2026-11-03');f.advanceTime(1);
+ const response=await f.engine.handle('month-excel','GET',{},new URLSearchParams({month:'2026-10'}));
+ assert(decodeURIComponent(response.headers.get('Content-Disposition')).includes('(04.11.2026)'));
+ const xml=strFromU8(unzipSync(new Uint8Array(await response.arrayBuffer()))['xl/worksheets/sheet1.xml']);assert(xml.includes('31.10.2026 PUSULA GELEN E-FATURALAR (04.11.2026)'));
+ const current=await f.db.get(key);assert.notEqual(current.file.id,old.file.id);assert.equal(current.date,'2026-11-04');assert.deepEqual(await f.engine.all(),rows);
+ await f.engine.refreshMonthlyExcels();assert.equal((await f.db.get(key)).file.id,current.file.id);
+ f.advanceTime(24);const folder=[...(await f.db.list({prefix:'folder:'})).values()].find(g=>g.month==='2026-10');
+ const zip=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id}));const entries=unzipSync(new Uint8Array(await zip.arrayBuffer()));
+ assert(Object.keys(entries).some(name=>name.endsWith('(05.11.2026).xlsx')));assert.equal((await f.db.get(key)).date,'2026-11-05');
+});
+
+test('PDF download preserves the original document and mobile inline viewing',async t=>{
+ const f=fixture();t.mock.method(globalThis,'fetch',f.fetcher);await f.engine.start();await drain(f.engine,f.db);const row=(await f.engine.all()).find(r=>r.file);
+ const inline=await f.engine.handle('pdf','GET',{},new URLSearchParams({id:row.uuid}));const download=await f.engine.handle('pdf','GET',{},new URLSearchParams({id:row.uuid,download:'1'}));
+ assert.match(inline.headers.get('Content-Disposition'),/^inline;/);assert.match(download.headers.get('Content-Disposition'),/^attachment;/);assert.equal(download.headers.get('Content-Type'),'application/pdf');assert.equal(await download.text(),await inline.text());
 });
 
 test('Existing monthly Excel downloads regenerate the template once without changing invoice records',async t=>{
