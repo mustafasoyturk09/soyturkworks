@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {InvoiceCycles} from '../server/invoice-cycles.mjs';
-import {allNotificationMonthCounts,statusNotifications} from '../server/notification-format.mjs';
+import {allNotificationMonthCounts,statusNotifications,notificationMonthCounts,notificationSections} from '../server/notification-format.mjs';
 
 function fixture(){
   const data=new Map();let queue=Promise.resolve(),now=Date.parse('2026-11-03T06:00:00Z');
@@ -25,11 +25,11 @@ test('Every connected company starts from one manual request; disabled tracking 
 test('A fast company notifies immediately, zero arrivals notify too, and late results survive the old eight minute deadline',async()=>{
   const f=fixture(),{id}=await f.cycles.begin();
   await f.cycles.record({cycleId:id,company:'PUSULA',fresh:0,allMonthly:[{month:'2026-10',count:22},{month:'2026-11',count:2}]});
-  let events=await f.events();assert.equal(events.length,1);assert.match(events[0].body,/Ekim 22 Adet · Kasım 2 Adet/);assert.match(events[0].title,/Yeni Fatura Yok/);
+  let events=await f.events();assert.equal(events.length,1);assert.match(events[0].body,/Ekim 22 Adet · Kasım 2 Adet/);assert.match(events[0].title,/24 İşlenmemiş Fatura/);
   f.advance(9*60000);await f.cycles.maintain();assert(await f.storage.get('push:cycle:'+id));
   assert.equal((await f.events()).filter(e=>/Kontrol Sürüyor/.test(e.title)).length,4);
   await f.cycles.record({cycleId:id,company:'COMED',fresh:3,monthly:[{month:'2026-11',count:3}]});
-  events=await f.events();assert(events.some(e=>e.company==='COMED'&&/3 Yeni Fatura/.test(e.title)));
+  events=await f.events();assert(events.some(e=>e.company==='COMED'&&/3 İşlenmemiş Fatura/.test(e.title)));
   const count=events.length;await f.cycles.record({cycleId:id,company:'COMED',fresh:3});assert.equal((await f.events()).length,count);
 });
 test('Duplicate scheduled trigger never erases earlier company results or sends them again',async()=>{
@@ -58,8 +58,33 @@ test('Concurrent company results persist all five notifications atomically',asyn
 test('Snapshot includes all archive months across years and splits readable notification pages without losing months',()=>{
   const rows=Array.from({length:20},(_,i)=>({tarih:new Date(Date.UTC(2025,3+i,2)).toISOString().slice(0,10)}));
   rows.push({tarih:'2025-04-05',done:true},{tarih:'2025-04-06',deletedAt:1},{tarih:'2025-04-07',isRet:true});
-  const months=allNotificationMonthCounts(rows);assert.equal(months.length,20);assert.equal(months[0].count,2);
-  const events=statusNotifications({id:'PUSULA',name:'Pusula'},{allMonthly:months,lastFinished:Date.parse('2026-11-03T06:00Z')},'id');
-  assert.equal(events.length,4);assert(events.every(e=>e.body.length<500&&Buffer.byteLength(JSON.stringify(e))<3500));assert(events[0].body.includes('Nisan 2025 2 Adet'));assert(events.at(-1).body.includes('Kasım 2026'));
+  const months=allNotificationMonthCounts(rows);assert.equal(months.length,20);assert.equal(months[0].count,1);
+  const events=statusNotifications({id:'PUSULA',name:'Pusula'},{allMonthly:months,lastFinished:Date.parse('2026-11-03T06:00Z')},'id',Date.parse('2026-11-03T06:00Z'));
+  assert.equal(events.length,4);assert(events.every(e=>e.body.length<500&&Buffer.byteLength(JSON.stringify(e))<3500));assert(events[0].body.includes('Nisan 2025 1 Adet'));assert(events[0].body.includes('Kasım 2026'));
   assert.equal(new Set(events.map(e=>e.tag)).size,4);
+});
+
+test('All five companies repeat outstanding totals without a new arrival, with distinct alert tags per control',async()=>{
+  const f=fixture(),ids=['PUSULA','COMED','KIB','DIJITAL_GARAJ','KIB_DIJITAL'];
+  const allMonthly=[{month:'2026-09',count:2},{month:'2026-10',count:3},{month:'2026-11',count:4}];
+  for(let round=0;round<2;round++){
+    const {id}=await f.cycles.begin();
+    for(const company of ids)await f.cycles.record({cycleId:id,company,fresh:round?0:4,allMonthly,monthly:allMonthly.slice(1)});
+    f.advance(2*3600000);
+  }
+  const events=await f.events();assert.equal(events.length,10);assert.equal(new Set(events.map(e=>e.tag)).size,10);
+  for(const company of ids){
+    const pair=events.filter(e=>e.company===company);assert.equal(pair.length,2);
+    for(const event of pair){assert.match(event.title,/9 İşlenmemiş Fatura/);assert.match(event.body,/Ekim 3 Adet · Kasım 4 Adet/);assert.match(event.body,/Önceki aylardan bekleyen: Eylül 2 Adet/);}
+  }
+});
+
+test('Processed, rejected and deleted invoices leave totals; older outstanding months survive the 15th and year rollover',()=>{
+  const rows=[{tarih:'2026-10-01',arrivalState:'waiting',notified:true},{tarih:'2026-11-01',arrivalState:'new',notified:true},{tarih:'2026-11-02',done:true},{tarih:'2026-11-03',isRet:true},{tarih:'2026-11-04',deletedAt:1}];
+  assert.deepEqual(notificationMonthCounts(rows,'2026-11-15'),[{month:'2026-10',count:1},{month:'2026-11',count:1}]);
+  let sections=notificationSections({allMonthly:allNotificationMonthCounts(rows)},Date.parse('2026-11-15T21:00:00Z'));
+  assert.deepEqual(sections,{monthly:[{month:'2026-11',count:1}],olderMonthly:[{month:'2026-10',count:1}],pending:2});
+  rows[0].done=true;sections=notificationSections({allMonthly:allNotificationMonthCounts(rows)},Date.parse('2026-11-16T06:00Z'));assert.equal(sections.pending,1);assert.equal(sections.olderMonthly.length,0);
+  rows[0].done=false;sections=notificationSections({allMonthly:allNotificationMonthCounts(rows)},Date.parse('2026-12-01T06:00Z'));assert.equal(sections.pending,2);assert.deepEqual(sections.monthly,[{month:'2026-11',count:1},{month:'2026-12',count:0}]);assert.equal(sections.olderMonthly[0].month,'2026-10');
+  const event=statusNotifications({id:'COMED',name:'Comed'},{allMonthly:[{month:'2026-12',count:1},{month:'2027-01',count:2}]},'rollover',Date.parse('2027-01-01T06:00Z'))[0];assert.match(event.body,/Aralık 2026 1 Adet · Ocak 2027 2 Adet/);
 });

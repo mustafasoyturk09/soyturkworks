@@ -50,16 +50,16 @@ test('Professional notification month template keeps the previous month only thr
  const rows=[{tarih:'2026-10-02'},{tarih:'2026-10-31'},{tarih:'2026-11-01'},{tarih:'2026-11-02',isRet:true},{tarih:'2026-09-30'},{tarih:'2026-10-05',deletedAt:1}];
  const firstHalf=notificationMonthCounts(rows,'2026-11-15');
  assert.deepEqual(firstHalf,[{month:'2026-10',count:2},{month:'2026-11',count:1}]);
- assert.equal(formatNotificationMonths(firstHalf),'Ekim · 2 Yeni Gelen\nKasım · 1 Yeni Gelen');
+ assert.equal(formatNotificationMonths(firstHalf),'Ekim · 2 İşlenmemiş\nKasım · 1 İşlenmemiş');
  assert.deepEqual(notificationMonthCounts(rows,'2026-11-16'),[{month:'2026-11',count:1}]);
  assert.deepEqual(notificationMonthCounts([{tarih:'2026-12-31'},{tarih:'2027-01-01'}],'2027-01-15'),[{month:'2026-12',count:1},{month:'2027-01',count:1}]);
- assert.deepEqual(notificationMonthCounts([{tarih:'2027-01-01'}],'2027-01-15'),[{month:'2027-01',count:1}]);
+ assert.deepEqual(notificationMonthCounts([{tarih:'2027-01-01'}],'2027-01-15'),[{month:'2026-12',count:0},{month:'2027-01',count:1}]);
 });
-test('Tracking checks at most ten days across month/year boundaries and preserves historical archives',async()=>{
- assert.deepEqual(trackingPeriod('2026-10-31','2026-10'),{startMonth:'2026-10',from:'2026-10-21',to:'2026-10-31'});
- assert.equal(trackingPeriod('2026-11-01','2026-10').from,'2026-10-22');
- assert.equal(trackingPeriod('2026-12-01','2026-10').from,'2026-11-21');
- assert.equal(trackingPeriod('2027-01-01','2026-10').from,'2026-12-22');
+test('Tracking checks the full active months across month/year boundaries and preserves historical archives',async()=>{
+ assert.deepEqual(trackingPeriod('2026-10-31','2026-10'),{startMonth:'2026-10',from:'2026-10-01',to:'2026-10-31'});
+ assert.equal(trackingPeriod('2026-11-01','2026-10').from,'2026-10-01');
+ assert.equal(trackingPeriod('2026-12-01','2026-10').from,'2026-11-01');
+ assert.equal(trackingPeriod('2027-01-01','2026-10').from,'2026-12-01');
  const f=fixture({date:'2026-10-31T06:00:00Z',startMonth:null}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
   const old=remoteInvoice(1,'2026-08-20'),september=remoteInvoice(2,'2026-09-27'),processed=remoteInvoice(3,'2026-10-27'),fresh=remoteInvoice(4,'2026-10-30');
@@ -69,14 +69,14 @@ test('Tracking checks at most ten days across month/year boundaries and preserve
   assert.equal((await f.db.get('settings')).startMonth,'2026-10');
   assert.equal((await f.engine.summary()).counts.total,2);assert.equal((await f.engine.summary()).counts.done,1);
   assert.equal(f.calls.filter(c=>c.url.endsWith('/pdf')).length,2);assert.equal(f.events[0].count,1);assert.equal(f.events[0].pending,1);
-  assert(f.calls.filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-21')));
+  assert(f.calls.filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-01')));
   const before=f.calls.length;f.advanceTime(24);f.setRemote([september,remoteInvoice(6,'2026-10-31'),remoteInvoice(7,'2026-11-01')]);
   await f.engine.start(true);await drain(f.engine,f.db);
   assert(f.calls.slice(before).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-10-')));
   assert.equal((await f.engine.summary()).counts.total,4);
   const december=f.calls.length;f.advanceTime(30*24);f.setRemote([remoteInvoice(8,'2026-10-28'),remoteInvoice(9,'2026-11-30'),remoteInvoice(10,'2026-12-01')]);
   await f.engine.start(true);await drain(f.engine,f.db);
-  assert(f.calls.slice(december).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-11-21')));
+  assert(f.calls.slice(december).filter(c=>c.url.includes('/inbox?')).every(c=>c.url.includes('startDate=2026-11-01')));
   assert.equal((await f.engine.all()).some(r=>r.uuid===remoteInvoice(8,'2026-10-28').uuid),false);
   assert.equal((await f.engine.summary()).counts.total,6);assert.equal((await f.engine.summary()).counts.done,1);
   assert((await f.engine.handle('folders','GET').then(r=>r.json())).folders.some(g=>g.month==='2026-10'),'Valid October archive remains available in December');
@@ -137,7 +137,7 @@ test('A running legacy job restarts within the new period instead of continuing 
  try{
   f.setRemote([remoteInvoice(1,'2026-09-20'),remoteInvoice(2,'2026-10-27')]);
   await f.db.put('job',{id:'11111111-2222-4333-8444-555555555555',phase:'pdf',documentStart:'2026-09-01',end:'2026-10-31',manual:true});
-  await f.engine.advance();assert(f.calls.some(c=>c.url.includes('/inbox?')&&c.url.includes('startDate=2026-10-21')));assert(!f.calls.some(c=>c.url.endsWith('/pdf')));
+  await f.engine.advance();assert(f.calls.some(c=>c.url.includes('/inbox?')&&c.url.includes('startDate=2026-10-01')));assert(!f.calls.some(c=>c.url.endsWith('/pdf')));
   await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,1);assert.equal((await f.engine.summary()).counts.pdfs,1);
  }finally{globalThis.fetch=original;}
 });
@@ -174,13 +174,13 @@ test('Automatic archive catches recent previous-month invoices, prepares Excel a
   const groups=(await(await f.engine.handle('folders','GET')).json()).folders;assert.equal(groups.length,2);assert(groups.every(g=>g.excel?.current));
   assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar (01.11.2026)'));
   assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar (01.11.2026)'));
-  assert.equal(f.events.length,1);assert.equal(f.events[0].title,'Pusula');assert.equal(f.events[0].body,'Ekim · 1 Yeni Gelen\nKasım · 1 Yeni Gelen');assert(!f.events[0].title.includes('Soyturk'));assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
-  assert(f.calls.some(c=>c.url.includes('dateType=DELIVERY')));assert(f.calls.some(c=>c.url.includes('dateType=DOCUMENT')&&c.url.includes('startDate=2026-10-22')));
+  assert.equal(f.events.length,1);assert.equal(f.events[0].title,'Pusula · 2 İşlenmemiş Fatura');assert.equal(f.events[0].body,'Yeni + bekleyen: Ekim 1 Adet · Kasım 1 Adet\nSon kontrol: 01/11 09:00');assert(!f.events[0].title.includes('Soyturk'));assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
+  assert(f.calls.some(c=>c.url.includes('dateType=DELIVERY')));assert(f.calls.some(c=>c.url.includes('dateType=DOCUMENT')&&c.url.includes('startDate=2026-10-01')));
   const row=(await f.engine.all())[0];
   await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:true});
   await assert.rejects(f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:0}],done:false}),e=>e.status===409);
   f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
-  assert.equal((await f.engine.all()).find(r=>r.uuid===row.uuid).done,true);assert.equal(f.events.length,1);
+  assert.equal((await f.engine.all()).find(r=>r.uuid===row.uuid).done,true);assert.equal(f.events.length,2);assert.equal(f.events.at(-1).pending,1);
   await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision+1}],done:false});assert.equal((await f.engine.summary()).counts.fresh,2);
   const folder=groups.find(g=>g.month==='2026-10');await f.engine.handle('excel','POST',{folder:folder.id});
   const excel=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'})),files=unzipSync(new Uint8Array(await excel.arrayBuffer()));
@@ -295,29 +295,29 @@ test('New means first discovery in the latest monthly batch; repeats, baseline, 
  const statusRow=(xml,no)=>xml.match(/<row\b[^>]*>.*?<\/row>/g).find(row=>row.includes(no));
  try{
   await f.engine.handle('baseline','POST',{numbers:[processed.documentNo]});f.setRemote([processed,old,oct,nov]);await f.engine.start();await drain(f.engine,f.db);
-  assert.equal((await load()).total,3);assert.equal((await load('new')).total,2);assert.equal((await load('done')).total,1);assert.equal((await load('waiting')).total,0);assert(!f.calls.some(c=>c.body?.[0]?.id===old.id));
+  assert.equal((await load()).total,4);assert.equal((await load('new')).total,2);assert.equal((await load('done')).total,1);assert.equal((await load('waiting')).total,1);assert(f.calls.some(c=>c.body?.[0]?.id===old.id));
   const firstOct=await sheet('2026-10'),firstNov=await sheet('2026-11');assert(statusRow(firstOct,processed.documentNo).includes('İŞLENDİ'));assert(statusRow(firstOct,oct.documentNo).includes('YENİ GELEN'));assert(!firstOct.includes(nov.documentNo));assert(firstNov.includes(nov.documentNo)&&!firstNov.includes(oct.documentNo));
   const events=f.events.length,firstFile=(await f.db.get('monthly-excel:2026-10')).file.id;f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
-  assert.equal(f.events.length,events);assert.equal((await load('new')).total,2);assert.equal((await f.db.get('monthly-excel:2026-10')).file.id,firstFile,'An unchanged check does not churn Excel or demote new arrivals');
+  assert.equal(f.events.length,events+1);assert.equal(f.events.at(-1).pending,3);assert.equal((await load('new')).total,2);assert.equal((await f.db.get('monthly-excel:2026-10')).file.id,firstFile,'An unchanged check does not churn Excel or demote new arrivals');
   f.setRemote([processed,old,oct,nov,later]);f.advanceTime();await f.engine.start();await drain(f.engine,f.db);
   const rows=(await load()).rows;assert.equal(rows.find(r=>r.fatno===oct.documentNo).state,'waiting');assert.equal(rows.find(r=>r.fatno===later.documentNo).state,'new');assert.equal(rows.find(r=>r.fatno===nov.documentNo).state,'new','November arrivals do not get moved into October');assert.equal(rows.find(r=>r.fatno===processed.documentNo).state,'done');
-  const nextOct=await sheet('2026-10');assert(statusRow(nextOct,oct.documentNo).includes('BEKLENİYOR'));assert(statusRow(nextOct,later.documentNo).includes('YENİ GELEN'));assert(statusRow(nextOct,processed.documentNo).includes('İŞLENDİ'));assert.equal(f.events.length,events+1);assert.equal(f.events.at(-1).count,1);
+  const nextOct=await sheet('2026-10');assert(statusRow(nextOct,oct.documentNo).includes('BEKLENİYOR'));assert(statusRow(nextOct,later.documentNo).includes('YENİ GELEN'));assert(statusRow(nextOct,processed.documentNo).includes('İŞLENDİ'));assert.equal(f.events.length,events+2);assert.equal(f.events.at(-1).count,4);
   const beforeUndo=(await load()).rows.find(r=>r.fatno===processed.documentNo);await f.engine.handle('mark','POST',{items:[{uuid:beforeUndo.uuid,revision:beforeUndo.revision}],done:false});assert.equal((await load()).rows.find(r=>r.uuid===beforeUndo.uuid).state,'waiting','Undoing an old processed invoice never calls it newly arrived');
   f.advanceTime(11*24);assert.equal((await f.engine.summary()).counts.fresh,0);assert((await sheet('2026-10')).includes('BEKLENİYOR'));
  }finally{globalThis.fetch=original;}
 });
-test('Legacy unmatched October 1 invoices migrate to waiting; imported processed numbers restore completion and no old invoice is announced',async()=>{
+test('Legacy October invoices retain completion and outstanding ones remain in the notification total',async()=>{
  const f=fixture(),at=Date.parse('2026-10-31T06:00:00Z'),old=remoteInvoice(1,'2026-10-01'),done=remoteInvoice(2,'2026-10-01');
  await f.db.put('baseline:'+createHash('sha256').update(done.documentNo).digest('hex'),{at});
  for(const source of [old,done])await f.db.put('invoice:'+source.uuid,{uuid:source.uuid,fatno:source.documentNo,tarih:source.issueDate,unvan:'Synthetic',tip:'SATIS',profile:'TEMELFATURA',tutar:100,birim:'TRY',yanit:'Kanunen kabul',firstSeen:at,done:false,revision:3});
  const summary=await f.engine.summary();assert.equal(summary.counts.fresh,0);assert.equal(summary.counts.waiting,1);assert.equal(summary.counts.done,1);assert.equal(f.events.length,0);
  const rows=(await f.engine.handle('invoices','GET').then(r=>r.json())).rows;assert.equal(rows.find(r=>r.fatno===old.documentNo).state,'waiting');assert.equal(rows.find(r=>r.fatno===done.documentNo).state,'done');assert(rows.every(r=>r.published));
  await f.engine.clearAll();const original=globalThis.fetch;globalThis.fetch=f.fetcher;
- try{f.setRemote([remoteInvoice(1,'2026-10-01'),remoteInvoice(2,'2026-10-01')]);await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,0,'A reset does not pull old October 1 invoices into a November recent scan');}finally{globalThis.fetch=original;}
+ try{f.setRemote([remoteInvoice(1,'2026-10-01'),remoteInvoice(2,'2026-10-01')]);await f.engine.start(true);await drain(f.engine,f.db);assert.equal((await f.engine.summary()).counts.total,2,'The full October period remains eligible through November 15');assert.equal(f.events.at(-1).pending,1);}finally{globalThis.fetch=original;}
 });
 test('A confirmed reset reacquires recent invoices and announces them again for phone verification',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
- try{await f.engine.start();await drain(f.engine,f.db);const events=f.events.length;await f.engine.clearAll();await f.engine.start(true);await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.fresh,2);assert.equal(summary.counts.waiting,0);assert.equal(summary.counts.pdfs,2);assert.equal(f.events.length,events+1);assert.equal(f.events.at(-1).title,'Pusula');assert.equal(f.events.at(-1).body,'Ekim · 1 Yeni Gelen\nKasım · 1 Yeni Gelen');assert((await f.db.list({prefix:'monthly-excel:'})).size===2);}finally{globalThis.fetch=original;}
+ try{await f.engine.start();await drain(f.engine,f.db);const events=f.events.length;await f.engine.clearAll();await f.engine.start(true);await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.fresh,2);assert.equal(summary.counts.waiting,0);assert.equal(summary.counts.pdfs,2);assert.equal(f.events.length,events+1);assert.equal(f.events.at(-1).title,'Pusula · 2 İşlenmemiş Fatura');assert.equal(f.events.at(-1).body,'Yeni + bekleyen: Ekim 1 Adet · Kasım 1 Adet\nSon kontrol: 01/11 09:00');assert((await f.db.list({prefix:'monthly-excel:'})).size===2);}finally{globalThis.fetch=original;}
 });
 for(const action of ['clear','mark'])test('A stale monthly Excel snapshot cannot overwrite '+action+' while generation is in flight',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
@@ -411,9 +411,9 @@ test('Completing an in-flight push never recreates a device removed during deliv
 
 test('Two-hour digest leads with company names and includes every company count',()=>{
  const event=digestNotification({id:'cycle-one',created:1,results:{PUSULA:{fresh:2,pending:4,monthly:[{month:'2026-10',count:4},{month:'2026-11',count:2}]},COMED:{fresh:1,pending:1,monthly:[{month:'2026-11',count:1}]}},companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true},{id:'COMED',name:'Comed',connected:true,enabled:true},{id:'KIB',name:'Kendine İyi Bak',connected:false,enabled:true}]});
- assert.equal(event.title,'2 Firmada Yeni Fatura');assert.equal(event.company,'ALL');assert.equal(event.tag,'invoice-digest');assert.equal(event.count,3);assert.match(event.body,/Pusula — Ekim 4 · Kasım 2 Yeni Gelen/);assert.match(event.body,/Comed — Kasım 1 Yeni Gelen/);assert(!event.title.includes('Soyturk Works'));
+ assert.equal(event.title,'2 Firmada Yeni Fatura');assert.equal(event.company,'ALL');assert.equal(event.tag,'invoice-digest');assert.equal(event.count,3);assert.match(event.body,/Pusula — Ekim 4 · Kasım 2 İşlenmemiş/);assert.match(event.body,/Comed — Kasım 1 İşlenmemiş/);assert(!event.title.includes('Soyturk Works'));
  const single=digestNotification({id:'cycle-single',results:{KIB:{fresh:2,pending:10,monthly:[{month:'2026-10',count:23},{month:'2026-11',count:2}]}},companies:[{id:'KIB',name:'Kendine İyi Bak',connected:true,enabled:true}]});
- assert.equal(single.title,'Kendine İyi Bak');assert.equal(single.body,'Ekim · 23 Yeni Gelen\nKasım · 2 Yeni Gelen');
+ assert.equal(single.title,'Kendine İyi Bak');assert.equal(single.body,'Ekim · 23 İşlenmemiş\nKasım · 2 İşlenmemiş');
  const waiting=digestNotification({id:'cycle-two',companies:[{id:'PUSULA',name:'Pusula',connected:true,enabled:true}],results:{}});assert.equal(waiting.title,'Tüm Firmalar · Kontrol Sürüyor');assert.match(waiting.body,/Pusula · Kontrol Sürüyor/);
 });
 
@@ -486,4 +486,28 @@ test('Existing monthly Excel downloads regenerate the template once without chan
  const response=await f.engine.handle('month-excel','GET',{},new URLSearchParams({month:'2026-10'}));assert.equal(response.status,200);
  const current=await f.db.get(key);assert.equal(current.templateVersion,EXCEL_TEMPLATE_VERSION);assert.notEqual(current.file.id,old.file.id);assert.deepEqual(await f.engine.all(),rows);
  await f.engine.refreshMonthlyExcels();assert.equal((await f.db.get(key)).file.id,current.file.id);
+});
+
+test('An old outstanding invoice remains in instant status after closing, disappears on processing and returns on undo',async t=>{
+ const f=fixture({date:'2026-11-15T06:00:00Z'});t.mock.method(globalThis,'fetch',f.fetcher);
+ f.setRemote([remoteInvoice(1,'2026-10-01'),remoteInvoice(2,'2026-11-01')]);await f.engine.start();await drain(f.engine,f.db);
+ assert.equal((await f.engine.notificationSummary()).pending,2);
+ f.advanceTime(24);let summary=await f.engine.notificationSummary();assert.equal(summary.monthly.length,1);assert.equal(summary.olderMonthly[0].count,1);assert.equal(summary.pending,2);
+ let row=(await f.engine.all()).find(r=>r.tarih==='2026-10-01');
+ await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:true});summary=await f.engine.notificationSummary();assert.equal(summary.pending,1);assert.deepEqual(summary.olderMonthly,[]);
+ row=await f.db.get('invoice:'+row.uuid);await f.engine.handle('mark','POST',{items:[{uuid:row.uuid,revision:row.revision}],done:false});assert.equal((await f.engine.notificationSummary()).pending,2);
+ f.advanceTime(15*24);summary=await f.engine.notificationSummary();assert.deepEqual(summary.monthly,[{month:'2026-11',count:1},{month:'2026-12',count:0}]);assert.deepEqual(summary.olderMonthly,[{month:'2026-10',count:1}]);assert.equal(summary.pending,2);
+ assert.equal(trackingPeriod('2026-11-15','2026-10').from,'2026-10-01');assert.equal(trackingPeriod('2026-11-16','2026-10').from,'2026-11-01');
+});
+
+test('One global subscription gets all five firms, and provider acceptance or retry is retained per firm',async()=>{
+ const db=storage(),sub=subscription();await db.put('push:device:one',{id:'one',subscription:sub.value,revision:'current'});
+ // Match Durable Object transaction isolation for concurrent provider replies.
+ const transact=db.transaction;let queue=Promise.resolve();
+ db.transaction=fn=>{const run=queue.then(()=>transact(fn));queue=run.catch(()=>{});return run;};
+ for(const company of ['PUSULA','COMED','KIB','DIJITAL_GARAJ','KIB_DIJITAL'])await enqueueNotification(db,{id:company,company,title:company,body:'İşlenmemiş 1',created:Date.now(),tag:'cycle-1-'+company});
+ let n=0;await flushNotifications(db,'https://soyturkworks.com','current',async()=>{n++;return new Response('',{status:201});});assert.equal(n,5);
+ let device=await db.get('push:device:one');assert.equal(Object.keys(device.deliveries).length,5);assert(Object.values(device.deliveries).every(d=>d.status==='sent'));
+ await enqueueNotification(db,{id:'COMED-next',company:'COMED',title:'Comed',body:'İşlenmemiş 1',created:Date.now(),tag:'cycle-2-COMED'});
+ await flushNotifications(db,'https://soyturkworks.com','current',async()=>new Response('',{status:503}));device=await db.get('push:device:one');assert.equal(device.deliveries.COMED.status,'retrying');assert.equal(device.deliveries.COMED.httpStatus,503);assert.equal(device.deliveries.PUSULA.status,'sent');
 });

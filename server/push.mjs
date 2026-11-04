@@ -3,7 +3,11 @@ import {createHash} from 'node:crypto';
 import {formatNotificationMonths,formatCompanyNotificationLine,normalizeNotificationMonths} from './notification-format.mjs';
 
 const COMPANY_IDS=['PUSULA','COMED','KIB','DIJITAL_GARAJ','KIB_DIJITAL'];
-const touchDevice=(storage,id,revision)=>storage.transaction(async tx=>{const device=await tx.get('push:device:'+id);if(device&&device.revision===revision)await tx.put('push:device:'+id,{...device,lastSent:Date.now()});});
+const touchDevice=(storage,id,revision,company=null,status='sent',httpStatus=null)=>storage.transaction(async tx=>{
+  const device=await tx.get('push:device:'+id);if(!device||device.revision!==revision)return;
+  const at=Date.now(),deliveries=company?{...device.deliveries,[company]:{status,at,httpStatus}}:device.deliveries;
+  await tx.put('push:device:'+id,{...device,...status==='sent'?{lastSent:at}:{},deliveries});
+});
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const fail=(text,status=400)=>{throw Object.assign(Error(text),{status});};
 export const deviceId=endpoint=>createHash('sha256').update(endpoint).digest('hex');
@@ -22,7 +26,7 @@ export async function deliver(subscription,payload,keys,origin,fetcher=fetch){
   const digest=payload.kind==='digest';
   const req=webpush.generateRequestDetails(subscription,JSON.stringify(payload),{TTL:digest?43200:86400,urgency:'high',topic:deviceId(payload.tag||payload.id).slice(0,28),vapidDetails:{subject:origin,publicKey:keys.publicKey,privateKey:keys.privateKey}});
   const response=await fetcher(req.endpoint,{method:'POST',headers:req.headers,body:req.body,redirect:'manual',signal:AbortSignal.timeout(20000)});
-  if(response.ok)return 'sent';if([404,410].includes(response.status))return 'expired';throw Error('Bildirim sağlayıcısı isteği tamamlayamadı ('+response.status+').');
+  if(response.ok)return 'sent';if([404,410].includes(response.status))return 'expired';throw Object.assign(Error('Bildirim sağlayıcısı isteği tamamlayamadı ('+response.status+').'),{httpStatus:response.status});
 }
 export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   if(!COMPANY_IDS.includes(body.company))fail('Önce bir firma seçin.');
@@ -32,7 +36,7 @@ export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   if(action==='subscribe'&&method==='POST'){
     const subscription=validateSubscription(body.subscription),id=deviceId(subscription.endpoint);
     const devices=await storage.list({prefix:'push:device:'});if(devices.size>=10&&!devices.has('push:device:'+id))fail('En fazla 10 bildirim cihazı kaydedilebilir.');
-    const previous=devices.get('push:device:'+id);await storage.put('push:device:'+id,{id,subscription,name:String(body.name||previous?.name||'Cihazım').trim().slice(0,60),created:previous?.created||Date.now(),revision:body.revision,accountWide:true,lastSent:previous?.lastSent||null});return json({ok:true,id,accountWide:true,created:!previous});
+    const previous=devices.get('push:device:'+id);await storage.put('push:device:'+id,{id,subscription,name:String(body.name||previous?.name||'Cihazım').trim().slice(0,60),created:previous?.created||Date.now(),revision:body.revision,accountWide:true,lastSent:previous?.lastSent||null,deliveries:previous?.revision===body.revision?previous.deliveries||{}:{}});return json({ok:true,id,accountWide:true,created:!previous});
   }
   if(action==='unsubscribe'&&method==='POST'){
     if(typeof body.id!=='string'||!/^[a-f0-9]{64}$/.test(body.id))fail('Cihaz kaydı geçersiz.');await storage.delete('push:device:'+body.id);return json({ok:true,remaining:0});
@@ -77,8 +81,8 @@ export async function flushNotifications(storage,origin,revision,fetcher=fetch){
   for(let i=0;i<items.length;i+=5)await Promise.all(items.slice(i,i+5).map(async([key,item])=>{
     const device=await storage.get('push:device:'+item.device);
     if(!device||device.revision!==revision||Date.now()-item.event.created>86400000){await storage.delete(key);return;}
-    try{const result=await deliver(device.subscription,item.event,keys,origin,fetcher);if(result==='expired')await storage.delete('push:device:'+device.id);else await touchDevice(storage,device.id,revision);await storage.delete(key);}
-    catch{item.attempts++;await storage.put(key,{...item,nextAttempt:Date.now()+Math.min(3600000,15000*2**Math.min(8,item.attempts-1))});}
+    try{const result=await deliver(device.subscription,item.event,keys,origin,fetcher);if(result==='expired')await storage.delete('push:device:'+device.id);else await touchDevice(storage,device.id,revision,item.event.company);await storage.delete(key);}
+    catch(error){await touchDevice(storage,device.id,revision,item.event.company,'retrying',Number(error.httpStatus)||null);item.attempts++;await storage.put(key,{...item,nextAttempt:Date.now()+Math.min(3600000,15000*2**Math.min(8,item.attempts-1))});}
   }));
 }
 

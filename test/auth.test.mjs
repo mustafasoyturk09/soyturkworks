@@ -162,6 +162,8 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/companies',null,cookie)).status,401);
     });
   } finally {
-    child.kill('SIGTERM');await Promise.race([new Promise(r=>child.once('exit',r)),pause(3000)]);if(child.exitCode===null)child.kill('SIGKILL');await rm(directory,{recursive:true,force:true});
+    child.kill('SIGTERM');await Promise.race([new Promise(r=>child.once('exit',r)),pause(3000)]);if(child.exitCode===null)child.kill('SIGKILL');
+    assert(directory.startsWith(join(tmpdir(),'sw-auth-test-')),'Cleanup must stay in this test temporary directory');
+    await rm(directory,{recursive:true,force:true,maxRetries:8,retryDelay:100});
   }
 });

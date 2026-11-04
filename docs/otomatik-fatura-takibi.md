@@ -21,8 +21,9 @@ sunucu kontrolüne uygulanmaz.
   bilgisayarın açık kalması gerekmez. İşin adımları Durable Object alarmında
   devam eder; geçici hatalar sınırlı sayıda yeniden denenir.
 - Başlangıç ayı ilk kontrol veya başlangıç Excel aktarımında firma kapsamında
-  kaydedilir. Yeni sorgu en fazla 10 gün geriye gider; başlangıç ayını ve önceki
-  ayın başını aşmaz. Örneğin 1 Kasım’da 22 Ekim–1 Kasım sorgulanır. Geliş ve
+  kaydedilir. Ayın 15'i dahil önceki ayın başından, 16'sından itibaren mevcut
+  ayın başından sorgulanır; firmanın başlangıç ayı aşılmaz. Örneğin 1 Kasım’da
+  1 Ekim–1 Kasım sorgulanır. Geliş ve
   belge tarihine göre iki sorgu yapılır; belge tarihi bu aralığın dışında kalan
   kayıt indirilmez. Daha önce arşivlenmiş geçerli aylar korunur.
 - Geliş sorgusu son başarılı kontrolün iki gün öncesinden, en erken tarama
@@ -44,9 +45,9 @@ Yıl seçimi, önceki/sonraki yıl düğmeleri ve Ocak–Aralık kutuları Fatur
 Klasörler ve Takip Durumu arasında ortak çalışır. Takip Durumu’nda seçilen ayın
 özet sayıları gösterilir; sayı kartları aynı ayın ilgili fatura filtresini açar.
 Verisiz ve gelecek aylar da seçilebilir; bu aylarda sayılar sıfırdır. Ay kutuları fatura veya PDF sayısını gösterir.
-Takip başlangıcından önceki aylar boş görünür. Bildirime dokunulunca o
-bildirimdeki yeni faturaların ayı açılır. Güncel ayda yeni fatura yoksa önceki
-aya geç gelen faturaların ayı seçilir.
+Takip başlangıcından önceki aylar boş görünür. Bildirime dokunulunca firmanın
+fatura ekranı açılır. Aylardaki ışıklı “Yeni” sayısı, yeni gelen ve bekleyen
+toplamıdır; işlendiğinde düşer, geri alındığında yeniden eklenir.
 
 Üst durum alanı otomatik takibin açık/kapalı durumunu, çalışan işi, son ve
 sonraki kontrolü ve bağlı cihaz sayısını gösterir. Takip durumu bölümünde
@@ -184,10 +185,12 @@ Eksik İzibiz bağlantısı veya başarısız başlatma ekranda firma adıyla g�
 Bağlantı testi otomatik olarak gönderilmez; gerçek sonuç bildirimi kullanılır.
 
 **Faturalar Anlık Durum**, yeniden İzibiz indirmesi başlatmadan bütün etkin
-firmaların sunucudaki son kayıtlarını, tüm arşiv aylarının gelen sayılarını ve
-son kontrol zamanını bağlı telefonlara gönderir. Örnek: Pusula — Gelen: Ekim
-22 Adet · Kasım 2 Adet. Bunlar yeni bulunan fatura sayısı değil, silinmemiş ve
-reddedilmemiş gelen faturaların aylık toplamıdır; işlenmiş faturalar dahildir.
+firmaların sunucudaki son işlenmemiş toplamlarını ve son kontrol zamanını
+bağlı telefonlara gönderir. Yeni gelen ile bekleyen birlikte sayılır;
+işlenmiş, silinmiş ve reddedilmiş faturalar sayılmaz. Bildirim gönderilmiş
+olması faturayı toplamdan düşürmez. Ayın 15'i dahil önceki ve mevcut ay,
+sonrasında mevcut ay ana bölümde gösterilir. Daha eski aylarda kalan
+işlenmemiş faturalar “Önceki aylardan bekleyen” bölümüne eklenir.
 Uzun arşivler altışar aylık ayrı bildirimlere bölünür; aylar kesilmez. Aynı özet
 ekranda da kalır. Bağlı cihaz yoksa gönderilmiş gibi gösterilmez. Devam eden veya
 başarısız son kontrol açıkça belirtilir; eski kayıtlar anlık İzibiz sorgusu gibi
@@ -225,7 +228,8 @@ Kimlik doğrulama testi arşiv/API/manifest/service worker erişimlerini de sın
 Bildirim geçmişinde seçili kayıtlar veya tüm firmaların geçmişi silinebilir.
 Silme, olay kimliğini koruyan bir gizleme işlemidir; bekleyen gönderimi,
 telefon aboneliğini ve fatura kayıtlarını değiştirmez. Yeni fatura bulunmayan
-başarılı kontrolde başlık açıkça “Yeni Fatura Yok” olur.
+başarılı kontrolde sonuç yine gönderilir. 4 Kasım güncellemesiyle başlık
+“N İşlenmemiş Fatura” olur; toplam sıfırsa “İşlenmemiş Fatura Yok” yazılır.
 
 Excel şablonu sürüm 2: referans sütun genişlikleri, orta kalınlıkta çerçeve,
 ortalı birleşik başlık ve firma adı uzunluğuna göre en fazla 47 punto kullanır.

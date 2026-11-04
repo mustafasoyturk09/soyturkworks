@@ -2,7 +2,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {IzibizConnector,invoiceTypeLabel} from './izibiz.mjs';
 import {invoiceState,recentInvoiceDate} from './invoice-state.mjs';
 import {folderName,excelName,safeName,makeExcel,unwrapDocument,supplierFromXML,streamZip,EXCEL_TEMPLATE_VERSION} from './invoice-files.mjs';
-import {notificationMonthCounts,formatNotificationMonths,allNotificationMonthCounts} from './notification-format.mjs';
+import {notificationMonthCounts,allNotificationMonthCounts,activeNotificationMonths,notificationSections,statusNotifications} from './notification-format.mjs';
 
 const CHUNK=512*1024,MAX_BYTES=512*1024*1024;
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -12,7 +12,7 @@ export const localDate=ms=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Ist
 export function workHours(ms){const d=new Date(ms+3*3600000);return d.getUTCDay()>0&&d.getUTCDay()<6&&d.getUTCHours()>=9&&d.getUTCHours()<18;}
 export function nextCheck(ms){let n=Math.floor(ms/3600000)*3600000+3600000;for(let i=0;i<200;i++,n+=3600000){const d=new Date(n+3*3600000);if(d.getUTCDay()>0&&d.getUTCDay()<6&&[9,11,13,15,17].includes(d.getUTCHours()))return n;}throw Error('Sonraki kontrol hesaplanamadı.');}
 export function previousMonth(date){const d=new Date(date+'T12:00:00Z');d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,10);}
-export function trackingPeriod(date,startMonth){return {startMonth,from:[startMonth+'-01',previousMonth(date),recentInvoiceDate(date)].sort().at(-1),to:date};}
+export function trackingPeriod(date,startMonth){return {startMonth,from:[startMonth+'-01',activeNotificationMonths(date)[0]+'-01'].sort().at(-1),to:date};}
 const disposition=name=>"attachment; filename=\"archive.zip\"; filename*=UTF-8''"+encodeURIComponent(name);
 const fileKeys=file=>Array.from({length:file.parts},(_,i)=>'blob:'+file.id+':'+i);
 
@@ -203,7 +203,7 @@ export class InvoiceArchive{
       // Only one archive job can own this connector. A finished/failed run's
       // browser rate-limit marker must not block a durable recovery job.
       if(cycleId)await tx.delete('izibiz:scan:'+this.company.id);
-      await tx.put('job',{id:randomUUID(),generation,manual,cycleId,cycleIds:cycleId?[cycleId]:[],phase:'delivery',page:0,start,end:period.to,documentStart:period.from,periodVersion:2,started:this.now(),attempts:0,received:0,seen:[]});
+      await tx.put('job',{id:randomUUID(),generation,manual,cycleId,cycleIds:cycleId?[cycleId]:[],phase:'delivery',page:0,start,end:period.to,documentStart:period.from,periodVersion:3,started:this.now(),attempts:0,received:0,seen:[]});
       await tx.put('status',{...state,lastAttempt:this.now(),error:null,progress:'İzibiz listesi bekleniyor'});return {running:true};
     });
     if(result.running)await this.storage.setAlarm(this.now()+1000);return result;
@@ -228,8 +228,8 @@ export class InvoiceArchive{
       runId=job.id;
       if(job.metadataOnly){await this.advanceTypes(job);return;}
       if(!(await this.settings()).enabled&&!job.manual){await this.storage.delete('job');return;}
-      if(job.periodVersion!==2||job.documentStart<period.from||job.end<period.from){
-        const previous=job;job={id:randomUUID(),generation:previous.generation||0,manual:job.manual,cycleId:previous.cycleId||null,cycleIds:previous.cycleIds||[],phase:'delivery',page:0,start:period.from,end:period.to,documentStart:period.from,periodVersion:2,started:this.now(),attempts:0,received:0,seen:[]};
+      if(job.periodVersion!==3||job.documentStart<period.from||job.end<period.from){
+        const previous=job;job={id:randomUUID(),generation:previous.generation||0,manual:job.manual,cycleId:previous.cycleId||null,cycleIds:previous.cycleIds||[],phase:'delivery',page:0,start:period.from,end:period.to,documentStart:period.from,periodVersion:3,started:this.now(),attempts:0,received:0,seen:[]};
         await this.storage.transaction(async tx=>{await this.requireJob(previous,tx);await this.saveJob(job,tx);});runId=job.id;
       }
       const {connector,identifier}=await this.connector();
@@ -292,11 +292,10 @@ export class InvoiceArchive{
       if(currentJob?.cycleId){
         const pending=rows.filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length;
         for(const cycleId of new Set([...(currentJob.cycleIds||[]),currentJob.cycleId].filter(Boolean)))await this.notify({id:sha(this.company.id+':cycle:'+cycleId),company:this.company.id,cycleId,kind:'cycle-result',fresh:fresh.length,pending,errors:errors.length,monthly,allMonthly:allNotificationMonthCounts(rows),error:errors.length?errors.length+' PDF hazırlanamadı':null,lastFinished:this.now(),created:this.now()});
-      }else if(fresh.length){
-        const id=sha(this.company.id+':'+fresh.map(r=>r.uuid).sort().join(','));
-        const pending=rows.filter(r=>!r.deletedAt&&!r.done&&!r.isRet).length;
-        const months=[...new Set(fresh.map(r=>r.tarih.slice(0,7)))],currentMonth=localDate(this.now()).slice(0,7),notificationMonth=months.includes(currentMonth)?currentMonth:months.sort().at(-1);
-        await this.notify({id,company:this.company.id,title:this.company.name,body:formatNotificationMonths(monthly),url:'/workspace/'+this.company.id+'/takip/?view=invoices&month='+notificationMonth,kind:'invoices',count:fresh.length,pending,monthly,created:this.now()});
+      }else{
+        const id=sha(this.company.id+':check:'+job.id);
+        const summary={monthly,allMonthly:allNotificationMonthCounts(rows),lastFinished:this.now()},pending=notificationSections(summary,this.now()).pending;
+        for(const notification of statusNotifications(this.company,summary,id,this.now()))await this.notify({...notification,id:sha(notification.id),title:this.company.name+' · '+(pending?pending+' İşlenmemiş Fatura':'İşlenmemiş Fatura Yok'),kind:'company-result',count:pending,pending,monthly});
         }
       for(const row of unnotified)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
       if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF Hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});
@@ -334,7 +333,8 @@ export class InvoiceArchive{
   }
   async notificationSummary(){
     const [storedRows,settings,status]=await Promise.all([this.all(),this.settings(),this.status()]),rows=storedRows.filter(r=>!r.deletedAt);
-    return {company:this.company,enabled:!!settings.enabled,running:!!await this.storage.get('job'),pending:rows.filter(r=>!r.done&&!r.isRet).length,monthly:notificationMonthCounts(rows,localDate(this.now())),allMonthly:allNotificationMonthCounts(rows),lastFinished:status.lastFinished||null,lastResult:status.lastResult||null,error:status.error||null};
+    const allMonthly=allNotificationMonthCounts(rows),sections=notificationSections({allMonthly},this.now());
+    return {company:this.company,enabled:!!settings.enabled,running:!!await this.storage.get('job'),...sections,allMonthly,lastFinished:status.lastFinished||null,lastResult:status.lastResult||null,error:status.error||null};
   }
   async handle(action,method,body={},params=new URLSearchParams()){
     if(action==='notification-summary'&&method==='GET')return json(await this.notificationSummary());

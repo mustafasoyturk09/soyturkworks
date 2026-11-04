@@ -7,6 +7,7 @@ export async function automationHealth(storage,revision,now=Date.now()){
   return {type:'automation-health',at:now,nextCheck:nextCheck||null,alarm:alarm||null,
     devices:devices.size,activeDevices:[...devices.values()].filter(d=>d.revision===revision).length,
     lastSent:Math.max(0,...[...devices.values()].map(d=>d.lastSent||0))||null,
+    deliveries:[...devices.values()].filter(d=>d.revision===revision).map(d=>({lastSent:d.lastSent||null,companies:d.deliveries||{}})),
     queued:outbox.size,retrying:[...outbox.values()].filter(v=>v.attempts>0).length,
     cycles:[...cycles.values()].filter(c=>now-c.created<86400000).sort((a,b)=>b.created-a.created).slice(0,12).map(c=>({
       created:c.created,manual:c.manual,completed:c.completed||null,
