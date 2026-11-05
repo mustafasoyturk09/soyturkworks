@@ -9,8 +9,9 @@ export const monthLabel=month=>new Intl.DateTimeFormat('tr-TR',{month:'long',yea
 export const trDate=date=>String(date).slice(0,10).split('-').reverse().join('.');
 export function folderName(company,month,date){return safeName(company+' '+monthLabel(month)+' Gelen E-Faturalar ('+trDate(date)+')');}
 export function excelName(company,month,date){return safeName(company+' '+monthLabel(month)+' - Gelen Faturalar ('+trDate(date)+').xlsx');}
-export const EXCEL_TEMPLATE_VERSION=3;
-const EXCEL_COLUMN_WIDTHS=[31.28515625,18.42578125,219.28515625,22.28515625,29.42578125,15.42578125,24.28515625];
+export const EXCEL_TEMPLATE_VERSION=4;
+const EXCEL_MIN_WIDTHS=[20,12,28,17,16,8,17];
+const EXCEL_MAX_WIDTHS=[26,13,58,24,23,9,19];
 export function excelTitle(company,month,date){
   const [year,number]=month.split('-').map(Number);
   const end=month===date.slice(0,7)?date:new Date(Date.UTC(year,number,0)).toISOString().slice(0,10);
@@ -19,15 +20,31 @@ export function excelTitle(company,month,date){
 // Arial bold advance widths (em units). Excel's shrink-to-fit remains a fallback
 // for a substituted font; the stored point size also adapts to the actual title.
 const TITLE_WIDTHS={A:.722,B:.722,C:.722,D:.722,E:.667,F:.611,G:.778,H:.722,I:.278,J:.556,K:.722,L:.611,M:.833,N:.722,O:.778,P:.667,Q:.778,R:.722,S:.667,T:.611,U:.722,V:.667,W:.944,X:.667,Y:.667,Z:.611,' ':.278,'-':.333,'(':.333,')':.333,'.':.278};
-export function excelTitleFontSize(title){
+export function excelTitleFontSize(title,widths=EXCEL_MIN_WIDTHS){
   const units=[...title.normalize('NFD').replace(/[\u0300-\u036f]/g,'')].reduce((n,c)=>n+(TITLE_WIDTHS[c]??(/\d/.test(c)?.556:.722)),0);
-  const width=EXCEL_COLUMN_WIDTHS.reduce((n,w)=>n+w,0)*7*.75-18;
-  return Math.max(24,Math.min(43,Math.floor(width/Math.max(1,units))));
+  const width=widths.reduce((n,w)=>n+w*7+5,0)*.75-24;
+  return Math.max(12,Math.min(26,Math.floor(width/Math.max(1,units))));
 }
-function excelAmountFontSize(rows){
-  const format=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const units=Math.max(1,...rows.map(r=>[...format.format(Number(r.tutar)||0)].reduce((n,c)=>n+(/\d/.test(c)?.556:.333),0)));
-  return Math.max(11,Math.min(20,Math.floor((EXCEL_COLUMN_WIDTHS[4]*14*.556-6)/units)));
+function excelTextWidth(value){
+  return [...String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')].reduce((n,c)=>n+(TITLE_WIDTHS[c.toUpperCase()]??(/\d/.test(c)?.556:.722))*(c!==c.toUpperCase()?.85:1),0)*11;
+}
+function excelValues(row,date){return [row.fatno,trDate(row.tarih),row.unvan,invoiceTypeLabel(row.profile,row.tip),row.tutar,row.birim||'TRY',invoiceStateLabel(row,date)];}
+export function excelColumnWidths(rows,date){
+  const widths=[...EXCEL_MIN_WIDTHS],money=new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  for(const row of rows)excelValues(row,date).forEach((value,i)=>{const points=excelTextWidth(i===4?money.format(Number(value)||0):value)+14; widths[i]=Math.min(EXCEL_MAX_WIDTHS[i],Math.max(widths[i],Math.ceil((points/.75-5)/7*100)/100));});
+  return widths;
+}
+function excelWrappedLines(value,width){
+  const available=(width*7+5)*.75-12;let lines=0;
+  for(const paragraph of String(value??'').split(/\r?\n/)){
+    let used=0;lines++;
+    for(const word of paragraph.split(/\s+/)){
+      const size=excelTextWidth(word),space=used?excelTextWidth(' '):0;
+      if(used&&used+space+size>available){lines++;used=0;}
+      if(size>available){const extra=Math.ceil(size/available)-1;lines+=extra;used=size-extra*available;}else used+=(used?space:0)+size;
+    }
+  }
+  return lines;
 }
 
 export function unwrapDocument(input,format){
@@ -55,17 +72,17 @@ export function supplierFromXML(bytes,row,identifier){
 export function makeExcel(company,month,date,rows){
   const xmlHeader='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
   const headers=['Fatura No','Tarih','Unvan','Tip','Tutar','Birim','Yanıt'];
-  const cell=(value,col,row,style=0)=>typeof value==='number'&&Number.isFinite(value)?'<c r="'+col+row+'" s="'+style+'"><v>'+value+'</v></c>':'<c r="'+col+row+'" s="'+style+'" t="inlineStr"><is><t xml:space="preserve">'+escape(value)+'</t></is></c>';
-  const title=excelTitle(company,month,date);
-  const lines=['<row r="1" ht="54" customHeight="1">'+Array.from({length:7},(_,i)=>cell(i===0?title:'',String.fromCharCode(65+i),1,1)).join('')+'</row>','<row r="2" ht="43.5" customHeight="1">'+headers.map((h,i)=>cell(h,String.fromCharCode(65+i),2,2)).join('')+'</row>'];
-  rows.forEach((r,i)=>{const n=i+3,currency=String(r.birim||'TRY').trim().toUpperCase();lines.push('<row r="'+n+'" ht="26.25" customHeight="1">'+[r.fatno,trDate(r.tarih),r.unvan,invoiceTypeLabel(r.profile,r.tip),r.tutar,r.birim||'TRY',invoiceStateLabel(r,date)].map((v,j)=>cell(v,String.fromCharCode(65+j),n,j===6?(r.isRet?5:r.done?4:invoiceState(r,date)==='new'?3:7):j===5?(currency==='USD'?8:['EUR','EURO'].includes(currency)?9:0):j===4?6:0)).join('')+'</row>');});
+  const cell=(value,col,row,style=10)=>typeof value==='number'&&Number.isFinite(value)?'<c r="'+col+row+'" s="'+style+'"><v>'+value+'</v></c>':'<c r="'+col+row+'" s="'+style+'" t="inlineStr"><is><t xml:space="preserve">'+escape(value)+'</t></is></c>';
+  const title=excelTitle(company,month,date),widths=excelColumnWidths(rows,date),titleSize=excelTitleFontSize(title,widths),lastRow=Math.max(2,rows.length+2);
+  const lines=['<row r="1" ht="'+Math.ceil(titleSize*1.5+12)+'" customHeight="1">'+Array.from({length:7},(_,i)=>cell(i===0?title:'',String.fromCharCode(65+i),1,1)).join('')+'</row>','<row r="2" ht="27" customHeight="1">'+headers.map((h,i)=>cell(h,String.fromCharCode(65+i),2,2)).join('')+'</row>'];
+  rows.forEach((r,i)=>{const n=i+3,currency=String(r.birim||'TRY').trim().toUpperCase(),values=excelValues(r,date),height=Math.min(409.5,Math.max(23,...values.map((v,j)=>j===4?23:excelWrappedLines(v,widths[j])*14+9)));lines.push('<row r="'+n+'" ht="'+height+'" customHeight="1">'+values.map((v,j)=>cell(v,String.fromCharCode(65+j),n,j===6?(r.isRet?5:r.done?4:invoiceState(r,date)==='new'?3:7):j===5?(currency==='USD'?8:['EUR','EURO'].includes(currency)?9:10):j===4?6:10)).join('')+'</row>');});
   const files={
     '[Content_Types].xml':xmlHeader+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
     '_rels/.rels':xmlHeader+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
-    'xl/workbook.xml':xmlHeader+'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="GELEN E-FATURALAR" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">\'GELEN E-FATURALAR\'!$1:$2</definedName></definedNames></workbook>',
+    'xl/workbook.xml':xmlHeader+'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="GELEN E-FATURALAR" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">&apos;GELEN E-FATURALAR&apos;!$A$1:$G$'+lastRow+'</definedName><definedName name="_xlnm.Print_Titles" localSheetId="0">&apos;GELEN E-FATURALAR&apos;!$1:$2</definedName></definedNames></workbook>',
     'xl/_rels/workbook.xml.rels':xmlHeader+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
-    'xl/worksheets/sheet1.xml':xmlHeader+'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+EXCEL_COLUMN_WIDTHS.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+lines.join('')+'</sheetData><autoFilter ref="A2:G'+Math.max(2,rows.length+2)+'"/><mergeCells count="1"><mergeCell ref="A1:G1"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>',
-    'xl/styles.xml':xmlHeader+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="6"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="'+excelTitleFontSize(title)+'"/><name val="Arial"/></font><font><b/><sz val="25"/><color rgb="FF10283C"/><name val="Arial"/></font><font><sz val="'+excelAmountFontSize(rows)+'"/><name val="Arial"/></font><font><sz val="14"/><name val="Arial"/></font><font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="10"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'+['00CCFF','FFC000','339966','FF0066','E8EDF2','0070C0','8B0000','FFFF00'].map(c=>'<fill><patternFill patternType="solid"><fgColor rgb="FF'+c+'"/><bgColor indexed="64"/></patternFill></fill>').join('')+'</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="medium"><color auto="1"/></left><right style="medium"><color auto="1"/></right><top style="medium"><color auto="1"/></top><bottom style="medium"><color auto="1"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="10">'+[[4,0,0],[1,0,0],[2,2,0],[4,3,0],[4,4,0],[4,5,0],[3,9,4],[4,6,0],[5,7,0],[5,8,0]].map(([f,fill,num])=>'<xf numFmtId="'+num+'" fontId="'+f+'" fillId="'+fill+'" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center" '+(f===1||f===3?'shrinkToFit="1"':'wrapText="1"')+'/></xf>').join('')+'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'
+    'xl/worksheets/sheet1.xml':xmlHeader+'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:G'+lastRow+'"/><sheetViews><sheetView workbookViewId="0" zoomScale="100" zoomScaleNormal="100"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>'+widths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+lines.join('')+'</sheetData><mergeCells count="1"><mergeCell ref="A1:G1"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>',
+    'xl/styles.xml':xmlHeader+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="6"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="'+titleSize+'"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FF10283C"/><name val="Arial"/></font><font><sz val="11"/><name val="Arial"/></font><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="10"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'+['00CCFF','FFC000','BFE3D5','FF0066','E8EDF2','0070C0','8B0000','FFFF00'].map(c=>'<fill><patternFill patternType="solid"><fgColor rgb="FF'+c+'"/><bgColor indexed="64"/></patternFill></fill>').join('')+'</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="medium"><color auto="1"/></left><right style="medium"><color auto="1"/></right><top style="medium"><color auto="1"/></top><bottom style="medium"><color auto="1"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="11">'+[[0,0,0],[1,0,0],[2,2,0],[4,3,0],[4,4,0],[4,5,0],[3,9,4],[4,6,0],[5,7,0],[5,8,0],[4,0,0]].map(([f,fill,num],i)=>i===0?'<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>':'<xf numFmtId="'+num+'" fontId="'+f+'" fillId="'+fill+'" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1" applyFill="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center" '+(f===1||f===3?'shrinkToFit="1"':'wrapText="1"')+'/></xf>').join('')+'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'
   };
   return zipSync(Object.fromEntries(Object.entries(files).map(([k,v])=>[k,strToU8(v)])),{level:6});
 }

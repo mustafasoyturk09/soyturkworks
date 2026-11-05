@@ -469,13 +469,13 @@ test('Excel export matches the bordered reference and fits every company title w
  for(const name of names){
   const bytes=makeExcel(name,'2026-10','2026-11-03',[{fatno:'TEST20260000001',tarih:'2026-10-27',unvan:'Örnek Tedarikçi',profile:'TEMELFATURA',tip:'SATIS',tutar:123456.78,birim:'TRY',yanit:'Yanıt gerekmiyor',done:true}]);
   const files=unzipSync(bytes),sheet=strFromU8(files['xl/worksheets/sheet1.xml']),styles=strFromU8(files['xl/styles.xml']);
-  const size=Number(styles.match(/<font><b\/><sz val="(\d+)"/)[1]);sizes.push(size);assert(size>=24&&size<=47);
+  const size=Number(styles.match(/<font><b\/><sz val="(\d+)"/)[1]);sizes.push(size);assert(size>=14&&size<=26);
   assert(sheet.includes(name.toLocaleUpperCase('tr-TR')));assert(sheet.includes('<mergeCell ref="A1:G1"/>'));
   for(const col of 'ABCDEFG')assert(sheet.includes('r="'+col+'1" s="1"'));
   assert.match(styles,/<left style="medium">/);assert.match(styles,/borderId="1"/);assert.match(styles,/horizontal="center" vertical="center" shrinkToFit="1"/);
-  assert.match(styles,/FF339966/);assert.match(styles,/FFFF0066/);assert(sheet.includes('<v>123456.78</v>'));assert(sheet.includes('İŞLENDİ'));
+  assert.match(styles,/FFBFE3D5/);assert.match(styles,/FFFF0066/);assert(sheet.includes('<v>123456.78</v>'));assert(sheet.includes('İŞLENDİ'));
  }
- assert.equal(sizes[0],43);assert(sizes[2]<=sizes[0]);
+ assert(sizes[0]<=26);assert(sizes[2]<sizes[0]);
  assert(excelTitleFontSize('ÇOK UZUN BİR FİRMA ÜNVANI '.repeat(4))<47);
 });
 
@@ -492,8 +492,22 @@ test('Excel replaces the processing column with Yanıt and colors USD/EUR separa
  const files=unzipSync(makeExcel('Pusula','2026-11','2026-11-04',rows)),xml=strFromU8(files['xl/worksheets/sheet1.xml']),styles=strFromU8(files['xl/styles.xml']);
  assert(!xml.includes('İşlem Durumu'));assert(!xml.includes('Yanıt gerekmiyor'));assert(!/<c r="H/.test(xml));
  assert.match(xml,/<c r="G3" s="4"[^>]*><is><t[^>]*>İŞLENDİ/);
- assert.match(xml,/<c r="F3" s="0"/);assert.match(xml,/<c r="F4" s="8"/);assert.match(xml,/<c r="F5" s="9"/);assert.match(xml,/<c r="F6" s="9"/);
- assert(styles.includes('FF0070C0'));assert(styles.includes('FF8B0000'));assert(xml.includes('autoFilter ref="A2:G6"'));
+ assert.match(xml,/<c r="F3" s="10"/);assert.match(xml,/<c r="F4" s="8"/);assert.match(xml,/<c r="F5" s="9"/);assert.match(xml,/<c r="F6" s="9"/);
+ assert(styles.includes('FF0070C0'));assert(styles.includes('FF8B0000'));assert(!xml.includes('autoFilter'));
+});
+
+test('Excel keeps blank cells unformatted, fits columns at 100 percent and wraps long supplier names',()=>{
+ const row={fatno:'TEST2026000000001',tarih:'2026-11-01',unvan:'Örnek Firma',profile:'TEMELFATURA',tip:'SATIS',tutar:123456.78,birim:'TRY',done:true};
+ const read=rows=>{const files=unzipSync(makeExcel('Kendine İyi Bak','2026-11','2026-11-05',rows));return {sheet:strFromU8(files['xl/worksheets/sheet1.xml']),styles:strFromU8(files['xl/styles.xml']),book:strFromU8(files['xl/workbook.xml'])};};
+ const short=read([row]),long=read([row,{...row,unvan:'ULUSLARARASI TEKNOLOJİ VE DANIŞMANLIK HİZMETLERİ '.repeat(8)}]);
+ assert.match(long.styles,/<cellXfs count="11"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"\/>/);
+ assert.match(long.sheet,/<c r="A3" s="10"/);assert.match(long.sheet,/<dimension ref="A1:G4"/);assert.match(long.sheet,/zoomScale="100" zoomScaleNormal="100"/);
+ assert(!long.sheet.includes('autoFilter'));assert(!long.sheet.includes('<c r="H'));assert(!/<col [^>]*style=/.test(long.sheet));assert(!/<row [^>]* s=/.test(long.sheet));
+ assert(long.book.includes('!$A$1:$G$4'));assert.match(long.styles,/FFBFE3D5/);
+ const widths=sheet=>[...sheet.matchAll(/<col [^>]*width="([\d.]+)"/g)].map(m=>Number(m[1]));
+ const small=widths(short.sheet),large=widths(long.sheet);assert(large[2]>small[2]);assert(large[2]<=58);assert(large.reduce((n,w)=>n+w*7+5,0)<=1250);
+ const height=(xml,n)=>Number(xml.match(new RegExp('<row r="'+n+'" ht="([\\d.]+)"'))[1]);assert(height(long.sheet,4)>height(long.sheet,3));
+ assert(long.sheet.includes('ULUSLARARASI TEKNOLOJİ VE DANIŞMANLIK HİZMETLERİ '.repeat(8)));
 });
 
 test('Unchanged Excel and ZIP downloads roll the date at Istanbul midnight without altering invoices',async t=>{
