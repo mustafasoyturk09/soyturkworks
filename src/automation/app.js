@@ -274,7 +274,7 @@ async function runScan(){
 async function sendInstantStatus(){
   await repairPushSubscription();
   const result=await api('/api/automation/instant-status',{}),panel=$('allCompanyStatus');panel.hidden=false;
-  panel.innerHTML='<strong>Faturalar Anlık Durum</strong><small>Yeni gelen + bekleyen toplamı; işlenenler hariç. Ayın 15’i dahil önceki ve mevcut ay, sonrasında mevcut ay. Daha eski işlenmemiş faturalar ayrıca gösterilir. Sunucudaki son kayıtlar.</small>'+result.results.map(r=>{
+  panel.innerHTML='<strong>Faturalar Anlık Durum</strong><small>Yeni Gelen toplamı; işlenenler hariç. Ayın 15’i dahil önceki ve mevcut ay, sonrasında mevcut ay. Daha eski işlenmemiş faturalar ayrıca gösterilir. Sunucudaki son kayıtlar.</small>'+result.results.map(r=>{
     const months=(r.monthly||[]).map(m=>monthName(m.month)+' '+m.count+' Adet').join(' · ')||(r.error?'Güncel durum doğrulanamadı':'İşlenmemiş fatura yok');
     const older=(r.olderMonthly||[]).map(m=>monthName(m.month)+' '+m.count+' Adet').join(' · ');
     const note=!r.connected?'İzibiz bağlantısı yok':r.error?'Son kontrol tamamlanamadı':r.running?'Kontrol sürüyor':!r.enabled?'Otomatik takip kapalı':'';

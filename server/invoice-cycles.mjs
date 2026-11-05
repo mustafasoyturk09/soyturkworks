@@ -58,7 +58,7 @@ export class InvoiceCycles{
       const monthly=event.monthly||[],{pending}=notificationSections(event,this.now());
       const notifications=statusNotifications(company,{...event,monthly,lastFinished:event.lastFinished||(!event.error?this.now():null)},'cycle:'+cycle.id,this.now(),event.error||'');
       for(const notification of notifications){
-        notification.id=hash(notification.id);notification.kind='company-result';notification.title=company.name+' · '+(event.error?'Kontrol Uyarısı':pending?pending+' İşlenmemiş Fatura':'İşlenmemiş Fatura Yok');
+        notification.id=hash(notification.id);notification.kind='company-result';notification.title=company.name+' · '+(event.error?'Kontrol Uyarısı':pending?pending+' Yeni Gelen':'Yeni Gelen Fatura Yok');
         notification.tag='invoice-check-'+cycle.id+'-'+company.id+'-'+notifications.indexOf(notification);
         await enqueueNotification(tx,notification,true);
       }

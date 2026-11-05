@@ -25,11 +25,11 @@ test('Every connected company starts from one manual request; disabled tracking 
 test('A fast company notifies immediately, zero arrivals notify too, and late results survive the old eight minute deadline',async()=>{
   const f=fixture(),{id}=await f.cycles.begin();
   await f.cycles.record({cycleId:id,company:'PUSULA',fresh:0,allMonthly:[{month:'2026-10',count:22},{month:'2026-11',count:2}]});
-  let events=await f.events();assert.equal(events.length,1);assert.match(events[0].body,/Ekim 22 Adet · Kasım 2 Adet/);assert.match(events[0].title,/24 İşlenmemiş Fatura/);
+  let events=await f.events();assert.equal(events.length,1);assert.match(events[0].body,/Ekim 22 Adet · Kasım 2 Adet/);assert.match(events[0].title,/24 Yeni Gelen/);
   f.advance(9*60000);await f.cycles.maintain();assert(await f.storage.get('push:cycle:'+id));
   assert.equal((await f.events()).filter(e=>/Kontrol Sürüyor/.test(e.title)).length,4);
   await f.cycles.record({cycleId:id,company:'COMED',fresh:3,monthly:[{month:'2026-11',count:3}]});
-  events=await f.events();assert(events.some(e=>e.company==='COMED'&&/3 İşlenmemiş Fatura/.test(e.title)));
+  events=await f.events();assert(events.some(e=>e.company==='COMED'&&/3 Yeni Gelen/.test(e.title)));
   const count=events.length;await f.cycles.record({cycleId:id,company:'COMED',fresh:3});assert.equal((await f.events()).length,count);
 });
 test('Duplicate scheduled trigger never erases earlier company results or sends them again',async()=>{
@@ -75,7 +75,7 @@ test('All five companies repeat outstanding totals without a new arrival, with d
   const events=await f.events();assert.equal(events.length,10);assert.equal(new Set(events.map(e=>e.tag)).size,10);
   for(const company of ids){
     const pair=events.filter(e=>e.company===company);assert.equal(pair.length,2);
-    for(const event of pair){assert.match(event.title,/9 İşlenmemiş Fatura/);assert.match(event.body,/Ekim 3 Adet · Kasım 4 Adet/);assert.match(event.body,/Önceki aylardan bekleyen: Eylül 2 Adet/);}
+    for(const event of pair){assert.match(event.title,/9 Yeni Gelen/);assert.match(event.body,/Ekim 3 Adet · Kasım 4 Adet/);assert.match(event.body,/Önceki aylardan bekleyen: Eylül 2 Adet/);}
   }
 });
 

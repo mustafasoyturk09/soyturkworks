@@ -295,7 +295,7 @@ export class InvoiceArchive{
       }else{
         const id=sha(this.company.id+':check:'+job.id);
         const summary={monthly,allMonthly:allNotificationMonthCounts(rows),lastFinished:this.now()},pending=notificationSections(summary,this.now()).pending;
-        for(const notification of statusNotifications(this.company,summary,id,this.now()))await this.notify({...notification,id:sha(notification.id),title:this.company.name+' · '+(pending?pending+' İşlenmemiş Fatura':'İşlenmemiş Fatura Yok'),kind:'company-result',count:pending,pending,monthly});
+        for(const notification of statusNotifications(this.company,summary,id,this.now()))await this.notify({...notification,id:sha(notification.id),title:this.company.name+' · '+(pending?pending+' Yeni Gelen':'Yeni Gelen Fatura Yok'),kind:'company-result',count:pending,pending,monthly});
         }
       for(const row of unnotified)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
       if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF Hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});

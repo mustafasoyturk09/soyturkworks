@@ -39,13 +39,13 @@ export function normalizeNotificationMonths(value){
 }
 
 export function formatNotificationMonths(value){
-  return normalizeNotificationMonths(value).map(item=>monthLabel(item.month)+' · '+item.count+' İşlenmemiş').join('\n');
+  return normalizeNotificationMonths(value).map(item=>monthLabel(item.month)+' · '+item.count+' Yeni Gelen').join('\n');
 }
 
 export function formatCompanyNotificationLine(name,value){
   const months=normalizeNotificationMonths(value);
   if(!months.length)return String(name||'Firma')+' · Veri Bekleniyor';
-  return String(name||'Firma')+' — '+months.map(item=>monthLabel(item.month)+' '+item.count).join(' · ')+' İşlenmemiş';
+  return String(name||'Firma')+' — '+months.map(item=>monthLabel(item.month)+' '+item.count).join(' · ')+' Yeni Gelen';
 }
 
 // Keep outstanding historical invoices visible until they are processed.
@@ -75,7 +75,7 @@ export function statusNotifications(company,summary,id,created=Date.now(),note='
   const time=summary.lastFinished?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(summary.lastFinished)):'Henüz tamamlanmadı';
   return parts.map((part,index)=>({id:createStatusId(id,company.id,index),company:company.id,
     title:company.name+' · Faturalar Anlık Durum'+(parts.length>1?' ('+(index+1)+'/'+parts.length+')':''),
-    body:[part.some(m=>!m.older)?'Yeni + bekleyen: '+part.filter(m=>!m.older).map(line).join(' · '):'',part.some(m=>m.older)?'Önceki aylardan bekleyen: '+part.filter(m=>m.older).map(line).join(' · '):'',note,summary.running?'Kontrol sürüyor':summary.error?'Son kontrol tamamlanamadı':'', 'Son kontrol: '+time].filter(Boolean).join('\n'),
+    body:[part.some(m=>!m.older)?'Yeni Gelen: '+part.filter(m=>!m.older).map(line).join(' · '):'',part.some(m=>m.older)?'Önceki aylardan bekleyen: '+part.filter(m=>m.older).map(line).join(' · '):'',note,summary.running?'Kontrol sürüyor':summary.error?'Son kontrol tamamlanamadı':'', 'Son kontrol: '+time].filter(Boolean).join('\n'),
     url:'/workspace/'+company.id+'/takip/?view=invoices',kind:'status',tag:'invoice-status-'+id+'-'+company.id+'-'+index,created}));
 }
 const createStatusId=(id,company,index)=>id+':'+company+':'+index;
