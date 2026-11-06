@@ -7,8 +7,8 @@
 <title>Fatura Takibi · Soyturk Works</title>
 <link rel="icon" href="/favicon.ico?v=3"><link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=month-spotlight-6">
-<script defer src="/automation/app.js?v=month-spotlight-6"></script>
+<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=monthly-archive-7">
+<script defer src="/automation/app.js?v=monthly-archive-7"></script>
 </head>
 <body>
 <aside class="rail">
@@ -23,6 +23,7 @@
 <div class="page-heading"><div><p class="eyebrow" id="todayLabel" hidden></p><div class="integration-heading"><svg class="integration-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 7h10m-4-4 4 4-4 4M17 17H7m4-4-4 4 4 4"/></svg><h1 id="systemTitle">Gelen E-Fatura Takip Sistemi</h1></div></div><button type="button" class="refresh-button" id="refreshButton"><span aria-hidden="true">↻</span> Yenile</button></div>
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
+<button type="button" id="previousPage" class="text-button previous-page">← Önceki Sayfa</button>
 <div id="trackingStatus" class="tracking-status"></div>
 <section id="periodPicker" class="period-picker" aria-label="Yıl ve ay seçimi">
 <div class="period-year"><button type="button" class="year-arrow" id="previousYear" aria-label="Önceki yıl">‹</button><label class="sr-only" for="yearSelect">Yıl</label><select id="yearSelect" aria-label="Yıl"></select><button type="button" class="year-arrow" id="nextYear" aria-label="Sonraki yıl">›</button><span id="periodHint"></span></div>
@@ -34,9 +35,9 @@
 <div class="filter-bar"><div class="segmented" id="statusFilters"><button data-status="all" aria-pressed="true">Tümü <span data-count="total">0</span></button><button data-status="new" aria-pressed="false">Yeni gelen <span data-count="fresh">0</span></button><button data-status="waiting" aria-pressed="false">Bekleniyor <span data-count="waiting">0</span></button><button data-status="done" aria-pressed="false">İşlendi <span data-count="done">0</span></button><button data-status="rejected" aria-pressed="false">Reddedildi <span data-count="rejected">0</span></button></div><label class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Firma veya fatura numarası ara" aria-label="Firma unvanı veya fatura numarası ara"></label></div>
 <div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden><span id="undoMessage"></span><button type="button" id="undoLastMark" class="secondary-button">Geri al</button></div>
 <div class="selection-bar" id="selectionBar" hidden><span id="selectedCount"></span><button data-bulk="true">İşlendi olarak işaretle</button><button data-bulk="false">İşlendi işaretini geri al</button><button id="clearSelection">Seçimi kaldır</button></div>
-<div id="invoiceList" class="invoice-list"></div><button id="loadMore" class="secondary-button more-button" hidden>Daha fazla göster</button>
+<div id="invoiceList" class="invoice-list"></div><nav id="invoicePagination" class="pagination" aria-label="Fatura sayfaları" hidden><button id="previousInvoices" class="secondary-button" disabled>Önceki Sayfa</button><span id="invoicePageInfo" aria-live="polite"></span><button id="loadMore" class="secondary-button">Sonraki Sayfa</button></nav>
 </section>
-<section id="foldersView" class="view" hidden><div class="section-head"><h2 id="folderHeading">Arşiv</h2><span class="subtle">PDF ve Excel dosyaları</span></div><div id="folderList" class="folder-grid"></div></section>
+<section id="foldersView" class="view" hidden><div class="section-head"><h2 id="folderHeading">Arşiv</h2><button type="button" id="checkFolders" class="secondary-button">Klasörleri kontrol et</button></div><div id="folderList" class="folder-grid"></div></section>
 <section id="notificationsView" class="view" hidden>
 <div class="section-head"><h2>Telefon Bildirimleri</h2></div>
 <div class="notification-settings settings-panel"><p>Bildirim istediğin telefonda yalnızca bir kez aç. Tek telefon tüm firmaları kapsar; firma firma ayar yapmazsın.</p><div id="pushStatus" class="connection-state">Cihaz kontrol ediliyor…</div><div id="pushSetupSteps" class="push-setup" hidden></div><button id="enablePush" class="primary-button">Bu telefonu tüm firmalara bağla</button><button id="testPush" class="secondary-button" hidden>Bu telefona test özeti gönder</button><p id="pushHelp" class="fineprint"></p><h3 class="connected-devices-heading">Tüm firmalara bağlı cihazlar</h3><div id="deviceList"></div></div>
@@ -49,7 +50,7 @@
 </main>
 </div>
 <nav class="bottom-nav" aria-label="Mobil fatura takip menüsü"></nav>
-<dialog id="folderDialog" class="folder-dialog"><div class="dialog-heading"><span class="folder-icon" id="dialogFolderIcon"></span><button id="closeFolder" class="icon-button" aria-label="Klasörü kapat">×</button></div><div id="folderContent"></div></dialog>
+<dialog id="folderDialog" class="folder-dialog"><div class="dialog-heading"><span class="folder-icon" id="dialogFolderIcon"></span><button type="button" id="backToFolders" class="text-button">← Önceki Sayfa</button><button id="closeFolder" class="icon-button" aria-label="Klasörü kapat">×</button></div><div id="folderContent"></div></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

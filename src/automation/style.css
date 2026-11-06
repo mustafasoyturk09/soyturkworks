@@ -91,6 +91,34 @@
 .push-setup{margin:4px 0 18px;padding:18px 20px;border:1px solid #a6dbc555;border-radius:14px;background:#a6dbc50b;color:var(--text);font-size:14px;line-height:1.65}.push-setup strong{display:block;color:var(--mint);font-size:16px}.push-setup ol{margin:12px 0;padding-left:22px}.push-setup li{margin:7px 0}.push-setup p{margin:12px 0 0;color:#c7d5df;font-weight:600}@media(max-width:600px){.push-setup{padding:16px;font-size:13px}.push-setup strong{font-size:15px}}
 
 .event p{white-space:pre-line}
+
+/* Monthly accounting archive: retain the existing palette and card layout. */
+.previous-page{margin:0 0 16px;min-height:44px}
+.pagination{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:22px 0}
+.pagination>span{font-size:12px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.pagination button{min-height:44px}
+.folder-card h3{font-size:16px;font-weight:600;margin:16px 0 12px}
+.folder-date-label{font-size:10px;letter-spacing:.06em;color:var(--muted);margin:12px 0 4px}
+.folder-received-dates{font-size:12px;line-height:1.7;color:var(--muted);margin:4px 0 14px;overflow-wrap:anywhere}
+.folder-action{flex-wrap:wrap;gap:6px 16px;align-items:center}
+.folder-action>*{min-height:44px}
+.folder-action .folder-card-delete{display:inline-flex;align-items:center;gap:6px;color:var(--red);margin-left:auto}
+.folder-card-delete svg{width:17px;height:17px}
+.folder-file-info{flex:1;min-width:0;overflow-wrap:anywhere}
+.folder-pdf-actions{display:flex;gap:16px;flex-wrap:wrap;margin-top:4px}
+.folder-pdf-actions a{display:inline-flex;align-items:center;min-height:44px;color:var(--mint)}
+.dialog-heading #backToFolders{margin-left:auto;margin-right:16px;min-height:44px}
+@media(max-width:600px){
+  .pagination{gap:8px;justify-content:space-between}
+  .pagination button{font-size:11px;padding:10px;flex:1;min-width:0}
+  .pagination>span{flex-basis:100%;order:3}
+  .folder-card{padding:18px}
+  .folder-file{display:grid;grid-template-columns:20px minmax(0,1fr);gap:4px 10px;align-items:start}
+  .folder-file>svg{margin-top:3px}
+  .folder-file>.status-chip{grid-column:2;justify-self:start;white-space:normal}
+  .folder-file small{font-size:11px;line-height:1.7;margin-top:4px}
+  .folder-pdf-actions{gap:8px 18px;font-size:12px}
+}
 .all-company-status{border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:16px;margin:0 0 20px;overflow-wrap:anywhere}.all-company-status>strong{font-size:15px}.all-company-status small{display:block;color:var(--muted);font-size:12px;line-height:1.6}.all-company-status p{margin:12px 0 0;padding-top:10px;border-top:1px solid var(--border);font-size:13px;line-height:1.6}.all-company-status b,.all-company-status span{display:block}.main-actions #instantStatusButton{border-color:var(--mint);color:var(--mint)}
 @media(max-width:900px){.invoice-section-head{align-items:flex-start;flex-direction:column}.main-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.main-actions>*{min-width:0!important;min-height:44px;padding:10px 8px;font-size:12px;white-space:normal;text-align:center;display:flex;align-items:center;justify-content:center}.main-actions #scanButton{grid-column:1;grid-row:1}.main-actions #instantStatusButton{grid-column:2;grid-row:1}.all-company-status{padding:12px}}
 .month-tile>em,.month-tile.active>em{color:var(--amber);font-weight:700;font-size:11px;text-shadow:0 1px 2px #39260e,0 0 3px #39260e99,0 0 7px #f0c58a99;white-space:nowrap}

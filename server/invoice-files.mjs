@@ -7,7 +7,7 @@ export const safeName=value=>String(value||'Firma').normalize('NFC').replace(/[<
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c])).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'');
 export const monthLabel=month=>new Intl.DateTimeFormat('tr-TR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(month+'-01T12:00:00Z')).replace(/^./,c=>c.toLocaleUpperCase('tr-TR'));
 export const trDate=date=>String(date).slice(0,10).split('-').reverse().join('.');
-export function folderName(company,month,date){return safeName(company+' '+monthLabel(month)+' Gelen E-Faturalar ('+trDate(date)+')');}
+export function folderName(company,month,date){return safeName(company+' '+monthLabel(month)+' Gelen E-Faturalar'+(date?' ('+trDate(date)+')':''));}
 export function excelName(company,month,date){return safeName(company+' '+monthLabel(month)+' - Gelen Faturalar ('+trDate(date)+').xlsx');}
 export const EXCEL_TEMPLATE_VERSION=5;
 // Preserve the user's November 5 reference geometry. Only the merged title fits.

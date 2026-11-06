@@ -231,15 +231,15 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "d3d8bb666b7fb6cc3bb917893539e9dc851a6c08ec6a5b14dde3c840983c774c"
+      "sha256": "afa19f6523a084a481bfa14eb4e9aa150489a9213e15e8b88db0d8467af965d6"
     },
     {
       "file": "automation/index.html",
-      "sha256": "7837fdf3cfb5b1088bb48557b696ca163ad604f11552a90a17173ea9fa9fea39"
+      "sha256": "53bc83a2087e4a9eafd8cb8ac33503d15bf6dbd96d6286ce8601f07eefbfe93a"
     },
     {
       "file": "automation/style.css",
-      "sha256": "e670490358a2ff1cd929f34e54ba35f618472dac14ac23acb3bb7e2fa16795ce"
+      "sha256": "4d85db69dfc43bdd7bcc2948bdece4d958eaecd478fa569ba7df49c64b3521fe"
     },
     {
       "file": "favicon.ico",
@@ -251,7 +251,7 @@
     },
     {
       "file": "manifest.webmanifest",
-      "sha256": "048d6f10c266965737b68d69eb8734d66fd3acaf8350766d040c5785f7c17de0"
+      "sha256": "605998b50d283c0e1145ef9f223bba159aaa3f85b772ad115b7c9020ed467526"
     },
     {
       "file": "portal/index.html",

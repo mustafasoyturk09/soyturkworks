@@ -111,10 +111,17 @@ olduğu otomatik varsayılmaz.
 
 ## Özel dosyalar
 
-Örnek: Pusula Ekim 2026 Gelen E-Faturalar (17.11.2026).
-Belge ayı ve siteye alınma tarihi ayrıdır. Aynı günde alınan farklı aylara ait
-belgeler ayrı klasörlerdedir. Aynı PDF tekrar kaydedilmez. Kullanıcıya PDF'ler
-otomatik olarak bilgisayar indirmesi başlatılmadan sunucuda hazırlanır.
+Örnek: Pusula Ekim 2026 Gelen E-Faturalar.
+Her fatura ayı için tek klasör vardır. Geç gelen bir Ekim faturası, tarama
+kapsamındaysa mevcut Ekim klasörüne eklenir; alınma gününe göre yeni kart açılmaz.
+Belge ayı ve siteye alınma tarihi ayrıdır. Kartta ilk/son alınma tarihi ve farklı
+gün sayısı; her PDF yanında kendi fatura tarihi ve alınma tarihi gösterilir.
+Yeni PDF'lerde alınma saati de korunur. Eski günlük klasörler birleştirilirken
+eski klasör tarihi PDF kaydına aktarılır; eski kayıtta saat yoksa saat uydurulmaz.
+Aynı PDF tekrar kaydedilmez. PDF'ler otomatik bilgisayar indirmesi başlatılmadan
+sunucuda hazırlanır. Windows, Mac ve telefonda **PDF önizle** yeni sekmede açar;
+**PDF indir** ayrı bağlantıyla özgün dosyayı indirir. Tarayıcının PDF görüntüleme
+tercihi önizlemenin nasıl açılacağını etkileyebilir.
 
 Dosyalar mevcut özel Durable Object bağlaması içinde firma başına ayrı nesnede,
 512 KiB parçalar halinde tutulur. Firma başına 512 MiB uygulama sınırı ve kullanım
@@ -142,10 +149,24 @@ Excel’i veya temizlenmiş arşivi geri getiremez.
 Klasörü dışa aktar, PDF'leri ve varsa son Excel'i klasör adı altında ZIP olarak
 verir. Dışa aktarma kullanıcının isteğiyle gerçekleşir.
 
-Klasör kartları seçili ayda alınma tarihine göre PDF sayısını, Excel durumunu,
-Dosyaları aç ve ZIP indir işlemlerini gösterir. Klasör içindeki Klasörü sil
-dosyaları kaldırır. Yeniden aynı faturaları indirmemek için ETTN,
-fatura bilgileri, silinme bilgisi ve işlem durumu kalır. Otomatik süreli silme yoktur.
+Klasör kartları seçili fatura ayını, alınma tarihlerini, PDF sayısını, Excel
+durumunu, muhasebe klasörü simgesini ve indirme işlemlerini gösterir. Karttaki
+**Sil** ve içerideki **Klasörü sil**, aylık klasörün tamamı için açık onay ister.
+Yeniden aynı faturaları indirmemek için ETTN, fatura bilgileri, silinme bilgisi
+ve işlem durumu kalır. Otomatik süreli silme yoktur.
+
+Klasörleri açarken ve yeni kontrol başlarken eksik klasör bağlantıları otomatik
+kontrol edilir. **Klasörleri kontrol et** aynı denetimi elle tekrarlar. Eski günlük
+klasör kayıtları silinmeden aylık klasöre yönlendirilir; eski bağlantılar da
+aylık içeriği açar. Onarım PDF'leri yeniden indirmez, dosya parçalarını veya
+eski Excel anlık görüntülerini silmez; işaretleme sürümünü ve bildirim durumunu
+değiştirmez. Kullanıcının sildiği klasör/faturalar onarımla geri getirilmez.
+
+Fatura listesi ve klasör içeriği 100'er kayıtla **Önceki Sayfa / Sonraki Sayfa**
+üzerinden gezilir; toplam ve gösterilen aralık yazılır. Liste kısalmışsa son
+geçerli sayfa açılır. Tümünü seç işlemi filtreye uyan bütün sayfaları kapsar.
+Klasör penceresindeki **Önceki Sayfa** arşive döner; ana ekrandaki düğme önceki
+bölüme, doğrudan girişte firmanın çalışma alanına döner.
 
 ## Telefon bildirimleri
 

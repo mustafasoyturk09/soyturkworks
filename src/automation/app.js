@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const $=id=>document.getElementById(id),escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const paths={home:'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',invoices:'M6 3h12v18l-3-2-3 2-3-2-3 2ZM9 7h6M9 11h6M9 15h3',folders:'M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1ZM3 9h18',notifications:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',check:'m5 12 4 4L19 6',clock:'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',file:'M14 3H5v18h14V8ZM14 3v5h5M8 12h8M8 16h6',arrow:'M5 12h14m-6-6 6 6-6 6',alert:'M12 3 2 21h20ZM12 9v5M12 17v1',download:'M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4'};
+const paths={home:'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',invoices:'M6 3h12v18l-3-2-3 2-3-2-3 2ZM9 7h6M9 11h6M9 15h3',accounting:'M3 7V5h7l2 3h9v13H3ZM3 10h18M7 14h3M7 17h3M14 13h4v5h-4ZM16 13v5M14 15.5h4',trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',folders:'M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1ZM3 9h18',notifications:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',check:'m5 12 4 4L19 6',clock:'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',file:'M14 3H5v18h14V8ZM14 3v5h5M8 12h8M8 16h6',arrow:'M5 12h14m-6-6 6 6-6 6',alert:'M12 3 2 21h20ZM12 9v5M12 17v1',download:'M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4'};
 const icon=(name)=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(paths[name]||paths.file)+'"/></svg>';
 const labels={invoices:'Faturalar',folders:'Klasörler',notifications:'Bildirimler',dashboard:'Takip durumu'},navIcons={dashboard:'home',invoices:'invoices',folders:'folders',notifications:'notifications'};
 const params=new URLSearchParams(location.search);
@@ -10,7 +10,8 @@ if(!companyContext?.id){location.replace('/companies');return;}
 const company=companyContext.id,base='/workspace/'+company+'/takip/';
 let state={companies:[],events:[]},view=params.get('view')||'invoices',status='all',month=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||'')?params.get('month'):localMonth(),query='',rows=[],offset=0,more=false,selected=new Map(),currentFolder=null,devices=[],pushId=null,loading=false,noticeTimer,toastTimer,searchTimer;
 let undoEntries=[],undoMessage='',marking=false,selectingAll=false;
-let monthSpotlight=false;
+let monthSpotlight=false,folderPageRequest=0;
+const viewHistory=[];
 const selectedEvents=new Set();
 let invoiceRequest=0,folderRequest=0,refreshRequest=0,typeRefreshTimer,deviceRefreshPromise,periodPinned=/^\d{4}-(0[1-9]|1[0-2])$/.test(params.get('month')||''),resetting=false,scanning=false,deviceStateKnown=false,pushRepairing=false;
 const monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -18,6 +19,9 @@ function localMonth(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/I
 let registrationPromise='serviceWorker' in navigator?navigator.serviceWorker.register('/push-sw.js',{scope:'/'}).catch(()=>null):Promise.resolve(null);
 const date=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(ms)):'—';
 const datetime=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(ms)):'Henüz kontrol edilmedi';
+const calendarDate=value=>value?value.split('-').reverse().join('.'):'Bilinmiyor';
+const receivedLabel=row=>row.receivedAt?date(row.receivedAt)+' '+time(row.receivedAt):calendarDate(row.receivedDate);
+const collectionDates=group=>{const dates=group.receivedDates?.length?group.receivedDates:[group.date].filter(Boolean);return dates.length?calendarDate(dates[0])+(dates.length>1?' – '+calendarDate(dates.at(-1))+' · '+dates.length+' farklı gün':''):'Bilinmiyor';};
 const time=ms=>ms?new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',hour:'2-digit',minute:'2-digit'}).format(new Date(ms)):'—';
 const money=n=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
 const monthName=m=>m?new Intl.DateTimeFormat('tr-TR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(m+'-01T12:00:00Z')).replace(/^./,c=>c.toLocaleUpperCase('tr')):'Bütün aylar';
@@ -40,7 +44,7 @@ function empty(title,text,symbol='invoices'){return '<div class="empty-state">'+
 function initNav(){
   const html=Object.entries(labels).map(([id,label])=>'<button type="button" class="nav-item" data-view="'+id+'">'+icon(navIcons[id])+'<span>'+label+'</span></button>').join('');
   document.querySelectorAll('.desktop-nav,.bottom-nav').forEach(nav=>{nav.innerHTML=html;nav.addEventListener('click',e=>{const button=e.target.closest('[data-view]');if(button)changeView(button.dataset.view);});});
-  $('openNotifications').innerHTML=icon('notifications');$('dialogFolderIcon').innerHTML=icon('folders');
+  $('openNotifications').innerHTML=icon('notifications');$('dialogFolderIcon').innerHTML=icon('accounting');
 }
 function updateAddress(){const p=new URLSearchParams({view});if(periodPinned)p.set('month',month);history.replaceState(null,'',base+'?'+p);}
 function monthCounts(){return info(company)?.monthly?.[month]||{total:0,fresh:0,waiting:0,done:0,rejected:0,pdfs:0,folders:0};}
@@ -69,13 +73,13 @@ function renderTrackingStatus(){
   const last=c.status?.lastFinished||c.status?.lastSuccess;
   $('trackingStatus').innerHTML='<div class="tracking-mode"><span class="mode-dot '+(enabled?'on':'off')+'"></span><div><strong>'+escape(title)+'</strong><p>'+escape(note)+'</p>'+(result?'<p class="'+(c.status?.error&&!c.running?'health error':'')+'">'+escape(result)+'</p>':'')+'</div><button class="text-button" data-go-view="dashboard">Ayarlar</button></div><div class="tracking-times"><span>Son kontrol <strong>'+datetime(last)+'</strong></span><span>Sonraki <strong>'+(enabled?datetime(c.nextCheck):'Kapalı')+'</strong></span></div><button type="button" class="tracking-notifications" data-go-view="notifications">'+icon('notifications')+'<span>Telefon bildirimleri<small>'+(!deviceStateKnown?'Cihaz durumu yükleniyor':activeDevices.length?activeDevices.length+' cihaz bağlı':'Henüz cihaz bağlı değil')+'</small></span><b>›</b></button>';
 }
-async function changeView(next,preloadedInvoices=null){
+async function changeView(next,preloadedInvoices=null,targetOffset=0){
   if(selectingAll&&next!=='invoices')++invoiceRequest;
-  if(!labels[next])next='invoices';view=next;updateAddress();
+  if(!labels[next])next='invoices';if(next!==view)viewHistory.push({view,month,status,query,offset});view=next;updateAddress();
   document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==next+'View');
   document.querySelectorAll('[data-view]').forEach(n=>{n.classList.toggle('active',n.dataset.view===next);if(n.dataset.view===next)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});
   renderTrackingStatus();renderCalendar();updateButtons();
-  try{if(next==='dashboard')renderDashboard();if(next==='invoices')await loadInvoices(false,preloadedInvoices);if(next==='folders')await loadFolders();if(next==='notifications')await renderNotifications();}catch(e){notice(e.message);}
+  try{if(next==='dashboard')renderDashboard();if(next==='invoices')await loadInvoices(targetOffset,preloadedInvoices);if(next==='folders')await loadFolders();if(next==='notifications')await renderNotifications();}catch(e){notice(e.message);}
 }
 function renderIdentity(){
   $('systemTitle').textContent='İzibiz - '+companyContext.name+' Gelen E-Fatura Takip Sistemi';$('breadcrumb').textContent=companyContext.name+' / Fatura Takibi';
@@ -90,7 +94,7 @@ function renderDashboard(){
 async function refresh(force=false){
   if(resetting&&!force||loading&&!force||selectingAll&&!force)return;const request=++refreshRequest;loading=true;
   try{
-    const requestedView=view,requestedMonth=periodPinned?month:localMonth(),initial=requestedView==='invoices',p=new URLSearchParams({offset:'0',status,month:requestedMonth,q:query});
+    const requestedView=view,requestedMonth=periodPinned?month:localMonth(),initial=requestedView==='invoices',p=new URLSearchParams({offset:String(offset),status,month:requestedMonth,q:query});
     const data=initial?await api(apiURL(company,'bootstrap')+'?'+p):{summary:await api(apiURL(company,'summary')),invoices:null},summary=data.summary,prefetchedInvoices=data.invoices;
     if(request!==refreshRequest)return;if(summary.company.id!==company)throw Error('Firma bilgisi doğrulanamadı.');state={companies:[summary],events:state.events};
     if(!periodPinned)month=localMonth();clearTimeout(typeRefreshTimer);if(summary.running)typeRefreshTimer=setTimeout(()=>{if(!document.hidden&&!$('folderDialog').open&&!selected.size)refresh();},2000);await changeView(view,requestedView===view&&requestedMonth===month?prefetchedInvoices:null);refreshDevicesInBackground();
@@ -100,27 +104,36 @@ function refreshDevicesInBackground(){
   if(deviceRefreshPromise||view==='notifications')return deviceRefreshPromise;
   deviceRefreshPromise=api(pushURL('devices')).then(data=>{devices=data.devices;deviceStateKnown=true;renderTrackingStatus();if(view==='dashboard')renderDashboard();return repairPushSubscription();}).catch(()=>{}).finally(()=>deviceRefreshPromise=null);return deviceRefreshPromise;
 }
-async function loadInvoices(append=false,prefetched=null){
-  const request=++invoiceRequest;if(!append){offset=0;selected.clear();}
-  const p=new URLSearchParams({offset:String(offset),status,month,q:query}),data=prefetched||await api(apiURL(company,'invoices')+'?'+p);if(request!==invoiceRequest)return;
-  const loaded=data.rows.map(r=>({...r,company:companyContext}));rows=append?[...rows,...loaded]:loaded;rows.sort((a,b)=>a.tarih.localeCompare(b.tarih)||(a.firstSeen||0)-(b.firstSeen||0)||a.fatno.localeCompare(b.fatno,'tr')||a.uuid.localeCompare(b.uuid));more=data.total>offset+data.rows.length;
+async function loadInvoices(targetOffset=0,prefetched=null){
+  const request=++invoiceRequest;
+  const p=new URLSearchParams({offset:String(targetOffset),status,month,q:query}),data=prefetched||await api(apiURL(company,'invoices')+'?'+p);if(request!==invoiceRequest)return;
+  offset=data.offset??targetOffset;selected.clear();rows=data.rows.map(r=>({...r,company:companyContext}));more=data.total>offset+data.rows.length;
   const start=info(company)?.period?.startMonth,before=start&&month<start;
   const note=query||status!=='all'?'Seçtiğin filtreye uygun fatura bulunamadı.':before?'Takip '+monthName(start)+' ayında başladı.':month===localMonth()?'Tüm Firmaları Güncelle ile bütün bağlı firmaları tek seferde kontrol edebilirsin.':'Bu ay için kayıtlı fatura bulunmuyor.';
   $('invoiceList').innerHTML=rows.length?invoiceHeader()+rows.map(invoiceHTML).join(''):empty(monthName(month)+' için fatura yok',note);
-  $('loadMore').hidden=!more;renderSelection();renderFilters();updateButtons();
+  renderInvoicePagination(data.total);renderSelection();renderFilters();updateButtons();
+}
+function renderInvoicePagination(total,allSelected=false){
+  $('invoicePagination').hidden=total<=100||allSelected;
+  $('previousInvoices').disabled=offset===0;
+  $('loadMore').hidden=false;$('loadMore').disabled=!more;
+  $('invoicePageInfo').textContent=total?(offset+1)+'–'+Math.min(offset+rows.length,total)+' / '+total+' fatura':'0 fatura';
+}
+async function navigateInvoices(targetOffset){
+  await loadInvoices(targetOffset);$('invoiceList').scrollIntoView({block:'start'});
 }
 const invoiceColumns=[['number','FATURA NUMARASI'],['date','TARİH'],['supplier','FİRMA ADI'],['type','FATURA TİPİ'],['amount-cell','TUTAR'],['currency','BİRİM']];
 function invoiceHeader(){return '<div class="invoice-table-head"><label class="invoice-select-label"><input type="checkbox" data-select-all aria-label="Bu listedeki tüm faturaları seç"><span class="select-all-caption">Tümünü seç</span></label><div class="invoice-fields">'+invoiceColumns.map(([,title])=>'<span class="invoice-column-heading">'+title+'</span>').join('')+'</div><span class="invoice-status-heading">DURUM</span></div>';}
-function pdfLink(id,uuid){
-  const download=/Windows|Win32|Win64/.test(navigator.userAgent+' '+navigator.platform);
-  return 'href="'+apiURL(id,'pdf')+'?'+new URLSearchParams({id:uuid,...(download?{download:'1'}:{})})+'" '+(download?'download title="PDF’i indirip bilgisayarındaki PDF uygulamasıyla aç"':'target="_blank" rel="noopener"');
+function pdfLink(id,uuid,download=false){
+  return 'href="'+apiURL(id,'pdf')+'?'+new URLSearchParams({id:uuid,...(download?{download:'1'}:{})})+'" '+(download?'download':'target="_blank" rel="noopener"');
 }
+function pdfActions(id,uuid){return '<a '+pdfLink(id,uuid)+'>PDF önizle ↗</a><a '+pdfLink(id,uuid,true)+'>PDF indir</a>';}
 function invoiceHTML(r){
   const key=r.company.id+':'+r.uuid,label=stateLabel(r);
   const type=r.tipLabel||((r.profile?({TEMELFATURA:'Temel',TICARIFATURA:'Ticari'})[r.profile]||r.profile:'—')+' - '+(({SATIS:'Satış',IADE:'İade',TEVKIFAT:'Tevkifat',ISTISNA:'İstisna',OZELMATRAH:'Özel matrah',IHRACKAYITLI:'İhraç kayıtlı',SGK:'SGK'})[r.tip]||r.tip||'—'));
   const values=[r.fatno,r.tarih.split('-').reverse().join('.'),r.unvan,type,money(r.tutar),r.birim||'TRY'];
   const fields=invoiceColumns.map(([name,title],i)=>'<div class="invoice-field invoice-'+name+'"><span class="invoice-field-label">'+title+'</span>'+(name==='supplier'?'<h3 class="invoice-title invoice-value">':'<span class="invoice-value'+(name==='amount-cell'?' invoice-amount':'')+'">')+escape(values[i])+(name==='supplier'?'</h3>':'</span>')+'</div>').join('');
-  return '<article class="invoice-row '+(r.done&&!r.isRet?'done':'')+'" style="--company:'+escape(r.company.color)+'"><input type="checkbox" data-select="'+key+'" aria-label="'+escape(r.fatno)+' faturasını seç" '+(r.isRet?'disabled':'')+' '+(selected.has(key)?'checked':'')+'><div class="invoice-fields">'+fields+'</div><div class="invoice-right"><span class="status-chip '+(r.isRet?'ret':r.done?'done':invoiceState(r)==='waiting'?'waiting':'')+'">'+label+'</span></div><div class="invoice-actions">'+(r.pdfReady?'<a '+pdfLink(r.company.id,r.uuid)+'>PDF’i aç ↗</a>':r.isRet?'':'<span class="health error">'+escape(r.pdfError?'PDF hazırlanamadı':'PDF hazırlanıyor')+'</span>')+(!r.isRet?'<button class="'+(r.done?'undo-invoice':'')+'" data-mark="'+key+'" data-done="'+(!r.done)+'">'+(r.done?'Geri al':'İşlendi olarak işaretle')+'</button>':'')+'<span class="invoice-reply">İzibiz yanıtı: '+escape(r.yanit||'—')+'</span></div></article>';
+  return '<article class="invoice-row '+(r.done&&!r.isRet?'done':'')+'" style="--company:'+escape(r.company.color)+'"><input type="checkbox" data-select="'+key+'" aria-label="'+escape(r.fatno)+' faturasını seç" '+(r.isRet?'disabled':'')+' '+(selected.has(key)?'checked':'')+'><div class="invoice-fields">'+fields+'</div><div class="invoice-right"><span class="status-chip '+(r.isRet?'ret':r.done?'done':invoiceState(r)==='waiting'?'waiting':'')+'">'+label+'</span></div><div class="invoice-actions">'+(r.pdfReady?pdfActions(r.company.id,r.uuid):r.isRet?'':'<span class="health error">'+escape(r.pdfError?'PDF hazırlanamadı':'PDF hazırlanıyor')+'</span>')+(!r.isRet?'<button class="'+(r.done?'undo-invoice':'')+'" data-mark="'+key+'" data-done="'+(!r.done)+'">'+(r.done?'Geri al':'İşlendi olarak işaretle')+'</button>':'')+(r.pdfReady?'<span class="invoice-reply">Alınma: '+escape(receivedLabel(r))+'</span>':'')+'<span class="invoice-reply">İzibiz yanıtı: '+escape(r.yanit||'—')+'</span></div></article>';
 }
 function renderUndo(){
   $('undoBar').hidden=!undoEntries.length;$('undoMessage').textContent=undoMessage;$('undoLastMark').disabled=marking;
@@ -129,8 +142,8 @@ function renderUndo(){
 function renderSelection(){
   $('selectionBar').hidden=!selected.size;$('selectedCount').textContent=selected.size+' fatura seçili';
   const all=$('invoiceList').querySelector('[data-select-all]'),eligible=rows.filter(r=>!r.isRet),count=eligible.filter(r=>selected.has(r.company.id+':'+r.uuid)).length;
-  if(all){all.checked=eligible.length>0&&count===eligible.length&&!more;all.indeterminate=count>0&&!all.checked;all.disabled=selectingAll||marking||(!eligible.length&&!more);all.setAttribute('aria-label',selectingAll?'Faturalar seçilmek üzere yükleniyor':'Bu listedeki tüm faturaları seç');}
-  $('loadMore').disabled=selectingAll;renderUndo();
+  if(all){all.checked=eligible.length>0&&count===eligible.length&&!more&&offset===0;all.indeterminate=count>0&&!all.checked;all.disabled=selectingAll||marking||(!eligible.length&&!more);all.setAttribute('aria-label',selectingAll?'Faturalar seçilmek üzere yükleniyor':'Bu listedeki tüm faturaları seç');}
+  $('loadMore').disabled=selectingAll||!more;$('previousInvoices').disabled=selectingAll||offset===0;renderUndo();
 }
 async function selectAllInvoices(checked){
   if(selectingAll||marking)return;
@@ -146,8 +159,8 @@ async function selectAllInvoices(checked){
       loaded.push(...data.rows.map(r=>({...r,company:companyContext})));
     }
     if(new Set(loaded.map(r=>r.uuid)).size!==loaded.length)throw Error('Liste değişti. Tümünü seç işlemini yeniden dene.');
-    rows=loaded;offset=rows.length;more=false;selected.clear();for(const row of rows)if(!row.isRet)selected.set(row.company.id+':'+row.uuid,row);
-    $('invoiceList').innerHTML=rows.length?invoiceHeader()+rows.map(invoiceHTML).join(''):empty('Fatura bulunamadı','Seçtiğin filtreye uygun fatura bulunamadı.');$('loadMore').hidden=true;
+    rows=loaded;offset=0;more=false;selected.clear();for(const row of rows)if(!row.isRet)selected.set(row.company.id+':'+row.uuid,row);
+    $('invoiceList').innerHTML=rows.length?invoiceHeader()+rows.map(invoiceHTML).join(''):empty('Fatura bulunamadı','Seçtiğin filtreye uygun fatura bulunamadı.');renderInvoicePagination(total,true);
   }catch(e){notice(e.message);}finally{selectingAll=false;renderSelection();}
 }
 async function mark(items,done){
@@ -177,17 +190,28 @@ async function undoLastMark(){
     toast(finished+' faturanın işlemi geri alındı.');
   }finally{marking=false;selected.clear();renderSelection();await refresh(true);}
 }
-async function loadFolders(){
+async function loadFolders(report=false){
   const request=++folderRequest,data=await api(apiURL(company,'folders')+'?'+new URLSearchParams({month}));if(request!==folderRequest)return;
-  const folders=data.folders.sort((a,b)=>a.date.localeCompare(b.date));
-  $('folderList').innerHTML=folders.length?folders.map(f=>'<article class="folder-card"><div class="folder-top"><span class="folder-icon">'+icon('folders')+'</span><span class="folder-file-count">'+f.pdfs+' PDF</span></div><p class="folder-date-label">ALINMA TARİHİ</p><h3>'+escape(new Intl.DateTimeFormat('tr-TR',{day:'numeric',month:'long',year:'numeric'}).format(new Date(f.date+'T12:00:00Z')))+'</h3><div class="folder-detail"><span>'+f.fresh+' yeni · '+f.waiting+' bekleyen</span><span>'+(f.excel?(f.excel.current?'Excel hazır':'Excel güncelleniyor'):'Excel hazırlanıyor')+'</span></div><div class="folder-action"><button class="text-button" data-folder="'+f.id+'" data-company-id="'+company+'">Dosyaları aç ↗</button>'+(f.excel?.current?'<a class="text-button" href="'+apiURL(company,'month-excel')+'?month='+month+'" download>Excel’i indir</a>':'')+'<a class="text-button muted" href="'+apiURL(company,'export')+'?folder='+f.id+'" download>ZIP indir</a></div></article>').join(''):empty(monthName(month)+' arşivi boş',month<(info(company)?.period?.startMonth||'')?'Takip '+monthName(info(company).period.startMonth)+' ayında başladı.':'PDF’ler alındığında bu ayın dosyaları burada görünür.','folders');
+  const folders=data.folders;
+  $('folderList').innerHTML=folders.length?folders.map(f=>'<article class="folder-card"><div class="folder-top"><span class="folder-icon">'+icon('accounting')+'</span><span class="folder-file-count">'+f.pdfs+' PDF</span></div><h3>'+escape(f.name)+'</h3><p class="folder-date-label">ALINMA TARİHLERİ</p><p class="folder-received-dates">'+escape(collectionDates(f))+'</p><div class="folder-detail"><span>'+f.fresh+' yeni · '+f.waiting+' bekleyen</span><span>'+(f.excel?(f.excel.current?'Excel hazır':'Excel güncelleniyor'):'Excel hazırlanıyor')+'</span></div><div class="folder-action"><button class="text-button" data-folder="'+f.id+'">Dosyaları aç ↗</button>'+(f.excel?.current?'<a class="text-button" href="'+apiURL(company,'month-excel')+'?month='+f.month+'" download>Excel’i indir</a>':'')+'<a class="text-button muted" href="'+apiURL(company,'export')+'?folder='+f.id+'" download>ZIP indir</a><button type="button" class="text-button folder-card-delete" data-delete-folder="'+f.id+'" data-folder-name="'+escape(f.name)+'" aria-label="'+escape(f.name)+' klasörünü sil">'+icon('trash')+' Sil</button></div></article>').join(''):empty(monthName(month)+' arşivi boş',month<(info(company)?.period?.startMonth||'')?'Takip '+monthName(info(company).period.startMonth)+' ayında başladı.':'PDF’ler alındığında bu ayın dosyaları burada görünür.','accounting');
+  if(report){const result=data.repair||{},changes=(result.repaired||0)+(result.merged||0)+(result.created||0);toast(changes?'Klasörler kontrol edildi; eksik bağlantılar onarıldı.':'Klasörler kontrol edildi. Eksik kayıt yok.');}
 }
-async function openFolder(id,folder){
-  currentFolder={id,folder};const c=info(id);if(!c)throw Error('Firma bulunamadı.');
-  const result=await api(apiURL(id,'folders')),group=result.folders.find(f=>f.id===folder);if(!group)throw Error('Klasör bulunamadı.');
-  const data=await api(apiURL(id,'invoices')+'?folder='+folder);
-  $('folderContent').innerHTML='<h2>'+escape(group.name)+'</h2><p class="subtle">'+group.pdfs+' PDF · '+group.fresh+' yeni · '+group.waiting+' bekleyen. </p><div class="dialog-actions">'+(group.excel?.current?'<a class="primary-button" href="'+apiURL(id,'month-excel')+'?month='+group.month+'" download>Excel’i indir</a>':'<span>Excel güncelleniyor…</span>')+'<a class="secondary-button" href="'+apiURL(id,'export')+'?folder='+folder+'" download>ZIP indir</a></div><div class="excel-note">'+(group.excel?'<strong>'+escape(group.excel.name)+'</strong><br>'+datetime(group.excel.at)+' tarihinde oluşturuldu. '+(group.excel.current?'Ayın tüm faturaları ve durumlarıyla otomatik güncel.':'Ayın faturaları değişti; Excel otomatik güncelleniyor.')+'<br><a class="text-button" href="'+apiURL(id,'export')+'?folder='+folder+'&excel=1" download>Excel’i indir ↗</a>':'Ayın bütün faturaları, Yeni gelen / Bekleniyor / İşlendi durumlarıyla otomatik Excel’e eklenir.')+'</div>'+data.rows.map(r=>'<div class="folder-file">'+icon('file')+'<a '+pdfLink(id,r.uuid)+'>'+escape(r.unvan+' - '+r.fatno)+'.pdf<small>'+escape(r.tarih.split('-').reverse().join('.'))+'</small></a><span class="status-chip '+(r.done?'done':'')+'">'+stateLabel(r)+'</span></div>').join('')+(data.total>data.rows.length?'<p class="fineprint">İlk '+data.rows.length+' dosya gösteriliyor. Dışa aktarma klasörün tamamını içerir.</p>':'')+'<button class="danger-button folder-delete" data-folder-action="delete">Klasörü sil</button><p class="fineprint subtle">Dosyaları siler. Faturaların işlem durumu korunur; aynı PDF’ler tekrar alınmaz.</p>';
+async function openFolder(id,folder,targetOffset=0){
+  const request=++folderPageRequest;if(!info(id))throw Error('Firma bulunamadı.');
+  const [result,data]=await Promise.all([api(apiURL(id,'folders')),api(apiURL(id,'invoices')+'?'+new URLSearchParams({folder,offset:String(targetOffset)}))]);
+  if(request!==folderPageRequest)return;
+  const group=result.folders.find(f=>f.id===folder);if(!group)throw Error('Klasör bulunamadı.');
+  const pageOffset=data.offset??targetOffset,limit=data.limit||100;
+  currentFolder={id,folder,name:group.name,offset:pageOffset};
+  $('folderContent').innerHTML='<h2>'+escape(group.name)+'</h2><p class="subtle">'+group.pdfs+' PDF · '+group.fresh+' yeni · '+group.waiting+' bekleyen.</p><p class="folder-received-dates">Alınma tarihleri: '+escape(collectionDates(group))+'</p><div class="dialog-actions">'+(group.excel?.current?'<a class="primary-button" href="'+apiURL(id,'month-excel')+'?month='+group.month+'" download>Excel’i indir</a>':'<span>Excel güncelleniyor…</span>')+'<a class="secondary-button" href="'+apiURL(id,'export')+'?folder='+folder+'" download>ZIP indir</a></div><div class="excel-note">'+(group.excel?'<strong>'+escape(group.excel.name)+'</strong><br>'+datetime(group.excel.at)+' tarihinde oluşturuldu. '+(group.excel.current?'Ayın tüm faturaları ve durumlarıyla otomatik güncel.':'Ayın faturaları değişti; Excel otomatik güncelleniyor.'):'Ayın bütün faturaları, Yeni gelen / Bekleniyor / İşlendi durumlarıyla otomatik Excel’e eklenir.')+'</div><div class="folder-files">'+data.rows.map(r=>'<div class="folder-file">'+icon('file')+'<div class="folder-file-info"><a '+pdfLink(id,r.uuid)+'>'+escape(r.unvan+' - '+r.fatno)+'.pdf</a><small>Fatura tarihi: '+escape(calendarDate(r.tarih))+' · Alınma: '+escape(receivedLabel(r))+'</small><div class="folder-pdf-actions">'+pdfActions(id,r.uuid)+'</div></div><span class="status-chip '+(r.done?'done':'')+'">'+stateLabel(r)+'</span></div>').join('')+'</div>'+(data.total>limit?'<nav class="pagination" aria-label="Klasör dosyalarının sayfaları"><button class="secondary-button" data-folder-page="'+Math.max(0,pageOffset-limit)+'" '+(pageOffset===0?'disabled':'')+'>Önceki Sayfa</button><span aria-live="polite">'+(pageOffset+1)+'–'+Math.min(pageOffset+data.rows.length,data.total)+' / '+data.total+' PDF</span><button class="secondary-button" data-folder-page="'+(pageOffset+limit)+'" '+(pageOffset+data.rows.length>=data.total?'disabled':'')+'>Sonraki Sayfa</button></nav>':'')+'<button class="danger-button folder-delete" data-folder-action="delete">Klasörü sil</button><p class="fineprint subtle">Bu ayın klasöründeki dosyaları siler. Faturaların işlem durumu korunur; aynı PDF’ler tekrar alınmaz.</p>';
   if(!$('folderDialog').open)$('folderDialog').showModal();
+  $('folderDialog').scrollTop=0;
+}
+function closeFolder(){++folderPageRequest;currentFolder=null;$('folderDialog').close();}
+async function previousPage(){
+  if($('folderDialog').open){closeFolder();return;}
+  const previous=viewHistory.pop();if(!previous){location.href='/workspace/'+company+'/';return;}
+  month=previous.month;status=previous.status;query=previous.query;periodPinned=true;$('searchInput').value=query;view=previous.view;await changeView(view,null,previous.offset||0);
 }
 function pushEnvironment(){
   const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -300,7 +324,10 @@ $('previousYear').onclick=()=>{monthSpotlight=false;selectPeriod((Number(month.s
 $('yearSelect').onchange=()=>{monthSpotlight=false;selectPeriod($('yearSelect').value+month.slice(4)).catch(e=>notice(e.message));};$('monthGrid').onclick=e=>{const b=e.target.closest('[data-month]');if(!b)return;monthSpotlight=!(monthSpotlight&&b.dataset.month===month);$('monthGrid').classList.toggle('spotlight',monthSpotlight);selectPeriod(b.dataset.month).catch(e=>notice(e.message));};
 $('statusFilters').onclick=e=>{const b=e.target.closest('[data-status]');if(!b)return;status=b.dataset.status;renderFilters();loadInvoices().catch(e=>notice(e.message));};
 $('searchInput').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{query=$('searchInput').value.trim();loadInvoices().catch(e=>notice(e.message));},250);};
-$('loadMore').onclick=()=>busy($('loadMore'),async()=>{offset+=100;await loadInvoices(true);});
+$('loadMore').onclick=()=>busy($('loadMore'),()=>navigateInvoices(offset+100));
+$('previousInvoices').onclick=()=>busy($('previousInvoices'),()=>navigateInvoices(Math.max(0,offset-100)));
+$('previousPage').onclick=()=>previousPage().catch(e=>notice(e.message));
+$('checkFolders').onclick=()=>busy($('checkFolders'),()=>loadFolders(true));
 $('invoiceList').onchange=e=>{if(e.target.matches('[data-select-all]')){selectAllInvoices(e.target.checked);return;}const key=e.target.dataset.select;if(!key)return;const row=rows.find(r=>r.company.id+':'+r.uuid===key);if(!row||row.isRet)return;if(e.target.checked)selected.set(key,row);else selected.delete(key);renderSelection();};
 $('invoiceList').onclick=e=>{const b=e.target.closest('[data-mark]');if(b)busy(b,async()=>{const row=rows.find(r=>r.company.id+':'+r.uuid===b.dataset.mark);if(row)await mark([row],b.dataset.done==='true');});};
 $('selectionBar').onclick=e=>{const b=e.target.closest('[data-bulk]');if(b)busy(b,()=>mark([...selected.values()],b.dataset.bulk==='true'));};
@@ -308,11 +335,12 @@ $('undoLastMark').onclick=()=>busy($('undoLastMark'),undoLastMark);
 $('clearSelection').onclick=()=>{++invoiceRequest;selected.clear();$('invoiceList').querySelectorAll('input[type=checkbox]').forEach(n=>n.checked=false);renderSelection();};
 $('scanButton').onclick=runScan;$('clearAllButton').onclick=resetAll;
 $('instantStatusButton').onclick=()=>busy($('instantStatusButton'),sendInstantStatus);
-async function clearFolder(id,folder){if(!confirm('Bu klasörün dosyaları silinsin mi? Aynı dosyalar otomatik olarak tekrar alınmaz. Tümünü Temizle ile sistemi boşaltıp yeniden alabilirsin.'))return;await api(apiURL(id,'delete-folder'),{folder});$('folderDialog').close();toast('Klasör dosyaları silindi.');await refresh(true);}
-$('folderList').onclick=e=>{const b=e.target.closest('[data-folder]');if(b)busy(b,()=>openFolder(company,b.dataset.folder));};
-$('closeFolder').onclick=()=>$('folderDialog').close();
-$('folderDialog').addEventListener('click',e=>{if(e.target===$('folderDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
-$('folderContent').onclick=e=>{const b=e.target.closest('[data-folder-action]');if(!b||!currentFolder)return;const {id,folder}=currentFolder;busy(b,async()=>{if(b.dataset.folderAction==='delete')await clearFolder(id,folder);else{await api(apiURL(id,'excel'),{folder});await openFolder(id,folder);toast('Excel hazır.');}});};
+async function clearFolder(id,folder,name){if(!confirm((name||'Bu aylık klasör')+' içindeki tüm PDF ve arşiv kayıtları silinsin mi? Aynı dosyalar otomatik olarak tekrar alınmaz. İşlem durumu korunur.'))return;await api(apiURL(id,'delete-folder'),{folder});if(currentFolder?.folder===folder)closeFolder();toast('Klasör dosyaları silindi.');await refresh(true);}
+$('folderList').onclick=e=>{const remove=e.target.closest('[data-delete-folder]');if(remove){busy(remove,()=>clearFolder(company,remove.dataset.deleteFolder,remove.dataset.folderName));return;}const b=e.target.closest('[data-folder]');if(b)busy(b,()=>openFolder(company,b.dataset.folder));};
+$('closeFolder').onclick=closeFolder;$('backToFolders').onclick=closeFolder;
+$('folderDialog').addEventListener('close',()=>{++folderPageRequest;currentFolder=null;});
+$('folderDialog').addEventListener('click',e=>{if(e.target===$('folderDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeFolder();}});
+$('folderContent').onclick=e=>{if(!currentFolder)return;const {id,folder,name}=currentFolder,page=e.target.closest('[data-folder-page]');if(page){busy(page,()=>openFolder(id,folder,Number(page.dataset.folderPage)));return;}const b=e.target.closest('[data-folder-action]');if(b?.dataset.folderAction==='delete')busy(b,()=>clearFolder(id,folder,name));};
 $('deviceList').onclick=e=>{const remove=e.target.closest('[data-remove-device]');if(remove)busy(remove,async()=>{await api(pushURL('unsubscribe'),{id:remove.dataset.removeDevice});if(remove.dataset.removeDevice===pushId){const registration=await registrationPromise;await(await registration?.pushManager?.getSubscription())?.unsubscribe();}await renderNotifications();toast('Bu cihazın tüm firma bildirimleri kapatıldı.');});};
 $('baselineButton').onclick=()=>$('baselineFile').click();
 $('baselineFile').onchange=async e=>{

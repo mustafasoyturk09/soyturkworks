@@ -172,8 +172,8 @@ test('Automatic archive catches recent previous-month invoices, prepares Excel a
   await f.engine.start();await drain(f.engine,f.db);
   const summary=await f.engine.summary();assert.equal(summary.counts.total,2);assert.equal(summary.counts.pdfs,2);assert.equal(summary.counts.fresh,2);assert(summary.status.lastSuccess);
   const groups=(await(await f.engine.handle('folders','GET')).json()).folders;assert.equal(groups.length,2);assert(groups.every(g=>g.excel?.current));
-  assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar (01.11.2026)'));
-  assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar (01.11.2026)'));
+  assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar'));
+  assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar'));
   assert.equal(f.events.length,1);assert.equal(f.events[0].title,'Pusula · 2 Yeni Gelen');assert.equal(f.events[0].body,'Yeni Gelen: Ekim 1 Adet · Kasım 1 Adet\nSon kontrol: 01/11 09:00');assert(!f.events[0].title.includes('Soyturk'));assert.equal(f.events[0].count,2);assert.equal(f.events[0].pending,2);
   assert(f.calls.some(c=>c.url.includes('dateType=DELIVERY')));assert(f.calls.some(c=>c.url.includes('dateType=DOCUMENT')&&c.url.includes('startDate=2026-10-01')));
   const row=(await f.engine.all())[0];
@@ -206,7 +206,7 @@ test('Monthly Excel automatically retains older unresolved rows and updates imme
  try{
   await f.engine.start();await drain(f.engine,f.db);
   f.setRemote([remoteInvoice(1,'2026-10-27'),remoteInvoice(2,'2026-11-01'),remoteInvoice(3,'2026-10-28')]);f.advanceTime(24);await f.engine.start();await drain(f.engine,f.db);
-  const groups=(await(await f.engine.handle('folders','GET')).json()).folders,folder=groups.find(g=>g.month==='2026-10'&&g.date==='2026-11-02');assert(folder);
+  const groups=(await(await f.engine.handle('folders','GET')).json()).folders,folder=groups.find(g=>g.month==='2026-10');assert(folder);assert.equal(groups.filter(g=>g.month==='2026-10').length,1);assert.equal(folder.pdfs,2);assert.deepEqual(folder.receivedDates,['2026-11-01','2026-11-02']);
   await f.engine.handle('excel','POST',{folder:folder.id});
   const response=await f.engine.handle('export','GET',{},new URLSearchParams({folder:folder.id,excel:'1'}));const xml=strFromU8(unzipSync(new Uint8Array(await response.arrayBuffer()))['xl/worksheets/sheet1.xml']);
   assert(xml.includes(remoteInvoice(1,'2026-10-27').documentNo));assert(xml.includes(remoteInvoice(3,'2026-10-28').documentNo));assert(!xml.includes(remoteInvoice(2,'2026-11-01').documentNo));
@@ -214,6 +214,65 @@ test('Monthly Excel automatically retains older unresolved rows and updates imme
   assert.equal((await(await f.engine.handle('folders','GET')).json()).folders.find(g=>g.id===folder.id).excel.current,true);
  }finally{globalThis.fetch=original;}
 });
+test('Legacy daily folders merge without deleting files, dates, Excel snapshots or accounting state',async()=>{
+ const f=fixture(),dates=['2026-11-01','2026-11-02','2026-11-03'],original=[];
+ for(let i=0;i<3;i++){
+  const uuid=remoteInvoice(i+1,'2026-10-27').uuid,file=await f.engine.saveFile('legacy-'+i,'test-'+i+'.pdf',new TextEncoder().encode('%PDF-1.7\n'+i)),folder='2026-10_'+dates[i];
+  const row={uuid,fatno:'LEGACY'+i,tarih:'2026-10-27',file,folder,firstSeen:Date.parse(dates[i]+'T06:00:00Z'),revision:7,done:i===0,manualOverride:true,published:true,notified:true,arrivalState:'waiting',arrivalBatch:'original'};
+  await f.db.put('invoice:'+uuid,row);original.push(row);
+  if(i<2)await f.db.put('folder:'+folder,{id:folder,month:'2026-10',date:dates[i],created:row.firstSeen,revision:3});
+ }
+ const excel=await f.engine.saveFile('legacy-excel','legacy.xlsx',new Uint8Array([1,2,3]));await f.db.put('folder:2026-10_2026-11-02',{...await f.db.get('folder:2026-10_2026-11-02'),excel});
+ const before=[...await f.db.list({prefix:'blob:'})],bytes=before.reduce((n,[,b])=>n+b.length,0);await f.db.put('totalBytes',bytes);
+ const result=await f.engine.repairFolders();assert.equal(result.repaired,3);assert.equal(result.merged,1);
+ const live=[...(await f.db.list({prefix:'folder:'})).values()].filter(g=>!g.mergedInto&&!g.deletedAt);assert.equal(live.length,1);assert.deepEqual(live[0].receivedDates,dates);
+ assert.equal((await f.db.get('folder:2026-10_2026-11-02')).excel.id,excel.id);
+ for(let i=0;i<original.length;i++){const row=await f.db.get('invoice:'+original[i].uuid);assert.deepEqual(row,{...original[i],folder:live[0].id,receivedDate:dates[i]});}
+ assert.deepEqual([...await f.db.list({prefix:'blob:'})],before);assert.equal(await f.db.get('totalBytes'),bytes);assert.equal(f.calls.length,0);assert.equal(f.events.length,0);
+ const snapshot=structuredClone([...f.db.data]);assert.deepEqual(await f.engine.repairFolders(),{ok:true,repaired:0,merged:0,created:0});assert.deepEqual([...f.db.data],snapshot);
+ const page=await f.engine.invoicePage(new URLSearchParams({folder:'2026-10_2026-11-02'}));assert.equal(page.total,3,'Old daily links resolve to the full monthly folder');
+ const exported=await f.engine.handle('export','GET',{},new URLSearchParams({folder:'2026-10_2026-11-02'}));const entries=unzipSync(new Uint8Array(await exported.arrayBuffer()));assert.equal(Object.keys(entries).filter(k=>k.endsWith('.pdf')).length,3);
+});
+
+test('Folder checks reconstruct missing records and correct wrong-month links without downloading PDFs',async t=>{
+ const f=fixture();t.mock.method(globalThis,'fetch',f.fetcher);await f.engine.start();await drain(f.engine,f.db);
+ const before=await f.engine.all(),oct=before.find(r=>r.tarih.startsWith('2026-10')),nov=before.find(r=>r.tarih.startsWith('2026-11')),calls=f.calls.length;
+ await f.db.delete('folder:'+oct.folder);await f.db.put('invoice:'+oct.uuid,{...oct,folder:nov.folder});
+ const groups=await f.engine.handle('folders','GET').then(r=>r.json());assert.equal(groups.repair.created,1);
+ const repaired=await f.db.get('invoice:'+oct.uuid);assert.notEqual(repaired.folder,nov.folder);assert.equal(repaired.receivedAt,oct.receivedAt);assert.equal(repaired.file.id,oct.file.id);assert.equal(repaired.revision,oct.revision);assert.equal(f.calls.length,calls);
+ assert.equal(groups.folders.find(g=>g.month==='2026-10').pdfs,1);assert.equal(groups.folders.find(g=>g.month==='2026-11').pdfs,1);
+ await f.db.delete('folder:'+repaired.folder);await f.db.put('invoice:'+oct.uuid,{...repaired,folder:null});
+ await f.engine.repairFolders();assert((await f.db.get('invoice:'+oct.uuid)).folder);assert.equal(f.calls.length,calls);
+});
+
+test('Repair keeps unknown PDF collection dates unknown rather than substituting invoice discovery time',async()=>{
+ const f=fixture(),file=await f.engine.saveFile('unknown-date','test.pdf',new TextEncoder().encode('%PDF-1.7')),uuid=remoteInvoice(1,'2026-10-27').uuid;
+ const row={uuid,fatno:'UNKNOWN',tarih:'2026-10-27',file,folder:null,firstSeen:Date.parse('2026-11-01T06:00:00Z'),done:false,revision:5};await f.db.put('invoice:'+uuid,row);
+ await f.engine.repairFolders();const saved=await f.db.get('invoice:'+uuid);assert.equal(saved.receivedDate,null);assert.equal(saved.firstSeen,row.firstSeen);assert.equal(saved.revision,5);
+ const group=await f.db.get('folder:'+saved.folder);assert.deepEqual(group.receivedDates,[]);assert.equal(group.date,null);
+});
+
+test('Repair never resurrects deleted folders or their merged aliases, including after later arrivals',async()=>{
+ const f=fixture(),date='2026-11-01',file=await f.engine.saveFile('kept','test.pdf',new TextEncoder().encode('%PDF-1.7'));
+ const row={uuid:remoteInvoice(1,'2026-10-27').uuid,fatno:'TEST1',tarih:'2026-10-27',file,folder:'old',firstSeen:Date.parse(date+'T06:00:00Z'),revision:2,done:true};
+ await f.db.put('folder:old',{id:'old',month:'2026-10',date});await f.db.put('folder:alias',{id:'alias',month:'2026-10',date,mergedInto:'old'});await f.db.put('invoice:'+row.uuid,row);
+ await f.engine.handle('delete-folder','POST',{folder:'alias'});const deleted=await f.db.get('invoice:'+row.uuid);assert(deleted.deletedAt);assert.equal(deleted.file.id,file.id);
+ await f.engine.repairFolders();assert.equal(await f.engine.resolveFolder('old'),null);assert.equal(await f.engine.resolveFolder('alias'),null);
+ const uuid=remoteInvoice(2,'2026-10-28').uuid;await f.db.put('invoice:'+uuid,{...row,uuid,folder:null,deletedAt:null});await f.engine.repairFolders();
+ const later=await f.db.get('invoice:'+uuid);assert.notEqual(later.folder,'old');assert.notEqual(later.folder,'alias');assert.deepEqual(await f.db.get('invoice:'+row.uuid),deleted);assert.equal(await f.engine.resolveFolder('alias'),null);
+ await f.engine.repairFolders();assert.deepEqual(await f.db.get('invoice:'+row.uuid),deleted);
+});
+
+test('Merged monthly folders expose all PDF pages and clamp pages after records change',async()=>{
+ const f=fixture(),file=await f.engine.saveFile('shared-test','test.pdf',new TextEncoder().encode('%PDF-1.7'));
+ for(let i=0;i<205;i++){const uuid=remoteInvoice(i+1,'2026-10-27').uuid;await f.db.put('invoice:'+uuid,{uuid,fatno:'TEST'+String(i).padStart(4,'0'),tarih:'2026-10-27',unvan:'Synthetic',profile:'TEMELFATURA',tip:'SATIS',file,folder:i%2?'daily2':'daily1',firstSeen:i+1,revision:0});}
+ for(const [id,date] of [['daily1','2026-11-01'],['daily2','2026-11-02']])await f.db.put('folder:'+id,{id,month:'2026-10',date});await f.engine.repairFolders();
+ const ids=[];for(const offset of [0,100,200]){const page=await f.engine.invoicePage(new URLSearchParams({folder:'daily2',offset:String(offset)}));assert.equal(page.total,205);assert.equal(page.offset,offset);ids.push(...page.rows.map(r=>r.uuid));}
+ assert.equal(new Set(ids).size,205);const last=await f.engine.invoicePage(new URLSearchParams({folder:'daily1',offset:'999999'}));assert.equal(last.offset,200);assert.equal(last.rows.length,5);
+ for(const uuid of ids.slice(100))await f.db.put('invoice:'+uuid,{...await f.db.get('invoice:'+uuid),deletedAt:Date.now()});
+ const reduced=await f.engine.invoicePage(new URLSearchParams({folder:'daily1',offset:'200'}));assert.equal(reduced.offset,0);assert.equal(reduced.rows.length,100);
+});
+
 test('Failed PDF fetches never become successful archives or new invoice success notifications',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;f.failPdf();
  try{await f.engine.start();await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.pdfs,0);assert.equal(summary.counts.errors,2);assert(summary.status.error);assert.equal(summary.status.lastSuccess,null);assert.equal(f.events.filter(e=>e.kind==='invoices').length,0);assert.equal(f.events.filter(e=>e.kind==='error').length,1);}finally{globalThis.fetch=original;}

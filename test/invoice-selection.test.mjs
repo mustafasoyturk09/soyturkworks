@@ -9,7 +9,7 @@ function fixture(api){
  const checkbox={setAttribute(){},checked:false,indeterminate:false,disabled:false},nodes=new Map();
  const context=vm.createContext({URLSearchParams,Map,Set,console,api,company:'PUSULA',companyContext:{id:'PUSULA'},status:'waiting',month:'2026-11',query:'test',rows:[],offset:0,more:true,selected:new Map(),invoiceRequest:0,selectingAll:false,marking:false,notices:[],
   $:id=>{if(!nodes.has(id))nodes.set(id,{querySelector:()=>checkbox,querySelectorAll:()=>[]});return nodes.get(id);},
-  apiURL:(id,action)=>'/api/automation/'+id+'/'+action,renderUndo(){},invoiceHeader:()=>'<header>',invoiceHTML:r=>r.uuid,empty:()=>'',notice(text){context.notices.push(text);}});
+  apiURL:(id,action)=>'/api/automation/'+id+'/'+action,renderUndo(){},renderInvoicePagination(){},invoiceHeader:()=>'<header>',invoiceHTML:r=>r.uuid,empty:()=>'',notice(text){context.notices.push(text);}});
  vm.runInContext(functions('function renderSelection(){','async function mark('),context);
  return {context,checkbox,nodes,run:code=>vm.runInContext(code,context)};
 }
@@ -40,8 +40,11 @@ test('Empty and rejected-only lists do not select invoices',async()=>{
  for(const data of [[],[{uuid:'rejected',isRet:true}]]){const f=fixture(async()=>({rows:data,total:data.length}));await f.run('selectAllInvoices(true)');assert.equal(f.context.selected.size,0);assert.equal(f.checkbox.checked,false);assert.equal(f.checkbox.disabled,true);}
 });
 
-test('PDF links request a local download on Windows and preserve phone preview',()=>{
- const context=vm.createContext({URLSearchParams,navigator:{userAgent:'Windows NT 10.0',platform:'Win32'},apiURL:()=>'/api/automation/PUSULA/pdf'});vm.runInContext(functions('function pdfLink(','function invoiceHTML('),context);
- const windows=vm.runInContext("pdfLink('PUSULA','test')",context);assert(windows.includes('download=1'));assert(!windows.includes('target="_blank"'));
- context.navigator={userAgent:'iPhone',platform:'iPhone'};const phone=vm.runInContext("pdfLink('PUSULA','test')",context);assert(!phone.includes('download=1'));assert(phone.includes('target="_blank"'));
+test('Preview and download remain separate on Windows, Mac and mobile',()=>{
+ for(const platform of ['Win32','MacIntel','iPhone','Linux armv8l']){
+  const context=vm.createContext({URLSearchParams,navigator:{userAgent:platform,platform},apiURL:()=>'/api/automation/PUSULA/pdf'});vm.runInContext(functions('function pdfLink(','function invoiceHTML('),context);
+  const preview=vm.runInContext("pdfLink('PUSULA','test')",context),download=vm.runInContext("pdfLink('PUSULA','test',true)",context);
+  assert(!preview.includes('download=1'));assert(preview.includes('target="_blank"'));assert(download.includes('download=1'));assert(!download.includes('target="_blank"'));
+  const actions=vm.runInContext("pdfActions('PUSULA','test')",context);assert(actions.includes('PDF önizle'));assert(actions.includes('PDF indir'));
+ }
 });
