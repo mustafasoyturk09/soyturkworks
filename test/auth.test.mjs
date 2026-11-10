@@ -63,6 +63,21 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/login',{username:'qa-user',password:'incorrect'})).status,401);
       assert.equal((await request('/api/session',null,cookie)).value.account.username,'qa-user');
     });
+    await t.test('Expense documents require authentication, same-origin uploads and an active company',async()=>{
+      assert.equal((await request('/api/expenses/PUSULA/list')).status,401);
+      assert.equal((await request('/expenses/ocr-core.js')).status,401);
+      assert.equal((await request('/workspace/PUSULA/masraf/')).status,303);
+      const page=await request('/workspace/PUSULA/masraf/',null,cookie);assert.equal(page.status,200);assert.match(page.value,/Masraf Fişleri/);assert.match(page.value,/window.SW_CONTEXT=/);
+      const bytes=Buffer.concat([Buffer.from([255,216,255]),Buffer.alloc(64,7)]),id=sha(bytes).toString('hex');
+      const upload=(headers={})=>fetch(origin+'/api/expenses/PUSULA/image/'+id,{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'image/jpeg',...headers},body:bytes});
+      assert.equal((await upload({Cookie:''})).status,401);assert.equal((await upload({Origin:'https://other.example'})).status,403);
+      assert.equal((await upload()).status,201);assert.equal((await request('/api/expenses/PUSULA/list',null,cookie)).value.receipts.length,1);
+      assert.equal((await request('/api/expenses/COMED/list',null,cookie)).value.receipts.length,0);
+      assert.equal((await request('/api/expenses/COMED/image/'+id,null,cookie)).status,404);
+      const raw=await fetch(origin+'/api/expenses/PUSULA/image/'+id,{headers:{Cookie:cookie}});assert.equal(raw.status,200);assert.deepEqual(Buffer.from(await raw.arrayBuffer()),bytes);assert.match(raw.headers.get('cache-control'),/no-store/);
+      assert.equal((await request('/api/companies',{id:'PUSULA',active:false,deleted:false},cookie,'PATCH')).status,200);assert.equal((await request('/api/expenses/PUSULA/list',null,cookie)).status,403);
+      await request('/api/companies',{id:'PUSULA',active:true,deleted:false},cookie,'PATCH');
+    });
     await t.test('Private archive and real push configuration require a session and stay company scoped',async()=>{
       assert.equal((await request('/takip',null,cookie)).headers.get('location'),origin+'/companies');
       const firms=(await request('/api/companies',null,cookie)).value.companies;

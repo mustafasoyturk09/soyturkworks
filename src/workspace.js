@@ -45,6 +45,7 @@
     document.title=names[companyId]+' · Soyturk Works';
     const aside=document.querySelector('aside');
     if(aside){
+      if(window.SW_CONTEXT){const expenses=document.createElement('a');expenses.className='nav-item';expenses.href='/workspace/'+companyId+'/masraf/';expenses.textContent='Masraf Fişleri';expenses.style.textDecoration='none';aside.querySelector('nav')?.append(expenses);}
       const box=document.createElement('section');box.className='sw-workspace-card';
       const label=document.createElement('span');label.textContent='AKTİF FİRMA';
       const title=document.createElement('strong');title.textContent=names[companyId];

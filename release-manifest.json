@@ -74,8 +74,8 @@
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
     {
-      "file": "app/portable-template-aa76281fc992903e.json",
-      "sha256": "aa76281fc992903e9fb5cd886e716f2fd5813bb7b7fcbc43d73fe2c3358f8fe4"
+      "file": "app/portable-template-96cc1db88f390ca8.json",
+      "sha256": "96cc1db88f390ca84a3988abd94b4ebb2a117775bbadd0bbf6cd104a370f0bbf"
     },
     {
       "file": "app/runtime.js",
@@ -107,7 +107,7 @@
     },
     {
       "file": "app/workspace.js",
-      "sha256": "c0a3a30dc18135d363e9b9460ff0a45f494937590d8474d9f5e7080d2c84530f"
+      "sha256": "1e2bcbb6f2039738de15722dbca4d0e751cbc1ae11e022483de1abac33f838dd"
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
@@ -242,12 +242,44 @@
       "sha256": "4d85db69dfc43bdd7bcc2948bdece4d958eaecd478fa569ba7df49c64b3521fe"
     },
     {
+      "file": "expenses/app.mjs",
+      "sha256": "2bb4b3711316d3d3788e0a5130be5423e037576e5de45317256ece0c432d1285"
+    },
+    {
+      "file": "expenses/eng.traineddata",
+      "sha256": "5dc5d8d640a212c9d6184921ba103b186f50e0fed9ee716c53e6b312b400d747"
+    },
+    {
+      "file": "expenses/index.html",
+      "sha256": "6630dac9fa2993e91b6eb4c8a0671d34436a86025fbb8c881724e70dfa65c953"
+    },
+    {
+      "file": "expenses/model.mjs",
+      "sha256": "8accbaf4b2e5d87475dd161b49302e00b82821f5b04a6ae1f8dd96aa3f72fd98"
+    },
+    {
+      "file": "expenses/ocr-core.js",
+      "sha256": "8f04aa0cc81e7bde33f80e92fa01a7a665f0b4884d098acf5de9c7104a11dfaa"
+    },
+    {
+      "file": "expenses/ocr-worker.js",
+      "sha256": "a915c4c150b4054abdf283c65660499d4ce284f7dae8f2905e862075be6a9564"
+    },
+    {
+      "file": "expenses/style.css",
+      "sha256": "5a016d9f53f51501cea48aefc59507c1b3071e7f314c01aad5c86106a643a235"
+    },
+    {
+      "file": "expenses/tur.traineddata",
+      "sha256": "f0127d0f3745f9c65e2ae7ec6b23198fbe5aa186a61b35661426f5e1ef9dedd7"
+    },
+    {
       "file": "favicon.ico",
       "sha256": "98623980de9c64da2a38b8315e5c715a70ea428854db953d743a8690e281ae46"
     },
     {
       "file": "index.html",
-      "sha256": "845243e4b98b03d674c2ca657f3e709a8c02cf565b82c25a971c9bb2e92ff3d8"
+      "sha256": "8e3aa03954cdd3040df9c7ba8cfb047ae37a5539fc9c98ef82981d340f20ff69"
     },
     {
       "file": "manifest.webmanifest",
@@ -267,7 +299,7 @@
     },
     {
       "file": "portal/portal.js",
-      "sha256": "3639bc1cc7eba0d0155c1945e9a8156f16e3c9ce07d937220c7ee69dfa04da46"
+      "sha256": "0615e9fac620c65ffb653202ee986096963c7dadfad0804a75c1b43ab8b15e9d"
     },
     {
       "file": "push-sw.js",

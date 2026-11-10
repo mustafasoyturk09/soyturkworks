@@ -5,6 +5,7 @@ import {IzibizConnector} from './izibiz.mjs';
 import {InvoiceArchive,nextCheck} from './automation.mjs';
 import {InvoiceCycles} from './invoice-cycles.mjs';
 import {automationHealth} from './automation-health.mjs';
+import {ExpenseStore} from './expenses.mjs';
 import {statusNotifications} from './notification-format.mjs';
 import {pushAPI,enqueueNotification,flushNotifications,notificationHistory,clearNotificationHistory} from './push.mjs';
 import {generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse} from '@simplewebauthn/server';
@@ -52,7 +53,18 @@ export default {
     const store=env.AUTH.get(env.AUTH.idFromName('single-owner-v1'));
     let response;
     try {
-      if(url.pathname.startsWith('/api/')) {
+      if(url.pathname.startsWith('/api/expenses/')) {
+        const route=url.pathname.match(/^\/api\/expenses\/([A-Z_]+)\/(list|profiles|record|image)(?:\/([a-f0-9]{64}))?$/);
+        if(!route)return json({error:'İşlem bulunamadı.'},404);
+        if(!['GET','POST'].includes(request.method))return json({error:'Yöntem desteklenmiyor.'},405);
+        if(request.method==='POST'&&(request.headers.get('Origin')!==origin||(route[2]!=='image'&&request.headers.get('Content-Type')?.split(';')[0]!=='application/json')))return json({error:'Geçersiz istek kaynağı.'},403);
+        const auth=await (await store.fetch(new Request(new URL('/api/session',origin),{headers:request.headers}))).json();
+        if(!auth.account)return json({error:'Oturum açmanız gerekiyor.'},401);
+        if(!auth.companies.some(c=>c.id===route[1]&&c.active&&!c.deleted))return json({error:'Etkin bir firma seçin.'},403);
+        const target=env.AUTH.get(env.AUTH.idFromName('expense-receipts-v1:'+route[1]));
+        const internal=new URL('https://expense-store.internal/'+route[2]+(route[3]?'/'+route[3]:''));internal.searchParams.set('company',route[1]);
+        response=await target.fetch(new Request(internal,{method:request.method,headers:request.headers,body:request.method==='POST'?request.body:undefined}));
+      } else if(url.pathname.startsWith('/api/')) {
         if(request.method!=='GET' && (request.headers.get('Origin')!==origin || request.headers.get('Content-Type')?.split(';')[0]!=='application/json')) return json({error:'Geçersiz istek kaynağı.'},403);
         if(Number(request.headers.get('Content-Length')||0)>32768) return json({error:'İstek çok büyük.'},413);
         response=await store.fetch(request);
@@ -74,11 +86,11 @@ export default {
             return Response.redirect(origin+(company?'/workspace/'+company.id+'/takip/'+(search.size?'?'+search:''):'/companies'),303);
           } else if(url.pathname.startsWith('/workspace/')) {
             if(!auth.account) return Response.redirect(origin+'/login?next='+encodeURIComponent(url.pathname+url.search),303);
-            const route=url.pathname.match(/^\/workspace\/([A-Z_]+)(\/takip)?\/?$/);
+            const route=url.pathname.match(/^\/workspace\/([A-Z_]+)(\/takip|\/masraf)?\/?$/);
             const id=route?.[1];
             const company=auth.companies.find(c=>c.id===id&&c.active&&!c.deleted);
             if(!company) return Response.redirect(origin+'/companies',303);
-            response=await asset(env,request,route[2]?'/automation/index.html':'/index.html');
+            response=await asset(env,request,route[2]==='/masraf'?'/expenses/index.html':route[2]?'/automation/index.html':'/index.html');
             const context=JSON.stringify({company,account:auth.account,origin}).replace(/</g,'\\u003c');
             response=new HTMLRewriter().on('head',{element(element){element.prepend('<base href="/"><script>window.SW_CONTEXT='+context+';</script>',{html:true});}}).transform(response);
           } else if(!auth.account) response=json({error:'Oturum açmanız gerekiyor.'},401);
@@ -94,6 +106,7 @@ export default {
     headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=(), publickey-credentials-get=(self), publickey-credentials-create=(self)');
     const path=url.pathname,staticAsset=!path.startsWith('/api/')&&/\.(?:css|js|json|mjs|png|ico|ttf)$/.test(path);
     if(path==='/push-sw.js')headers.set('Cache-Control','no-cache');
+    else if(response.ok&&/^\/expenses\/(?:tur|eng)\.traineddata$/.test(path))headers.set('Cache-Control','private, max-age=300');
     else if(path==='/manifest.webmanifest')headers.set('Cache-Control','private, max-age=300, must-revalidate');
     else if(response.ok&&/^\/app\/(?:inline-(?:script|style)|portable-template)-[a-f0-9]{16}\.(?:js|css|json)$/.test(path))headers.set('Cache-Control','private, max-age=31536000, immutable');
     else if(response.ok&&path.startsWith('/assets/vendor/'))headers.set('Cache-Control','private, max-age=31536000, immutable');
@@ -159,6 +172,12 @@ export class AuthStore extends DurableObject {
   }
   async handle(request) {
     const url=new URL(request.url), path=url.pathname;
+    if(url.origin==='https://expense-store.internal'){
+      const company=url.searchParams.get('company');if(!COMPANIES.some(c=>c.id===company))fail('Geçersiz firma.');
+      const assigned=await this.storage.get('expenses:company');if(assigned&&assigned!==company)fail('Firma bağlamı eşleşmiyor.',403);
+      if(!assigned)await this.storage.put('expenses:company',company);
+      return new ExpenseStore(this.storage,company).handle(request);
+    }
     // This origin is reachable only through the internal Durable Object binding.
     // The public Worker rejects every origin except APP_ORIGIN before routing.
     // Keep the encryption key in a separate private object from credentials.

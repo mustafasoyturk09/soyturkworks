@@ -3,6 +3,7 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const raw=await readFile(root+'/dist/index.html','utf8');
 const portable=raw.match(/<script\b[^>]*id="fc153PortableTemplate"[^>]*data-src="([^"]+)"[^>]*>[\s\S]*?<\/script>/);
@@ -17,6 +18,8 @@ for(const name of ['workspace.js','mobile.js','calculator-ui.js','izibiz.js','sa
 new vm.Script(await readFile(root+'/src/portal/portal.js','utf8'));
 new vm.Script(await readFile(root+'/src/automation/app.js','utf8'));
 new vm.Script(await readFile(root+'/src/push-sw.js','utf8'));
+new vm.Script(await readFile(root+'/src/expenses/ocr-worker.js','utf8'));
+for(const file of ['app.mjs','model.mjs'])execFileSync(process.execPath,['--check',root+'/src/expenses/'+file]);
 const workerConfig=JSON.parse(await readFile(root+'/wrangler.jsonc','utf8'));
 assert.equal(workerConfig.assets.run_worker_first,true,'Giriş koruması varlıklardan önce çalışmalı.');
 assert.equal(workerConfig.assets.binding,'ASSETS');
