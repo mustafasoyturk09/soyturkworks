@@ -1,4 +1,4 @@
-import {categories,normalize,cents,amount,parseReceipt,issues,duplicateIds,exportReadiness} from './model.mjs';
+import {categories,normalize,cents,amount,parseReceipt,issues,duplicateIds,exportReadiness,categoryProfile,buildPurchaseXML} from './model.mjs';
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
 $('company').textContent=company.name;$('workspace').href='/workspace/'+company.id+'/';document.title=company.name+' · Masraf Fişleri';
@@ -13,7 +13,7 @@ async function api(action,body,raw=false){
 }
 async function refresh(){
   if(refreshing)return;refreshing=true;
-  try{const data=await api('list');receipts=data.receipts;profiles=data.profiles;render();$('sync').textContent='Hesapla eşitlendi · '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
+  try{const data=await api('list');receipts=data.receipts.map(r=>({...r,lines:r.lines.map(l=>({...l,category:l.category==='bakery'?'meal':l.category}))}));profiles=data.profiles;render();$('sync').textContent='Hesapla eşitlendi · '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
   finally{refreshing=false;}
 }
 function render(){
@@ -23,12 +23,12 @@ function render(){
   const query=normalize($('search').value),list=receipts.filter(r=>(filter==='archived'?r.archived:!r.archived)&&(filter!=='pending'||!reviewed(r))&&(filter!=='checked'||reviewed(r))&&normalize(r.seller+' '+r.number).includes(query));
   $('receipts').innerHTML=list.map(r=>{
     const problems=issues(r),duplicate=duplicates.has(r.id),ok=reviewed(r),types=[...new Set(r.lines.map(l=>categories[l.category]))].filter(Boolean).join(' · ');
-    const warning=duplicate?'Olası mükerrer: aynı vergi no, tarih ve belge no.':r.error||(!r.ocrDone?'Okuma bekliyor.':problems.length?problems[0]+(problems.length>1?' +'+(problems.length-1)+' uyarı':''):ok?'Belge kontrol edildi. Logo şablonu bekleniyor.':'Alanları fotoğrafla karşılaştır ve onayla.');
-    return '<article class="receipt panel"><div class="receipt-top"><span class="step">'+(r.source.type==='application/pdf'?'PDF BELGE':'MASRAF FİŞİ')+'</span><span class="badge '+(ok?'ok':'')+'">'+(r.archived?'Arşiv':ok?'Kontrol edildi':'Kontrol gerekli')+'</span></div><h3>'+escape(r.seller||'Satıcı henüz okunmadı')+'</h3><div class="meta">'+escape(r.date||'Tarih eksik')+' · '+escape(r.number||'Belge no eksik')+'</div><div class="money">'+escape(money(r.total,r.currency))+'</div><div class="types">'+escape(types||'Kategori seçilecek')+'</div><p class="issue '+(ok?'good':'')+'">'+escape(warning)+'</p><button class="secondary" data-open="'+r.id+'">Belgeyi ve satırları kontrol et ↗</button></article>';
+    const warning=duplicate?'Olası mükerrer: aynı vergi no, tarih ve belge no.':r.error||(!r.ocrDone?'Okuma bekliyor.':problems.length?problems[0]+(problems.length>1?' +'+(problems.length-1)+' uyarı':''):ok?'Belge kontrol edildi.':'Alanları fotoğrafla karşılaştır ve onayla.');
+    return '<article class="receipt panel"><div class="receipt-top"><span class="step">'+(r.source.type==='application/pdf'?'PDF BELGE':'MASRAF FİŞİ')+'</span><span class="badge '+(ok?'ok':'')+'">'+(r.archived?'Arşiv':ok?'Kontrol edildi':'Kontrol gerekli')+'</span></div><h3>'+escape(r.seller||'Satıcı henüz okunmadı')+'</h3><div class="meta">'+escape(r.date||'Tarih eksik')+' · '+escape(r.number||'Belge no eksik')+'</div><div class="money">'+escape(money(r.total,r.currency))+'</div><div class="types">'+escape(types||'Kategori seçilecek')+'</div><p class="issue '+(ok?'good':'')+'">'+escape(warning)+'</p><button class="secondary" data-open="'+r.id+'">Fişi aç →</button></article>';
   }).join('');
-  $('empty').hidden=list.length>0;$('empty').querySelector('h3').textContent=receipts.length?'Bu filtrede fiş yok.':'İlk fişinle başlayalım.';
+  $('empty').hidden=list.length>0;$('empty').querySelector('h3').textContent=receipts.length?'Bu filtrede fiş yok.':'Henüz fiş eklenmedi.';
   $('resume').disabled=busy||!active.some(r=>!r.ocrDone);$('camera').disabled=busy;$('pick').disabled=busy;
-  $('exportReason').textContent=exportReadiness(active,profiles).reasons.join('\n');$('xml').disabled=true;
+  const status=exportReadiness(active,profiles,company.id);$('exportReason').textContent=status.ready?active.length+' fiş aktarıma hazır.':status.reasons.join('\n');$('xml').disabled=!status.ready;
 }
 function downloadJSON(value,name){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
 async function getBlob(id){const r=await fetch(imageURL(id),{cache:'no-store'});if(!r.ok)throw Error('Kaynak belge açılamadı. Oturumunu kontrol et.');return r.blob();}
@@ -97,7 +97,7 @@ async function runQueue(files=null){
 function lineHTML(line,index){return '<div class="line" data-index="'+index+'"><div class="line-head"><strong>MASRAF SATIRI '+(index+1)+'</strong><button type="button" class="text-button" data-remove="'+index+'" aria-label="'+(index+1)+'. satırı kaldır">Kaldır</button></div><div class="line-grid"><label class="full">Açıklama<input data-field="description" value="'+escape(line.description)+'" maxlength="200"></label></div><div class="categories" role="group" aria-label="'+(index+1)+'. satır kategorisi">'+Object.entries(categories).map(([key,label])=>'<button type="button" data-category="'+key+'" aria-pressed="'+(line.category===key)+'">'+label+'</button>').join('')+'</div><div class="line-grid"><label>KDV dahil tutar<input data-field="gross" inputmode="decimal" value="'+amount(line.gross)+'"></label><label>KDV oranı (%)<input data-field="vatRate" inputmode="decimal" value="'+escape(line.vatRate??'')+'" placeholder="Okunmadı"></label></div></div>';}
 function renderLines(){$('lines').innerHTML=editing.lines.map(lineHTML).join('');}
 function collect(){
-  const f=$('editForm').elements;for(const key of ['seller','taxId','date','number','currency'])editing[key]=f[key].value.trim();for(const key of ['total','vat'])editing[key]=cents(f[key].value);
+  const f=$('editForm').elements;for(const key of ['seller','taxId','date','number','currency','paymentCard'])editing[key]=f[key].value.trim();for(const key of ['total','vat'])editing[key]=cents(f[key].value);
   editing.reviewed=f.reviewed.checked;
   for(const node of $('lines').children){const row=editing.lines[Number(node.dataset.index)];row.description=node.querySelector('[data-field=description]').value.trim();row.gross=cents(node.querySelector('[data-field=gross]').value);const value=node.querySelector('[data-field=vatRate]').value.trim().replace(',','.');row.vatRate=/^\d+(?:\.\d{1,2})?$/.test(value)?Number(value):null;}
   return editing;
@@ -118,8 +118,8 @@ async function openEditor(id){
   if(busy){notice('Okuma bittikten sonra fişi düzenleyebilirsin.');return;}
   if(opening)return;opening=true;
   try{
-  editing=await api('record/'+id);dirty=false;$('editTitle').textContent=editing.seller||'Masraf fişi';const f=$('editForm').elements;
-  for(const key of ['seller','taxId','date','number','currency'])f[key].value=editing[key]||'';for(const key of ['total','vat'])f[key].value=amount(editing[key]);f.reviewed.checked=editing.reviewed;
+  editing=await api('record/'+id);editing.lines.forEach(l=>{if(l.category==='bakery')l.category='meal';});dirty=false;$('editTitle').textContent=editing.seller||'Masraf fişi';const f=$('editForm').elements;
+  for(const key of ['seller','taxId','date','number','currency','paymentCard'])f[key].value=editing[key]||'';for(const key of ['total','vat'])f[key].value=amount(editing[key]);f.reviewed.checked=editing.reviewed;
   $('archive').textContent=editing.archived?'Arşivden geri getir':'Arşive al';$('rawText').textContent=editing.rawText||'Henüz metin okunmadı.';$('editSaveState').textContent='Değişiklikler Kaydet ile hesaba aktarılır.';
   renderLines();warningList();$('editor').showModal();await displayPreview(editing).catch(e=>{$('preview').textContent=e.message;});
   }finally{opening=false;}
@@ -158,8 +158,10 @@ $('retry').onclick=()=>run(async()=>{
 $('draftBackup').onclick=()=>{collect();downloadJSON({format:'soyturk-expense-draft-v1',company:company.id,receipt:editing},'masraf-duzenleme-'+company.id+'.json');};
 $('backup').onclick=()=>run(async()=>{const full=[];for(const r of receipts)full.push(await api('record/'+r.id));downloadJSON({format:'soyturk-expenses-v1',company:company.id,created:new Date().toISOString(),receipts:full,profiles,sourceImagesIncluded:false},'masraf-calisma-'+company.id+'.json');notice('Alanlar ve eşleştirmeler indirildi. Bu yedek kaynak fotoğraf/PDF dosyalarını içermez; belgeler hesabında korunuyor.');});
 let profileRevision=0;
-$('openProfiles').onclick=()=>{profileRevision=profiles.revision;$('profileStatus').textContent='';$('profileRows').innerHTML=Object.entries(categories).map(([key,label])=>'<section class="profile-row" data-profile="'+key+'"><strong>'+label+'</strong><div class="profile-grid">'+[['serviceCode','Logo hizmet / stok kodu'],['accountCode','Gider hesap kodu'],['costCenter','Masraf merkezi']].map(([field,title])=>'<label>'+title+'<input data-profile-field="'+field+'" value="'+escape(profiles.categories?.[key]?.[field]||'')+'" maxlength="60"></label>').join('')+'</div></section>').join('');$('profiles').showModal();};
-$('closeProfiles').onclick=()=>$('profiles').close();$('profileForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('[type=submit]');button.disabled=true;try{const map={};for(const row of $('profileRows').children){map[row.dataset.profile]={};for(const input of row.querySelectorAll('input'))map[row.dataset.profile][input.dataset.profileField]=input.value;}profiles=await api('profiles',{revision:profileRevision,categories:map});profileRevision=profiles.revision;$('profileStatus').textContent='Bu firmaya ait taslak eşleştirmeler kaydedildi.';}catch(e){$('profileStatus').textContent=e.message;}finally{button.disabled=false;}};
+$('openProfiles').onclick=()=>{profileRevision=profiles.revision;$('profileStatus').textContent='';$('profileRows').innerHTML=Object.entries(categories).map(([key,label])=>'<details class="profile-row" data-profile="'+key+'"><summary>'+label+'</summary><div class="profile-grid">'+[['serviceCode','Logo hizmet / stok kodu'],['accountCode','Gider hesap kodu'],['costCenter','Masraf merkezi'],['vatCode1','%1 KDV hesap kodu'],['vatCode10','%10 KDV hesap kodu'],['vatCode20','%20 KDV hesap kodu'],['kkegCode','KKEG gider hesabı'],['kkegVatCode','KKEG KDV hesabı'],['vatCode1','%1 KDV hesap kodu'],['vatCode10','%10 KDV hesap kodu'],['vatCode20','%20 KDV hesap kodu'],['kkegCode','KKEG gider hesab?'],['kkegVatCode','KKEG KDV hesab?']].map(([field,title])=>'<label>'+title+'<input data-profile-field="'+field+'" value="'+escape(categoryProfile(key,profiles,company.id)[field]||'')+'" maxlength="60"></label>').join('')+'</div></details>').join('');$('profiles').showModal();};
+$('closeProfiles').onclick=()=>$('profiles').close();$('profileForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('[type=submit]');button.disabled=true;try{const map={};for(const row of $('profileRows').children){map[row.dataset.profile]={};for(const input of row.querySelectorAll('input'))map[row.dataset.profile][input.dataset.profileField]=input.value;}profiles=await api('profiles',{revision:profileRevision,categories:map});profileRevision=profiles.revision;render();$('profileStatus').textContent='Firma ayarları kaydedildi.';}catch(e){$('profileStatus').textContent=e.message;}finally{button.disabled=false;}};
 window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue='';}});
 setInterval(()=>{if(!document.hidden&&!busy&&!$('editor').open&&!$('profiles').open)refresh().catch(e=>{$('sync').textContent=e.message;});},15000);
 run(refresh);
+
+$('xml').onclick=()=>run(async()=>{await refresh();const xml=buildPurchaseXML(receipts,profiles,company.id),url=URL.createObjectURL(new Blob([xml],{type:'application/xml;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='masraf-'+company.id+'.xml';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);notice('Logo XML indirildi.');});

@@ -19,7 +19,7 @@ dosya seçicisini kullanır. Sürekli kamera akışı veya otomatik deklanşör 
 - PDF metin katmanı kullanılır; yeterli metin yoksa sayfa görüntüsü okunur.
   Tarayıcı destekliyorsa BarcodeDetector ek bilgi olarak barkod/karekod okur.
   Kod içindeki adresler açılmaz ve doğrulanmamış değerler muhasebe alanlarına yazılmaz.
-- Her masraf satırında yemek, unlu mamul, yakıt, otopark, uçak bileti, ulaşım,
+- Her masraf satırında yemek (unlu mamuller dahil), araç yıkama, yakıt, otopark, uçak bileti, ulaşım,
   diğer seçenekleri vardır. Kategori hiçbir vergi oranını veya hesap kodunu varsaymaz.
   Karma KDV satırları ayrıdır. Satır toplamı ve KDV, belge toplamlarıyla karşılaştırılır.
 - Belirsiz tarih, toplam, belge no veya KDV alanı boş bırakılır. OCR güven puanı
@@ -32,19 +32,26 @@ dosya seçicisini kullanır. Sürekli kamera akışı veya otomatik deklanşör 
   Yedekten otomatik geri yükleme bu sürümün kapsamında değildir. Kaynak dosyalar
   özgün belge bağlantısından ayrıca alınabilir.
 
-## Logo eşleştirmeleri ve sonraki adım
+## Logo aktarımı
 
-Her firma / kategori için hizmet-stok kodu, gider hesap kodu, masraf merkezi taslak
-olarak saklanır. Bu alanlar tek başına Logo satın alma XML şemasını doğrulamaz.
-**XML oluştur ve indir** düğmesi henüz kapalıdır. Bir profile `verified` değeri
-ekleyerek bu kısıt aşılamaz; henüz doğrulanmış bir çıktı adaptörü yoktur.
+Koyu arayüzde fiş ekleme, belge kontrolü ve XML indirme adımları bulunur.
+Menü bağlantısı Gelen E-Fatura Takip ile Satış Faturaları arasındadır.
+Kart seçimi kullanıcıya aittir; OCR kartı otomatik seçmez. Seçenekler:
+`309.07 (9190 KK)` ve `309.03 (3915 KK)`. Seçim kayıt sürümüyle birlikte saklanır.
 
-Her masraf türü için aynı belgenin net görüntüsü ve Logo’ya doğru şekilde işlenmiş
-XML çıktısı gerekir. Örnekler üzerinde başlık alanları, belge türü, cari/hizmet kodu,
-satır miktar/birim/tutarları, KDV, masraf merkezi, yuvarlama, uçak bileti özel
-alanları ve çok satırlı belgeler karşılaştırılacak. Sonrasında doğrulanmış adaptör
-ve örneklerden türetilmiş testlerle XML aktarımı açılacak. Gerçek örnek dosyalar
-Git deposuna konmayacak.
+Kullanıcının yerel XML örneklerinden türetilen `PURCHASE_INVOICES / INVOICE TYPE=4`
+adaptörü TL hizmet faturası üretir. Pusula için yemek, otopark, yıkama ve ulaşım
+hizmet/gider/merkez kodları örneklerden gelir; diğer firmalara taşınmaz. KDV oranı
+belgeden alınır. %1 unlu mamul yemek olarak kalır; bu oran için KDV hesabı ayarlardan
+tanımlanmalıdır. Uçak bileti ve dövizli belgelerin XML aktarımı henüz açık değildir.
+Kaynak görseller, tarihler, belge numaraları ve satıcı kimlikleri depoya eklenmez.
+
+XML öncesinde belge onayı, kart seçimi, toplamlar, mükerrerlik ve hesap eşleştirmeleri
+denetlenir. Satır toplamları belge toplamına tam eşit olmalıdır; en fazla iki kuruşluk
+KDV yuvarlama farkı son KDV'li satıra dağıtılarak basılı belge toplamı korunur.
+Yeni kayıtlar `DBOP=INS` ile, eski Logo iç referansları ve muhasebeleştirme bayrakları
+kopyalanmadan hazırlanır. XML biçimi ve hesaplar otomatik testlerle kontrol edilir;
+Logo masaüstü uygulamasında gerçek içeri alma işlemi ayrıca doğrulanmalıdır.
 
 ## Depolama ve sınırlar
 
@@ -63,7 +70,7 @@ değiştirilmez; bu sürüm `getUserMedia` kullanmaz.
 
 `test/expenses.test.mjs`: metin alanları, kuruş hassasiyeti, belirsiz alanlar,
 karma KDV, kategori tahmini, mükerrerlik, firma ayrımı, atomik kayıt, eşzamanlı
-düzenleme, kaynak bütünlüğü, boyut sınırları ve XML çıkış kilidi.
+düzenleme, kaynak bütünlüğü, boyut sınırları ve örnek temelli XML üretimi.
 `test/auth.test.mjs`: gerçek yerel Worker üzerinde oturum, firma, kaynak dosya
 erişimi ve siteler arası yazma koruması.
 

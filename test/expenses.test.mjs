@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
@@ -33,14 +33,14 @@ test('Money parser preserves kuruş precision and rejects malformed and negative
   for(const [value,expected] of [['1.234,56',123456],['1234.56',123456],['1.234',123400],['0,00',0],['',null],['12,34,56',null],['-100,00',null],['1O0,00',null]])assert.equal(cents(value),expected,value);
 });
 test('Category suggestions are conservative and never infer a tax rate or accounting code',()=>{
-  assert.equal(guessCategory('UNLU MAMÜLLER'),'bakery');assert.equal(guessCategory('MOTORİN'),'fuel');assert.equal(guessCategory('OTOPARK'),'parking');assert.equal(guessCategory('TURKISH AIRLINES'),'flight');assert.equal(guessCategory('Lokanta ve akaryakıt'),'other');
+  assert.equal(guessCategory('UNLU MAMÜLLER'),'meal');assert.equal(guessCategory('MOTORİN'),'fuel');assert.equal(guessCategory('OTOPARK'),'parking');assert.equal(guessCategory('TURKISH AIRLINES'),'flight');assert.equal(guessCategory('Lokanta ve akaryakıt'),'other');
   const r=parseReceipt('OTOPARK\nTOPLAM 100,00');assert.equal(r.lines[0].vatRate,null);assert.equal(r.lines[0].category,'parking');
 });
 test('Duplicate receipts are flagged independently of amounts and archived entries do not block review',()=>{
   const a=receipt(),b={...receipt(),id:'two',total:99999};assert.deepEqual([...duplicateIds([a,b])].sort(),['one','two']);b.archived=true;assert.equal(duplicateIds([a,b]).size,0);
 });
 test('Logo XML export cannot be enabled with unverified category mappings or imported verification flags',()=>{
-  const result=exportReadiness([receipt()],{verified:true,categories:{meal:{verified:true}}});assert.equal(result.ready,false);assert(result.reasons.some(n=>n.includes('şablonu')));
+  const result=exportReadiness([receipt()],{verified:true,categories:{meal:{verified:true}}});assert.equal(result.ready,false);assert(result.reasons.some(n=>n.includes('eşleştirmesini')));
 });
 test('Receipt source uploads are byte-exact, idempotent and isolated by company store',async()=>{
   const s=new Storage(),a=new ExpenseStore(s,'PUSULA'),b=new ExpenseStore(new Storage(),'COMED');
@@ -72,4 +72,32 @@ test('Build ships the standalone module and pinned OCR assets without changing t
   const manifest=JSON.parse(await readFile(new URL('../release-manifest.json',import.meta.url)));
   for(const file of ['expenses/index.html','expenses/model.mjs','expenses/app.mjs','expenses/ocr-worker.js','expenses/ocr-core.js','expenses/tur.traineddata','expenses/eng.traineddata'])assert(manifest.files.some(f=>f.file===file));
   const html=await readFile(new URL('../src/expenses/index.html',import.meta.url),'utf8');assert.match(html,/capture="environment"/);assert.match(html,/id="xml"[^>]+disabled/);
+});
+
+
+test('Sample purchase workflow preserves receipt totals, selected card and category accounts',()=>{
+  for(const [category,gross,rate,vat,account] of [['meal',217000,10,19727,'770.02.013'],['parking',50000,20,8333,'770.11.004'],['wash',54000,20,9000,'770.11.004'],['transport',40000,0,0,'770.11.004']]){
+    const r={...receipt(),paymentCard:'309.03',total:gross,vat,lines:[{description:'Test & <satır>',category,gross,vatRate:rate}]};
+    const xml=buildPurchaseXML([r],{},'PUSULA');
+    assert.match(xml,/<INVOICE DBOP="INS">/);assert.match(xml,/<ARP_CODE>309.03<\/ARP_CODE>/);assert.match(xml,/<GL_CODE>309.01.001<\/GL_CODE>/);
+    assert(xml.includes('<MASTER_CODE>'+account+'</MASTER_CODE>'));assert(xml.includes('<VAT_AMOUNT>'+(vat/100).toFixed(2)+'</VAT_AMOUNT>'));assert(xml.includes('Test &amp; &lt;satır&gt;'));
+    r.paymentCard='309.07';assert.match(buildPurchaseXML([r],{},'PUSULA'),/<GL_CODE>309.01.007<\/GL_CODE>/);
+  }
+});
+test('Export requires manual card choice and company mappings, blocks flight and unreviewed documents',()=>{
+  const r=receipt();assert.equal(exportReadiness([r],{},'PUSULA').ready,false);
+  r.paymentCard='309.07';assert.equal(exportReadiness([r],{},'PUSULA').ready,true);assert.equal(exportReadiness([r],{},'COMED').ready,false);
+  r.reviewed=false;assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'));r.reviewed=true;r.lines[0].category='flight';assert.equal(exportReadiness([r],{},'PUSULA').ready,false);
+  assert.equal(categoryProfile('bakery',{},'PUSULA').serviceCode,'770.02.013');
+});
+test('Bakery stays meal without substituting its printed VAT rate; wash and food labels are recognized',()=>{
+  for(const word of ['UNLU MAM','UNLU MAMÜLLER','YİYECEK','IZGARA TAVUK SALATASI'])assert.equal(guessCategory(word),'meal');
+  const r=parseReceipt('ÖRNEK FIRIN\n1234567890\nUNLU MAMÜLLER %01 *5.500,00\nTOPKDV *54,46\nTOPLAM *5.500,00');
+  assert.equal(r.taxId,'1234567890');assert.equal(r.lines[0].category,'meal');assert.equal(r.lines[0].vatRate,1);assert.equal(r.vat,5446);assert.equal(guessCategory('YIKAMA'),'wash');
+  assert.equal(parseReceipt('KDV *83,33').vat,8333);
+});
+test('Selected card and legacy bakery category survive server save and reload',async()=>{
+  const store=new ExpenseStore(new Storage(),'PUSULA');const r=(await(await call(store,'image/'+id,jpg,true)).json()).receipt;
+  const draft={...r,...receipt(),paymentCard:'309.07'};draft.lines[0].category='bakery';
+  const saved=await(await call(store,'record/'+id,draft)).json();assert.equal(saved.paymentCard,'309.07');assert.equal(saved.lines[0].category,'meal');
 });

@@ -45,7 +45,7 @@
     document.title=names[companyId]+' · Soyturk Works';
     const aside=document.querySelector('aside');
     if(aside){
-      if(window.SW_CONTEXT){const expenses=document.createElement('a');expenses.className='nav-item';expenses.href='/workspace/'+companyId+'/masraf/';expenses.textContent='Masraf Fişleri';expenses.style.textDecoration='none';aside.querySelector('nav')?.append(expenses);}
+      if(window.SW_CONTEXT){const expenses=document.createElement('a');expenses.className='nav-item';expenses.href='/workspace/'+companyId+'/masraf/';expenses.innerHTML='<svg class="nav-home-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3ZM9 7h6M9 11h6M9 15h3"/></svg> Masraf Fişleri';expenses.style.textDecoration='none';const incoming=aside.querySelector('[data-page=efatura]');if(incoming)incoming.after(expenses);else aside.querySelector('nav')?.prepend(expenses);}
       const box=document.createElement('section');box.className='sw-workspace-card';
       const label=document.createElement('span');label.textContent='AKTİF FİRMA';
       const title=document.createElement('strong');title.textContent=names[companyId];

@@ -1,4 +1,4 @@
-export const categories=Object.freeze({meal:'Yemek',bakery:'Unlu mamul',fuel:'Yakıt',parking:'Otopark',flight:'Uçak bileti',transport:'Ulaşım',other:'Diğer'});
+export const categories=Object.freeze({meal:'Yemek',wash:'Araç yıkama',fuel:'Yakıt',parking:'Otopark',flight:'Uçak bileti',transport:'Ulaşım',other:'Diğer'});
 export const normalize=value=>String(value??'').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i');
 export function cents(value){
   if(typeof value==='number')return Number.isSafeInteger(value)&&value>=0?value:null;
@@ -12,7 +12,7 @@ export function cents(value){
 export const amount=value=>Number.isSafeInteger(value)?(value/100).toFixed(2).replace('.',','):'';
 export function validDate(value){return /^20\d{2}-\d{2}-\d{2}$/.test(value||'')&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;}
 export function guessCategory(text){
-  const n=normalize(text),matches=[['fuel',/\b(motorin|benzin|akaryakit|kursunsuz|lpg)\b/],['parking',/otopark|park ucreti/],['flight',/ucak|havayol|airlines|e.bilet|ucus/],['bakery',/unlu mamul|firin|pastane|pogaca|simit/],['meal',/yemek|restoran|restaurant|lokanta|doner|kebap|kafe|cafe/],['transport',/taksi|otobus|ulasim|tren/]].filter(([,re])=>re.test(n));
+  const n=normalize(text),matches=[['fuel',/\b(motorin|benzin|akaryakit|kursunsuz|lpg)\b/],['parking',/otopark|park ucreti/],['flight',/ucak|havayol|airlines|e.bilet|ucus/],['wash',/yikama|car wash/],['meal',/unlu mam|firin|pastane|pogaca|simit|yemek|yiyecek|izgara|corba|cay|asure|su pet|restoran|restaurant|lokanta|doner|kebap|kafe|cafe/],['transport',/taksi|otobus|ulasim|tren/]].filter(([,re])=>re.test(n));
   return matches.length===1?matches[0][0]:'other';
 }
 const trailingMoney=line=>{const m=String(line).match(/(\d[\d.,]*[.,]\d{2})\s*(?:TL|TRY|₺)?\s*$/i);return m?cents(m[1]):null;};
@@ -22,14 +22,15 @@ export function parseReceipt(rawText,confidence=null){
   const nums=[...new Set([...text.matchAll(/(?:F[İI][ŞS]|FATURA|BELGE|B[İI]LET)\s*(?:NO|NUMARASI)\.?\s*[:#]?\s*([A-Z0-9/-]{1,30})/gi)].map(m=>m[1]))];
   const totalLines=lines.filter(l=>/^(?:GENEL\s+TOPLAM|TOPLAM|TOP|[ÖO]DENECEK(?:\s+TUTAR)?)\b/i.test(l)&&!/KDV/i.test(l));
   const totals=[...new Set(totalLines.map(trailingMoney).filter(v=>v!==null))];
-  const taxes=[...new Set(lines.filter(l=>/^(?:TOP\s*KDV|TOPLAM\s+KDV|KDV\s+TOPLAM|KDV\s*[:*])/i.test(l)).map(trailingMoney).filter(v=>v!==null))];
+  const taxes=[...new Set(lines.filter(l=>/^(?:TOP\s*KDV|TOPLAM\s+KDV|KDV\s+TOPLAM|KDV\s*(?:[:*]|(?=\d)))/i.test(l)).map(trailingMoney).filter(v=>v!==null))];
   const vkns=[...new Set([...text.matchAll(/(?:VKN|TCKN|VERG[İI]\s*(?:NO|NUMARASI))\s*[:/]?\s*(\d{10,11})\b/gi)].map(m=>m[1]))];
+  if(!vkns.length){const printed=lines.flatMap(l=>/^\d{10,11}$/.test(l)?[l]:/\bV\.?D\.?|\bVD\b/i.test(l)?[...(l.matchAll(/\b\d{10,11}\b/g))].map(m=>m[0]):[]);vkns.push(...new Set(printed));}
   const rates=[...new Set([...text.matchAll(/%\s*(\d{1,2})(?!\d)/g)].map(m=>Number(m[1])))];
   const items=[];
   for(const line of lines){
     if(/^(?:TOP|KDV|GENEL|NAK[İI]T|KRED[İI]|PARA|[ÖO]DENECEK)/i.test(line))continue;
     const rate=line.match(/%\s*(\d{1,2})(?!\d)/),gross=trailingMoney(line);
-    if(rate&&gross!==null&&/[A-ZÇĞİÖŞÜ]/i.test(line.slice(0,rate.index))){items.push({description:line.slice(0,rate.index).trim().slice(0,200),category:guessCategory(line),gross,vatRate:Number(rate[1])});}
+    if(rate&&gross!==null&&/[A-ZÇĞİÖŞÜ]/i.test(line.slice(0,rate.index))){items.push({description:line.slice(0,rate.index).trim().slice(0,200),category:guessCategory(line)==='other'?guessCategory(text):guessCategory(line),gross,vatRate:Number(rate[1])});}
   }
   if(dates.length>1)notes.push('Birden fazla tarih okundu; belge tarihini seç.');
   if(totals.length>1)notes.push('Birden fazla toplam okundu; belge toplamını kontrol et.');
@@ -71,12 +72,47 @@ export function duplicateIds(receipts){
   }
   return ids;
 }
-export function exportReadiness(receipts,profiles={}){
-  const reasons=[];const active=receipts.filter(r=>!r.archived),duplicates=duplicateIds(active);
+export const paymentCards=Object.freeze({'309.07':{label:'9190 KK',glCode:'309.01.007'},'309.03':{label:'3915 KK',glCode:'309.01.001'}});
+export function categoryProfile(category,profiles={},company=''){
+  category=category==='bakery'?'meal':category;
+  const defaults=company==='PUSULA'?{
+    meal:{serviceCode:'770.02.013',accountCode:'770.02.013',costCenter:'DB.01',vatCode10:'191.01.005'},
+    ...Object.fromEntries(['parking','wash','transport'].map(k=>[k,{serviceCode:'770.11.004',accountCode:'770.11.004',costCenter:'DB.01',vatCode20:'191.01.004',kkegCode:'689.03.012',kkegVatCode:'689.03.003'}]))
+  }:{};
+  return {...defaults[category],...profiles.categories?.[category]};
+}
+export function exportReadiness(receipts,profiles={},company=''){
+  const reasons=[],active=receipts.filter(r=>!r.archived),duplicates=duplicateIds(active);
   if(!active.length)reasons.push('Aktarılacak fiş yok.');
-  for(const r of active){if(issues(r).length||!r.reviewed)reasons.push('Kontrolü tamamlanmamış fişler var.');if(duplicates.has(r.id))reasons.push('Olası mükerrer fişleri kontrol et.');}
-  // Category mappings alone cannot establish a valid Logo import schema.
-  // No imported or user-edited profile can bypass sample-based adapter validation.
-  reasons.push('Logo satın alma XML şablonu örnek dosyalarla henüz doğrulanmadı.');
-  return {ready:false,reasons:[...new Set(reasons)]};
+  for(const r of active){
+    if(issues(r).length||!r.reviewed)reasons.push('Fişlerin kontrolünü tamamla.');
+    if((r.lines||[]).reduce((sum,l)=>sum+(l.gross||0),0)!==r.total)reasons.push('Satır toplamını belge toplamına eşitle.');
+    if(duplicates.has(r.id))reasons.push('Olası mükerrer fişleri kontrol et.');
+    if(!Object.hasOwn(paymentCards,r.paymentCard||''))reasons.push('Her fiş için kredi kartını seç.');
+    if(r.currency!=='TRY')reasons.push('Dövizli belgeler için aktarım henüz desteklenmiyor.');
+    for(const l of r.lines||[]){
+      const p=categoryProfile(l.category,profiles,company),label=categories[l.category]||'Masraf';
+      if(l.category==='flight')reasons.push('Uçak bileti için Logo XML örneği gerekiyor.');
+      if(!p.serviceCode||!p.accountCode||!p.costCenter)reasons.push(label+': Logo eşleştirmesini tamamla.');
+      if(l.vatRate>0&&!p['vatCode'+l.vatRate])reasons.push(label+': %'+l.vatRate+' KDV hesap kodunu tanımla.');
+    }
+  }
+  return {ready:reasons.length===0,reasons:[...new Set(reasons)]};
+}
+export function buildPurchaseXML(receipts,profiles={},company=''){
+  const status=exportReadiness(receipts,profiles,company);if(!status.ready)throw Error(status.reasons.join(' '));
+  const esc=v=>String(v??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+  const tag=(k,v)=>'<'+k+'>'+esc(v)+'</'+k+'>',money=v=>(v/100).toFixed(2);
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<PURCHASE_INVOICES>'+receipts.filter(r=>!r.archived).map(r=>{
+    const date=r.date.split('-').reverse().join('.'),card=paymentCards[r.paymentCard];
+    const taxes=r.lines.map(l=>l.gross-Math.round(l.gross*100/(100+l.vatRate)));
+    const adjustment=r.vat-taxes.reduce((a,b)=>a+b,0),lastTaxed=r.lines.findLastIndex(l=>l.vatRate>0);
+    if(adjustment&&lastTaxed<0)throw Error('KDV toplamını kontrol et.');
+    if(lastTaxed>=0)taxes[lastTaxed]+=adjustment;
+    const rows=r.lines.map((l,i)=>{const p=categoryProfile(l.category,profiles,company),vat=taxes[i],net=l.gross-vat;
+      return '<TRANSACTION>'+tag('TYPE',4)+tag('MASTER_CODE',p.serviceCode)+tag('OHP_CODE1',p.costCenter)+tag('GL_CODE1',p.accountCode)+(vat?tag('GL_CODE2',p['vatCode'+l.vatRate]):'')+tag('QUANTITY',1)+tag('PRICE',money(l.gross))+tag('TOTAL',money(l.gross))+tag('DESCRIPTION','FİŞ NO:'+r.number+' '+r.seller+' · '+l.description)+tag('UNIT_CODE','ADET')+tag('UNIT_CONV1',1)+tag('UNIT_CONV2',1)+tag('VAT_INCLUDED',1)+tag('VAT_RATE',l.vatRate)+tag('VAT_AMOUNT',money(vat))+tag('VAT_BASE',money(net))+tag('TOTAL_NET',money(net))+tag('BILLED',1)+(p.kkegCode?tag('KKEG_GL_CODE',p.kkegCode)+tag('KKEG_OHP_CODE',p.costCenter):'')+(p.kkegVatCode?tag('KKEG_VAT_GL_CODE',p.kkegVatCode)+tag('KKEG_VAT_OHP_CODE',p.costCenter):'')+'</TRANSACTION>';
+    }).join('');
+    const vat=r.vat,net=r.total-vat;
+    return '<INVOICE DBOP="INS">'+tag('TYPE',4)+tag('NUMBER','~')+tag('DATE',date)+tag('DOC_DATE',date)+tag('DOC_NUMBER',r.number)+tag('ARP_CODE',r.paymentCard)+tag('GL_CODE',card.glCode)+tag('TOTAL_DISCOUNTED',money(net))+tag('TOTAL_GROSS',money(net))+tag('TOTAL_VAT',money(vat))+tag('TOTAL_NET',money(r.total))+tag('TC_NET',money(r.total))+tag('CURRSEL_TOTALS',2)+'<TRANSACTIONS>'+rows+'</TRANSACTIONS><PAYMENT_LIST><PAYMENT>'+tag('DATE',date)+tag('MODULENR',4)+tag('SIGN',1)+tag('TRCODE',4)+tag('TOTAL',money(r.total))+tag('PROCDATE',date)+tag('PAY_NO',1)+'</PAYMENT></PAYMENT_LIST>'+tag('TOTAL_SERVICES',money(r.total))+tag('EBOOK_DOCTYPE',99)+'</INVOICE>';
+  }).join('\n')+'</PURCHASE_INVOICES>';
 }

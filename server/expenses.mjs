@@ -12,10 +12,10 @@ export async function limitedBytes(request,max){
 }
 function cleanReceipt(input){
   if(!input||typeof input!=='object'||!Array.isArray(input.lines)||input.lines.length>40)fail('Fiş satırları geçersiz (en fazla 40).');
-  const out={};for(const [key,max] of Object.entries({seller:200,taxId:11,date:10,number:40,currency:3,rawText:18000,error:300}))out[key]=String(input[key]??'').slice(0,max);
+  const out={};for(const [key,max] of Object.entries({seller:200,taxId:11,date:10,number:40,currency:3,rawText:18000,error:300,paymentCard:20}))out[key]=String(input[key]??'').slice(0,max);
   const money=v=>v===null||v===undefined||v===''?null:Number.isSafeInteger(v)&&v>=0&&v<=1e11?v:fail('Tutar geçersiz.');
   out.total=money(input.total);out.vat=money(input.vat);
-  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),category:Object.hasOwn(categories,l.category)?l.category:'other',gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.')}));
+  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.')}));
   out.notes=Array.isArray(input.notes)?input.notes.slice(0,12).map(n=>String(n).slice(0,250)):[];
   out.confidence=typeof input.confidence==='number'&&Number.isFinite(input.confidence)?Math.max(0,Math.min(100,input.confidence)):null;
   out.reviewed=input.reviewed===true;out.archived=input.archived===true;out.ocrDone=input.ocrDone===true;
@@ -32,7 +32,7 @@ export class ExpenseStore{
     }
     if(action==='profiles'&&request.method==='POST'){
       const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,16000))),map={};
-      for(const key of Object.keys(categories)){const p=body.categories?.[key]||{};map[key]={};for(const field of ['serviceCode','accountCode','costCenter'])map[key][field]=String(p[field]||'').trim().slice(0,60);}
+      for(const key of Object.keys(categories)){const p=body.categories?.[key]||{};map[key]={};for(const field of ['serviceCode','accountCode','costCenter','vatCode1','vatCode10','vatCode20','kkegCode','kkegVatCode'])map[key][field]=String(p[field]||'').trim().slice(0,60);}
       return this.storage.transaction(async tx=>{const previous=await tx.get('profiles')||{revision:0};if(body.revision!==previous.revision)fail('Eşleştirmeler başka cihazda değişti. Yenileyip tekrar dene.',409);const value={revision:previous.revision+1,categories:map,verified:false};await tx.put('profiles',value);return json(value);});
     }
     if(!/^[a-f0-9]{64}$/.test(id||''))fail('Fiş kimliği geçersiz.');
