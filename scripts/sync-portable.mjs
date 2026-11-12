@@ -22,6 +22,25 @@ const salesHTML=await readFile(new URL('../src/sales-issue.html',import.meta.url
 // browser-local and are never serialized into the distributed source template.
 source=source.replace(/<div class="page" id="page-satis-kesme"[\s\S]*?(?=<div class="page" id="page-satis")/,()=>salesHTML+'\n');
 template=template.replace(/<div class="page" id="page-satis-kesme"[\s\S]*?(?=<div class="page" id="page-satis")/,()=>salesHTML+'\n');
+// Keep the older Sales Invoices workspace identical in the portable export.
+const salesPageStart='<div class="page" id="page-satis"';
+const salesPageEnd='<div class="y-lightbox"';
+function salesPage(content){
+ const start=content.indexOf(salesPageStart),end=content.indexOf(salesPageEnd,start);
+ if(start<0||end<0)throw Error('Satış faturaları sayfası bulunamadı.');
+ return content.slice(start,end);
+}
+const currentSalesPage=salesPage(source);
+template=template.replace(/<div class="page" id="page-satis"[\s\S]*?(?=<div class="y-lightbox")/,()=>currentSalesPage);
+function salesInlineScript(content){
+ const marker=content.indexOf('var MAX_FILES = 500;',content.indexOf(salesPageEnd));
+ const start=content.lastIndexOf('<script>',marker),end=content.indexOf('</script>',marker)+9;
+ if(marker<0||start<0||end<9)throw Error('Satış faturaları kodu bulunamadı.');
+ return content.slice(start,end);
+}
+const currentSalesScript=salesInlineScript(source);
+const oldSalesScript=salesInlineScript(template);
+template=template.replace(oldSalesScript,()=>currentSalesScript);
 const salesStyle='<style id="sw-sales-preparation-ui">'+salesCSS+mobileCSS.slice(mobileCSS.indexOf('/* Sales preparation'))+'</style>';
 const salesScript='<script id="sw-sales-preparation-code">'+salesJS+'</script>';
 if(template.includes('id="sw-sales-preparation-ui"'))template=template.replace(/<style id="sw-sales-preparation-ui">[\s\S]*?<\/style>/,()=>salesStyle);else template=template.replace('</head>',()=>salesStyle+'</head>');
