@@ -29,6 +29,18 @@
   var s102Busy=false,s102LastMatch={},s102MemoryKey='fc_sales_branch_memory_v1';
   var s102Memory=s102LoadMemory();
   var activeCompany = window.SWWorkspace.companyId;
+  // Eski firma eşleştirmeleri yeni satış kurallarına taşınmaz. Çalışma listesi ve geçmiş korunur.
+  if(activeCompany!=='PUSULA'&&s153Storage.getItem('fc_sales_nonpusula_rules_reset_v1')!=='1'){
+    s102Memory=[];
+    s150Services=[];
+    delete s151Undo[activeCompany];
+    try{
+      s153Storage.setItem(s102MemoryKey,'[]');
+      s153Storage.setItem(s150ServiceKey,'[]');
+      s153Storage.setItem('fc_sales_memory_undo_v1',JSON.stringify(s151Undo));
+      s153Storage.setItem('fc_sales_nonpusula_rules_reset_v1','1');
+    }catch(e){}
+  }
   var HISTORY_KEYS = Object.fromEntries(Object.keys(SALES_COMPANIES).map(c=>[c,c==='PUSULA'?'fc_sales_history_v1':c==='KIB'?'fc_sales_history_kib_v1':'fc_sales_history_'+c.toLowerCase()+'_v1']));
   function emptyState(company){return{company:company,records:[],filter:'all',issueFilter:'',search:'',history:loadHistory(company),fileUrls:{},pendingExport:[],historyOpen:false,reportMode:'single'};}
   Object.keys(s156ExtraCompanies).forEach(function(c){HISTORY_KEYS[c]='fc_sales_history_'+c.toLowerCase()+'_v1';});
@@ -723,7 +735,7 @@
   function s151Title(r){return r.sourceXmlTitle||r.s149PdfTitle||r.pdfTitle||r.s150OriginalTitle||r.unvan||'';}
   function s151Lookup(company,vkn,title,address){
     if(!s151CompanyKnown(company))return {code:'',known:false,branch:false,candidates:[],reason:'Firma için ayrı hesap planı tanımlanmalı.'};
-    var names=s150Text(title),rules=(SALES_BRANCH_RULES[company]||{})[vkn]||[],codes=[];
+    var names=s150Text(title),rules=company==='PUSULA'?(SALES_BRANCH_RULES.PUSULA[vkn]||[]):[],codes=[];
     // Pusula's verified chart intentionally uses one customer account for these units.
     if(company==='PUSULA'&&vkn==='4810552613')rules=['SUAM DIS','SEFAKOY','SUAM ESENLER','SUAM CAMLICA','PENDIK'].map(function(name){return [name,CUSTOMER_BY_VKN[vkn]];});
     if(company==='PUSULA'&&vkn==='6200443970'){
@@ -752,7 +764,7 @@
   function s151ReservedOwners(company,code){
     var singles=s156Customers(company),owners=[];
     Object.keys(singles).forEach(function(vkn){if(singles[vkn]===code)owners.push(vkn);});
-    var rules=SALES_BRANCH_RULES[company]||{};
+    var rules=company==='PUSULA'?SALES_BRANCH_RULES.PUSULA:{};
     Object.keys(rules).forEach(function(vkn){if(rules[vkn].some(function(pair){return pair[1]===code;})&&owners.indexOf(vkn)<0)owners.push(vkn);});return owners;
   }
   function s151HardIssues(r,replacingMemory){

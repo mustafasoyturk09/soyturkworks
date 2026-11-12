@@ -41,6 +41,23 @@ function salesInlineScript(content){
 const currentSalesScript=salesInlineScript(source);
 const oldSalesScript=salesInlineScript(template);
 template=template.replace(oldSalesScript,()=>currentSalesScript);
+function keepPusulaSeedRules(content){
+ return content.replace(/(<script type="application\/json" id="fc153PortableData">)([^<]*)(<\/script>)/,(_all,open,json,close)=>{
+  const seed=JSON.parse(json);
+  for(const key of ['fc_sales_branch_memory_v1','fc_sales_service_memory_v1']){
+   if(typeof seed.values?.[key]!=='string')continue;
+   const rows=JSON.parse(seed.values[key]);
+   seed.values[key]=JSON.stringify(Array.isArray(rows)?rows.filter(row=>row?.company==='PUSULA'):[]);
+  }
+  if(typeof seed.values?.fc_sales_memory_undo_v1==='string'){
+   const undo=JSON.parse(seed.values.fc_sales_memory_undo_v1);
+   seed.values.fc_sales_memory_undo_v1=JSON.stringify(undo&&typeof undo==='object'&&undo.PUSULA?{PUSULA:undo.PUSULA}:{});
+  }
+  return open+JSON.stringify(seed).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026')+close;
+ });
+}
+source=keepPusulaSeedRules(source);
+template=keepPusulaSeedRules(template);
 const invoiceNameStart=source.lastIndexOf('const entName = window.SWWorkspace.companyId');
 const invoiceNameEnd=source.indexOf(';',invoiceNameStart)+1;
 const oldLegacyNameStart=template.indexOf('let entName = ',template.indexOf('function processRawGrid'));

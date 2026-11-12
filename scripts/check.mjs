@@ -12,7 +12,7 @@ JSON.parse(await readFile(new URL(portable[1],new URL('../dist/index.html',impor
 const live=raw.replace(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>[\s\S]*?<\/script>/,'');
 assert(!/nt144Token|127\.0\.0\.1:38471|ef166Panel/.test(raw));
 const seed=raw.match(/<script[^>]+id="fc153PortableData">([\s\S]*?)<\/script>/);
-if(seed)for(const [key,value] of Object.entries(JSON.parse(seed[1]).values))if(/history|undo/.test(key))assert.equal(value,'[]');
+if(seed)for(const [key,value] of Object.entries(JSON.parse(seed[1]).values))if(/history|undo/.test(key))assert.equal(Object.keys(JSON.parse(value)).length,0);
 for(const m of live.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi))if(m[2].trim()&&!/type\s*=\s*["'](?!text\/javascript|application\/javascript|module)/i.test(m[1]))new vm.Script(m[2]);
 for(const name of ['workspace.js','mobile.js','calculator-ui.js','izibiz.js','sales-issue.js'])new vm.Script(await readFile(root+'/src/'+name,'utf8'));
 new vm.Script(await readFile(root+'/src/portal/portal.js','utf8'));
