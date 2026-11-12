@@ -1,13 +1,20 @@
 import {categories,normalize,cents,amount,parseReceipt,issues,duplicateIds,exportReadiness,categoryProfile,buildPurchaseXML,splitFlight,lineAmounts,memoryKey,validExpenseCode} from './model.mjs';
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
+const expenseRulesReady=company.id==='PUSULA';
 $('company').textContent=company.name;$('workspace').href='/workspace/'+company.id+'/';document.title=company.name+' · Masraf Fişleri';
+if(!expenseRulesReady){
+  $('openProfiles').style.display='none';
+  const cardLabel=$('editForm').elements.paymentCard.closest('label');
+  cardLabel.style.display='none';
+  if(cardLabel.previousElementSibling)cardLabel.previousElementSibling.style.display='none';
+}
 const base='/api/expenses/'+company.id+'/',escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let receipts=[],profiles={revision:0,categories:{}},filter='all',busy=false,stop=false,editing=null,dirty=false,saving=false,previewURL=null,rotation=0,worker=null,refreshing=false,pdfModule=null,opening=false;
 const money=(value,currency='TRY')=>Number.isSafeInteger(value)?new Intl.NumberFormat('tr-TR',{style:'currency',currency}).format(value/100):'Tutar okunmadı';
 const imageURL=id=>base+'image/'+id;
 const normalizeLine=(line,receipt)=>{const oldFlight=line.category==='flight'&&line.vatIncluded===undefined&&Number.isSafeInteger(line.gross)&&Number.isFinite(line.vatRate);const prefix=receipt.number&&receipt.seller?'FİŞ NO:'+receipt.number+' '+receipt.seller:'';return {...line,category:line.category==='bakery'?'meal':line.category,gross:oldFlight?Math.round(line.gross*100/(100+line.vatRate)):line.gross,vatIncluded:oldFlight?false:line.vatIncluded!==false,description:!line.descriptionReady&&prefix&&!line.description?.startsWith('FİŞ NO:')?(prefix+(line.description?' · '+line.description:'')).slice(0,200):line.description,descriptionReady:true};};
-const suggestExpenseCode=(receipt,line)=>{const code=profiles.memories?.[memoryKey(receipt,line)];return !line.expenseCode&&code?{...line,expenseCode:code}:line;};
+const suggestExpenseCode=(receipt,line)=>{if(!expenseRulesReady)return line;const code=profiles.memories?.[memoryKey(receipt,line)];return !line.expenseCode&&code?{...line,expenseCode:code}:line;};
 function notice(message){$('notice').textContent=message;$('notice').hidden=!message;}
 async function api(action,body,raw=false){
   const r=await fetch(base+action,{method:body===undefined?'GET':'POST',credentials:'same-origin',cache:'no-store',headers:body===undefined?{}:{'Content-Type':raw?body.type||'application/octet-stream':'application/json'},body:body===undefined?undefined:raw?body:JSON.stringify(body)});
@@ -97,10 +104,17 @@ async function runQueue(files=null){
   }finally{worker?.terminate();worker=null;busy=false;render();$('progressPanel').hidden=true;notice([stop?'İşlem durduruldu. Kaydedilmiş fişler korundu.':tasks.length?'İşlem tamamlandı. Okunan taslakları kontrol et.':'Bekleyen belge yok.',duplicateCount?duplicateCount+' dosya zaten kayıtlı; yeniden eklenmedi.':'',files&&files.length>20?'İlk 20 dosya işlendi. Kalanları yeniden seç.':'',...errors].filter(Boolean).join('\n'));}
 }
 function lineHTML(line,index){return '<div class="line" data-index="'+index+'"><div class="line-head"><strong>MASRAF SATIRI '+(index+1)+'</strong><button type="button" class="text-button" data-remove="'+index+'" aria-label="'+(index+1)+'. satırı kaldır">Kaldır</button></div><div class="line-grid"><label class="full">Logo satır açıklaması<input data-field="description" value="'+escape(line.description)+'" maxlength="200"></label></div><div class="categories" role="group" aria-label="'+(index+1)+'. satır kategorisi">'+Object.entries(categories).map(([key,label])=>'<button type="button" data-category="'+key+'" aria-pressed="'+(line.category===key)+'">'+label+'</button>').join('')+'</div><div class="expense-code"><label>Gider hesabı kodu (Logo GL_CODE1)<input data-field="expenseCode" value="'+escape(line.expenseCode||'')+'" maxlength="60" placeholder="Örn. 770.11.004" autocomplete="off"></label><div class="expense-code-actions"><button type="button" data-remember>Hafızaya kaydet</button><button type="button" data-forget>Geri al</button><span data-memory-status></span></div></div><div class="line-grid"><label>Satır tutarı ('+(line.vatIncluded===false?'KDV hariç':'KDV dahil')+')<input data-field="gross" inputmode="decimal" value="'+amount(line.gross)+'"></label><label>KDV oranı (%)<input data-field="vatRate" inputmode="decimal" value="'+escape(line.vatRate??'')+'" placeholder="Okunmadı"></label></div><div class="vat-choice" role="group" aria-label="'+(index+1)+'. satır KDV tutar biçimi"><span>KDV</span><button type="button" data-vat-included="true" aria-pressed="'+(line.vatIncluded!==false)+'">Dahil</button><button type="button" data-vat-included="false" aria-pressed="'+(line.vatIncluded===false)+'">Hariç</button></div><div class="line-summary" data-line-summary aria-live="polite"></div></div>';}
-function renderLines(){$('lines').innerHTML=editing.lines.map(lineHTML).join('');$('flightSplit').hidden=!editing.lines.some(l=>l.category==='flight');renderLineSummaries();}
+function renderLines(){
+  $('lines').innerHTML=editing.lines.map(lineHTML).join('');
+  if(!expenseRulesReady){
+    $('lines').querySelectorAll('.expense-code-actions').forEach(node=>{node.style.display='none';});
+    $('lines').querySelectorAll('[data-field=expenseCode]').forEach(input=>{input.placeholder='Bu firmada gider kodu henüz tanımlanmadı';});
+  }
+  $('flightSplit').hidden=!editing.lines.some(l=>l.category==='flight');renderLineSummaries();
+}
 function renderLineSummaries(){for(const node of $('lines').children){const l=editing.lines[Number(node.dataset.index)],v=lineAmounts(l);node.querySelector('[data-line-summary]').textContent=v.gross===null?'Tutar ve KDV oranını gir.':'Matrah '+money(v.net)+'  ·  KDV '+money(v.vat)+'  ·  Genel toplam '+money(v.gross);node.querySelector('[data-memory-status]').textContent=l.expenseCode&&profiles.memories?.[memoryKey(editing,l)]===l.expenseCode?'Hafızada':l.expenseCode?'Bu satıra özel':'Kategori kodu kullanılır';}}
 function collect(){
-  const f=$('editForm').elements;for(const key of ['seller','taxId','date','number','currency','paymentCard'])editing[key]=f[key].value.trim();for(const key of ['total','vat'])editing[key]=cents(f[key].value);
+  const f=$('editForm').elements;for(const key of ['seller','taxId','date','number','currency'])editing[key]=f[key].value.trim();if(expenseRulesReady)editing.paymentCard=f.paymentCard.value.trim();for(const key of ['total','vat'])editing[key]=cents(f[key].value);
   editing.reviewed=f.reviewed.checked;
   for(const node of $('lines').children){const row=editing.lines[Number(node.dataset.index)];row.description=node.querySelector('[data-field=description]').value.trim();row.descriptionReady=true;row.expenseCode=node.querySelector('[data-field=expenseCode]').value.trim().toUpperCase();row.vatIncluded=node.querySelector('[data-vat-included=true]').getAttribute('aria-pressed')==='true';row.gross=cents(node.querySelector('[data-field=gross]').value);const value=node.querySelector('[data-field=vatRate]').value.trim().replace(',','.');row.vatRate=/^\d+(?:\.\d{1,2})?$/.test(value)?Number(value):null;}
   return editing;

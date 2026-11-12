@@ -300,13 +300,13 @@ function fmtDate(d){
   return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()}`;
 }
 function detectEntegrator(domain){
-  if(!domain) return 'BİLİNMEYEN';
-  if(ENTEGRATOR_MAP[domain]) return String(ENTEGRATOR_MAP[domain]).toLocaleUpperCase('tr-TR');
-  let base = domain.split('.')[0];
+  if(!domain)return (window.SWWorkspace?.companyName||'').toLocaleUpperCase('tr-TR');
+  if(ENTEGRATOR_MAP[domain])return String(ENTEGRATOR_MAP[domain]).toLocaleUpperCase('tr-TR');
+  let base=domain.split('.')[0];
   ['yazilim','bilisim','teknoloji','yazılım'].forEach(suf=>{
-    if(base.toLowerCase().endsWith(suf)) base = base.slice(0, base.length - suf.length);
+    if(base.toLowerCase().endsWith(suf))base=base.slice(0,base.length-suf.length);
   });
-  return (base || domain).toLocaleUpperCase('tr-TR');
+  return (base||domain).toLocaleUpperCase('tr-TR');
 }
 
 /* ============ MAP EDITOR UI ============ */
@@ -442,14 +442,13 @@ function processRawGrid(grid, gridRaw){
   const headers=(grid[headerRow]||[]).map(h=>isInvoiceNumberHeader(h)?'Fatura No':String(h).trim());
   const idx = {};
   headers.forEach((h,i)=>idx[h]=i);
-  const need = ['Fatura No','Tarih','Unvan','Ad Soyad','Tip','Tutar','Birim','Yanıt','Durum','Alıcı Bilgisi(PK)'];
+  const need = ['Fatura No','Tarih','Unvan','Ad Soyad','Tip','Tutar','Birim','Yanıt','Durum'];
   const missing = need.filter(n=>!(n in idx));
   if(missing.length){
     toast('Beklenen sütunlar bulunamadı: ' + missing.join(', '));
   }
 
   const rows = [];
-  const domains = new Set();
   const dates = [];
   for(let r=headerRow+1; r<grid.length; r++){
     const row = grid[r];
@@ -475,7 +474,6 @@ function processRawGrid(grid, gridRaw){
     const birim = get('Birim') || '';
     const yanitRaw = get('Yanıt') || '';
     const durum = get('Durum');
-    const alici = get('Alıcı Bilgisi(PK)');
 
     const finalUnvan = (unvan && String(unvan).trim()) ? unvan : (adsoyad || '');
     const isRet = durum && String(durum).trim().toLowerCase()==='ret';
@@ -485,10 +483,6 @@ function processRawGrid(grid, gridRaw){
 
     const d = parseTRDate(tarih);
     if(d) dates.push(d);
-    if(alici){
-      const m = String(alici).split('@').pop().trim();
-      if(m) domains.add(m);
-    }
   }
 
   ef115.selected.clear();ef115.page=0;
@@ -501,8 +495,11 @@ function processRawGrid(grid, gridRaw){
   const ef116Now=new Date();
   const ef116Dates=ef116Period(dates,ef116Now);
   let firstOfMonth=ef116Dates.start,today=ef116Dates.end;
-  let entName = 'BİLİNMEYEN';
-  if(domains.size) entName = detectEntegrator([...domains][0]);
+  // The workbook may omit Alıcı Bilgisi(PK); the selected workspace is the
+  // authoritative owner of this incoming-invoice list.
+  const entName = window.SWWorkspace.companyId==='KIB'
+    ? 'KENDİNE İYİ BAK A.Ş.'
+    : window.SWWorkspace.companyName.toLocaleUpperCase('tr-TR');
   detectedTitle = `${firstOfMonth} - ${today} ${entName} GELEN E-FATURALAR (${ef116Dates.loaded})`.toLocaleUpperCase('tr-TR');
 
   // ===== İŞLENMİŞ/YENİ AYRIMI: Adım 1'deki ESKİ dosyanın fatura no'larına göre.
@@ -858,7 +855,7 @@ window.SWInvoiceBridge=Object.freeze({
     efaturaUploads.raw.token++;efaturaUploads.raw.loading=false;efaturaUploads.raw.error='';
     processRawGrid(grid,grid);
     parsedRows.forEach(r=>{if(!r.isRet&&previous.has(normFatno(r.fatno)))r.islendi=previous.get(normFatno(r.fatno));});
-    const name=window.SWWorkspace.companyName.toLocaleUpperCase('tr-TR');
+    const name=window.SWWorkspace.companyId==='KIB'?'KENDİNE İYİ BAK A.Ş.':window.SWWorkspace.companyName.toLocaleUpperCase('tr-TR');
     document.getElementById('sumEnt').textContent=name;
     document.getElementById('titleInput').value=document.getElementById('titleInput').value.replace(currentEntegratorKey+' GELEN',name+' GELEN');
     currentEntegratorKey=name;buildLedgerTable();

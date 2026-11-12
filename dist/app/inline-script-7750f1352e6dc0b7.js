@@ -21,11 +21,7 @@
       '6130721685':[['GEBZE','120.01.099'],['KOCAELI','120.01.133']],
       '6850466349':[['SILIVRI','120.01.207'],['EREGLI','120.01.208'],['AVCILAR','120.01.209']],
       '5280597407':[['CEKMEKOY','120.01.238'],['RUZGARLIBAHCE','120.01.170']]
-    },KIB:{
-        '6200443970':[['NISA HASTANESI','120.01.004'],['MEDIPOL MEGA','120.01.005'],['ACIBADEM BOLGE','120.01.026'],['ISTANBUL MEDIPOL HASTANESI','120.01.003'],['KOSUYOLU','120.01.003']],
-        '4810552613':[['SUAM DIS','120.01.006'],['SEFAKOY','120.01.007'],['SUAM ESENLER','120.01.008'],['SUAM CAMLICA','120.01.009'],['PENDIK','120.01.010']],
-        '7060030488':[['KEMALOZ','120.01.014']]
-      }};
+    },KIB:{}};
   var s153Seed=s153ReadSeed(),s153Storage=s153MakeStorage(s153Seed);
   var s156ExtraCompanies=s156LoadCompanies();
   var s151Undo=s151LoadUndo(),s151MemoryOpen=false,s151MigrationMessage='';
@@ -43,15 +39,9 @@
   var CUSTOMER_BY_VKN = {
     '0012637028':'120.01.197','0080783717':'120.01.003','0081950962':'120.01.250','0100467727':'120.01.191','0250878733':'120.01.194','0680061327':'120.01.243','0680578123':'120.01.126','0690158528':'120.01.046','0700086545':'120.01.149','0700675761':'120.01.180','0850347484':'120.01.106','0900668135':'120.01.193','1050602704':'120.01.007','1271180696':'120.01.220','1550565770':'120.01.221','1710019769':'120.01.254','1780748276':'120.01.069','1910572062':'120.01.173','1910572175':'120.01.172','2090063434':'120.01.161','2710839371':'120.01.154','2720805474':'120.01.155','2940338626':'120.01.022','2990076074':'120.01.114','3292178406':'120.01.223','3340187736':'120.01.025','3360066741':'120.01.188','3540351012':'120.01.204','3770885673':'120.01.228','3800537069':'120.01.028','3880693450':'120.01.178','3881273840':'120.01.179','4220964054':'120.01.192','4510016851':'120.01.131','4630245293':'120.01.257','4810037012':'120.01.145','4810101280':'120.01.070','4810552613':'120.01.037','4810975206':'120.01.239','5280597407':'120.01.170','5440012219':'120.01.101','5601097560':'120.01.166','5640545072':'120.01.045','6080063965':'120.01.218','6080457900':'120.01.253','6110524223':'120.01.235','6130702624':'120.01.048','6130718916':'120.01.108','6130759810':'120.01.051','6190544752':'120.01.086','6221732027':'120.01.137','6222248171':'120.01.165','6222502550':'120.01.213','6230322595':'120.01.089','6291331157':'120.01.256','6300435303':'120.01.132','6300714041':'120.01.189','6310103199':'120.01.054','6581128668':'120.01.203','6850048173':'120.01.222','6850064236':'120.01.059','6850439355':'120.01.058','6850452258':'120.01.159','6850457662':'120.01.060','6850522139':'120.01.199','7440066456':'120.01.241','7450380053':'120.01.162','7610089282':'120.01.110','7640051114':'120.01.224','7750434067':'120.01.130','7890017136':'120.01.251','8010654664':'120.01.068','8170192551':'120.01.071','8370071590':'120.01.128','8720075424':'120.01.093','8940046700':'120.01.075'
   };
-  var KIB_CUSTOMER_BY_VKN = {
-    '3340187736':'120.01.011','2090063434':'120.01.016','6850452258':'120.01.021','4220964054':'120.01.018','2940338626':'120.01.022','6311972431':'120.01.027','1271180696':'120.01.029','3360066741':'120.01.032','6850048173':'120.01.031','7290441180':'120.01.017'
-  };
   var CONFLICT_VKNS = {'6200443970':1,'7060030488':1,'6130582094':1,'7420398563':1,'4810611692':1,'6130721685':1,'6850466349':1};
   var KNOWN_DOC_ARP = {
     'PUS2026000001074':'120.01.184','PUS2026000001075':'120.01.185','PUS2026000001076':'120.01.050','PUS2026000001077':'120.01.206','PUS2026000001087':'120.01.061','PUS2026000001088':'120.01.255','PUS2026000001098':'120.01.052','PUS2026000001099':'120.01.052','PUS2026000001100':'120.01.052','PUS2026000001101':'120.04.004','PUS2026000001102':'120.04.013','PUS2026000001103':'120.04.010','PUS2026000001104':'120.04.016','PUS2026000001105':'120.04.005','PUS2026000001106':'120.04.014','PUS2026000001107':'120.04.012','PUS2026000001108':'120.04.007','PUS2026000001109':'120.04.017','PUS2026000001110':'120.04.009','PUS2026000001111':'120.04.011','PUS2026000001112':'120.04.019','PUS2026000001113':'120.04.021','PUS2026000001114':'120.04.020','PUS2026000001115':'120.04.022','PUS2026000001119':'120.01.091','PUS2026000001120':'120.01.146','PUS2026000001121':'120.01.134','PUS2026000001122':'120.01.140','PUS2026000001123':'120.01.181','PUS2026000001124':'120.01.182','PUS2026000001126':'120.03.002','PUS2026000001127':'120.03.001','PUS2026000001128':'120.03.003','PUS2026000001129':'120.03.004','PUS2026000001130':'120.03.005','PUS2026000001131':'120.01.099','PUS2026000001132':'120.01.133','PUS2026000001175':'120.01.207','PUS2026000001176':'120.01.208','PUS2026000001177':'120.01.209'
-  };
-  var KIB_KNOWN_DOC_ARP = {
-    'KIB2026000000219':'120.01.003','KIB2026000000220':'120.01.004','KIB2026000000221':'120.01.005','KIB2026000000222':'120.01.026','KIB2026000000223':'120.01.006','KIB2026000000224':'120.01.007','KIB2026000000225':'120.01.008','KIB2026000000226':'120.01.009','KIB2026000000227':'120.01.010','KIB2026000000228':'120.01.011','KIB2026000000229':'120.01.014','KIB2026000000230':'120.01.016','KIB2026000000231':'120.01.021','KIB2026000000232':'120.01.018','KIB2026000000233':'120.01.022','KIB2026000000234':'120.01.027','KIB2026000000235':'120.01.029','KIB2026000000236':'120.01.032','KIB2026000000237':'120.01.031','KIB2026000000246':'120.01.016','KIB2026000000247':'120.01.022','KIB2026000000248':'120.01.011','KIB2026000000249':'120.01.018','KIB2026000000250':'120.01.017'
   };
   var KNOWN_LINE_DESCRIPTION = {
     'PUS2026000001079':'SUAM DİŞ','PUS2026000001080':'SEFAKÖY','PUS2026000001081':'SUAM ESENLER','PUS2026000001082':'SUAM ÇAMLICA','PUS2026000001083':'PENDİK','PUS2026000001098':'LABORATUAR YAZILIMI COMED LIS','PUS2026000001099':'MERKEZ BAKIM','PUS2026000001100':'MP TEM ŞUBESİ','PUS2026000001136':'KAYSERİ','PUS2026000001137':'KAYSERİ TÜP BEBEK MERKEZİ','PUS2026000001138':'DİCLE HASTANESİ','PUS2026000001139':'DİYARBAKIR HASTANESİ','PUS2026000001140':'MERKEZ','PUS2026000001141':'ANTALYA HASTANESİ','PUS2026000001142':'ANKARA HASTANESİ','PUS2026000001143':'ATAŞEHİR HASTANESİ','PUS2026000001144':'BAHÇELİEVLER HASTANESİ','PUS2026000001145':'ŞİŞLİ HASTANESİ','PUS2026000001146':'MEDROYALTIP MERKEZİ','PUS2026000001147':'EVDE BAKIM TIP MERKEZİ','PUS2026000001148':'KIBRIS TIP MERKEZİ','PUS2026000001149':'BODRUM HASTANESİ','PUS2026000001150':'GÖZTEPE HASTANESİ','PUS2026000001181':'Entegrasyon Geliştirme/Bakım Bedeli'
@@ -59,18 +49,10 @@
   var SERVICE_DEFS = {
     'P01.09':'HBYS PACS Kiralama Hizmeti','P01.12':'Pusula HBYS Bakım Hizmeti','P01.13':'Pusula HBYS Ek Yazılım Geliştirme','P01.14':'Pusula HBYS Kiralama Hizmeti','P01.17':'Pusula HBYS Bakım Hizmeti Tevkifatlı','P01.23':'Mobil Hasta Uygulaması','P01.32':'ELIS Aylık Kira Bedeli','P01.34':'Pusula HBYS Kiralama Hizmeti (Tevkifatlı)','P02.14':'CoMed LIS Kiralama Hizmeti','P04.01':'İş Ortakları Komisyon Gelirleri','P06.02':'White Label Mobil Uygulama Bakım-Destek','P09.01':'Allianz Sigorta Ent./Bakım/Destek Hiz.Bedeli'
   };
-  var KIB_SERVICE_DEFS = {'03':'KİB Mobil Uygulama Hizmet Bedeli','06':'KİB Uygulama Komisyon Bedeli'};
-  var KIB_SERVICE_GL = {'03':'600.01.001','06':'602.02.001'};
-  /* Logo dışa aktarımlarında doğrulanan cari kartı -> muhasebe hesabı
-     istisnaları. Pusula ve KİB tabloları bilinçli olarak ayrıdır. */
+  /* Logo dışa aktarımlarında doğrulanan Pusula cari kartı -> muhasebe hesabı istisnaları. */
   var SALES_GL_BY_ARP = {
     PUSULA: {
       '120.01.208':'120.01.207','120.01.209':'120.01.207'
-    },
-    KIB: {
-      '120.01.004':'120.01.003','120.01.005':'120.01.003','120.01.026':'120.01.003',
-      '120.01.006':'120.01.004','120.01.007':'120.01.004','120.01.008':'120.01.004',
-      '120.01.009':'120.01.004','120.01.010':'120.01.004'
     }
   };
   function salesGlCode(company,arpCode){
@@ -126,11 +108,7 @@
   function serviceForDescription(desc){
     if(!s151CompanyKnown(activeCompany))return null;
     var n=norm(desc);
-    if(activeCompany!=='PUSULA'&&activeCompany!=='KIB'){var custom=(s156ExtraCompanies[activeCompany]||{}).serviceRules||[],found=custom.find(function(x){return n===norm(x.phrase)||n.indexOf(norm(x.phrase)+' ')===0;});return found?{code:found.code,def:s156Defs(activeCompany)[found.code]}:null;}
-    if(activeCompany==='KIB'){
-      if(/KIB UYGULAMA KOMISYON BEDELI/.test(n))return{code:'06',def:KIB_SERVICE_DEFS['06']};
-      return /KENDINE IYI BAK MOBIL UYGULAMA HIZMET BEDELI/.test(n)?{code:'03',def:KIB_SERVICE_DEFS['03']}:null;
-    }
+    if(activeCompany!=='PUSULA')return null;
     /* Logo örneklerinde bu ifade hem P01.12 hem P01.14 ile işlendiği için
        otomatik seçim yapılmaz; kullanıcı kontrolü zorunludur. */
     if(/HBYS LISANS BAKIM BEDELI/.test(n))return null;
@@ -146,7 +124,7 @@
     if(!s151CompanyKnown(activeCompany))return false;
     if(!code||!String(desc||'').trim())return false;
     var n=norm(desc),c=String(code).trim().toUpperCase();
-    if(activeCompany==='KIB')return (c==='03'&&/KENDINE IYI BAK MOBIL UYGULAMA HIZMET BEDELI/.test(n))||(c==='06'&&/KIB UYGULAMA KOMISYON BEDELI/.test(n));
+    if(activeCompany!=='PUSULA')return false;
     if(/HBYS LISANS BAKIM BEDELI/.test(n))return c==='P01.12'||c==='P01.14';
     var r=serviceForDescription(desc);return !!r&&r.code===c;
   }
@@ -268,7 +246,7 @@
     state.records.push(rec);state.fileUrls[rec.id]=URL.createObjectURL(new Blob([bytes],{type:'application/xml;charset=utf-8'}));evaluate(rec);return true;
   }
 
-  function s177University(r){return ['4810552613','6200443970','4810037012'].includes(String(r.vkn||''));}
+  function s177University(r){return activeCompany==='PUSULA'&&['4810552613','6200443970','4810037012'].includes(String(r.vkn||''));}
   function s177Branch(value){
     var names=['SUAM DİŞ','SEFAKÖY','SUAM ESENLER','SUAM ÇAMLICA','PENDİK'],text=' '+norm(value||'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ')+' ';
     var found=names.filter(function(name){return text.indexOf(' '+norm(name)+' ')>=0;});
@@ -277,6 +255,7 @@
   }
   function s177Description(r,l){
     var current=String(l.lineDescription||'').trim();if(current||l.s150Edited)return current;
+    if(activeCompany!=='PUSULA')return '';
     var description=String(l.pdfDescription||l.sourceDescription||'').trim(),title=r.sourceXmlTitle||r.s149PdfTitle||r.unvan||'';
     if(String(r.vkn)==='4810552613'){
       var recipient=[title,r.s149PdfRecipient,r.sourceRecipient,r.sourceFileTitle].filter(Boolean).join(' '),branch=s177Branch(recipient);
@@ -309,7 +288,7 @@
     if(!s151CompanyKnown(activeCompany)||state.company!==activeCompany||rec.company&&rec.company!==activeCompany){rec.warnings=['FİRMA ÇELİŞKİSİ: Bu kayıt seçili firmaya ait değil.'];rec.status='review';return rec.status;}
     if(!rec.s102NeedsConfirmation&&rec.s102Confirmed!==s102Signature(rec))s102Restore(rec);
     rec.lines.forEach(function(l){if(!l.s156Editing)l.lineDescription=s177Description(rec,l);});
-    var w=s102Warnings(rec).concat(rec.sourceWarnings||[]);if(s156HasDraft(rec))w.push('Kaydedilmemiş satır veya cari değişikliği var.');
+    var w=s102Warnings(rec).concat(rec.sourceWarnings||[]);if(activeCompany!=='PUSULA')w.push('Bu firma için satış faturası Logo kuralları henüz tanımlanmadı.');if(s156HasDraft(rec))w.push('Kaydedilmemiş satır veya cari değişikliği var.');
     if(!/^\d{2}\.\d{2}\.\d{4}$/.test(rec.date))w.push('Fatura tarihi okunamadı veya geçersiz.');
     if(!rec.docNo)w.push('Belge numarası okunamadı.');
     else if(activeCompany==='KIB'&&!/^KIB/i.test(rec.docNo))w.push('Bu belge Kendine İyi Bak faturası değil; KİB tarafında XML\'e alınamaz.');
@@ -457,7 +436,7 @@
     if(!s151CompanyKnown(company)||!companyStates[company])return;
     activeCompany=company;state=companyStates[company];
     document.querySelectorAll('[data-sales-company]').forEach(function(b){var selected=b.dataset.salesCompany===company;b.classList.toggle('active',selected);b.classList.remove('disabled');var small=b.querySelector('small');if(small)small.textContent=selected?'AKTİF':'';});
-    document.getElementById('s86PageDesc').textContent=window.SWWorkspace.names[company]+' satış e-faturalarını İzibiz XML\'lerinden oku, satırları kontrol et ve Logo Tiger 3 için toplu XML hazırla.';
+    document.getElementById('s86PageDesc').textContent=company==='PUSULA'?window.SWWorkspace.names[company]+' satış e-faturalarını İzibiz XML\'lerinden oku, satırları kontrol et ve Logo Tiger 3 için toplu XML hazırla.':window.SWWorkspace.names[company]+' faturalarını görüntüle ve satırlarını düzenle. Logo aktarım kuralları bu firma için henüz tanımlanmadı.';
     document.querySelectorAll('#s79Filters [data-filter]').forEach(function(b){b.classList.toggle('active',b.dataset.filter===state.filter);});
     if(s156Ready){document.getElementById('s156Search').value=state.search||'';s151MemoryOpen=!!state.search;}updateCommitButton();showNotice('');render();
   }
@@ -583,15 +562,13 @@
   }
   function s102Choose(vkn,title,flat,rules,single,docs,docNo){
     var names=norm(title),codes=[];
-    if(activeCompany==='KIB'&&/\bPINAR\b/.test(names)&&/\bMEDIKAL\b/.test(names)){
-      var pinar=s102PinarCode(title);s102LastMatch={branch:true,candidates:pinar?[pinar]:[],reason:pinar?'Pınar Medikal şube kodu kullanıcı ve Logo XML örneğiyle doğrulandı.':'Pınar Medikal şubesi belirsiz; Bayrampaşa / Beylikdüzü ayrımı gerekli.'};return pinar;
-    }
     rules.forEach(function(pair){if(names.indexOf(pair[0])>=0&&codes.indexOf(pair[1])<0)codes.push(pair[1]);});
     // A branch hint is only a suggestion. The whole PDF is never a branch selector.
     if(rules.length){s102LastMatch={branch:true,candidates:codes,reason:codes.length>1?'Unvanda birden fazla şube adayı var.':codes.length===1?'Şube kodu önerildi; PDF alıcısı ve Logo kartını doğrulayın.':'Şube kesin belirlenemedi; Logo cari kodunu girin.'};return codes.length===1?codes[0]:'';}
     var code=single[vkn]||docs[docNo]||'';s102LastMatch={branch:false,known:!!single[vkn],reason:code?'Kod önerisi var; bu alıcının unvanı/şubesi henüz doğrulanmadı.':'Cari kodu tanınmadı.'};return code;
   }
   function s102Restore(r){
+    if(activeCompany!=='PUSULA')return;
     var matches=s102Memory.filter(function(x){return x.company===activeCompany&&s150MemoryIdentity(x)===s102Identity(r);});
     var codes=Array.from(new Set(matches.map(function(x){return x.arpCode;})));
     if(codes.length===1&&matches.every(function(x){return x.verified!==false;})&&r.sourceRecipient){
@@ -613,7 +590,6 @@
     if(r.arpCode&&!/^120\.[0-9A-Za-z.]+$/.test(r.arpCode))w.push('Satış cari kodu 120 ile başlamalıdır; 320 alış cari koduyla satış XML’i oluşturulamaz.');
     return w;
   }
-  function s102PinarCode(title){var n=norm(title);if(!/\bPINAR\b/.test(n)||!/\bMEDIKAL\b/.test(n))return '';var a=/\bBAYRAMPASA\b/.test(n),b=/\bBEYLIKDUZU\b/.test(n);return a===b?'':a?'120.01.017':'120.01.025';}
   function s102AutoSave(r){
     if(!r.unvan||!/^\d{10,11}$/.test(r.vkn)||!/^120\.[0-9A-Za-z.]+$/.test(r.arpCode))return;
     var problems=s151HardIssues(r,true);if(problems.length){r.s102Confirmed='';r.s102NeedsConfirmation=true;showNotice(problems.join(' '));return;}
@@ -644,6 +620,7 @@
   function s150ServiceEntries(r,l){var desc=s150Description(l.pdfDescription||l.sourceDescription);return s150Profile(r).filter(function(x){return x.description===desc;});}
   function s150ServiceSignature(l){return JSON.stringify([String(l.code||''),s150Text(l.masterDef),s150Gl(l)]);}
   function s150ApplyService(r,l){
+    if(activeCompany!=='PUSULA')return;
     if(l.s150Edited)return;
     var matches=s150ServiceEntries(r,l),signatures=Array.from(new Set(matches.map(s150ServiceSignature)));
     if(signatures.length!==1||matches.some(function(x){return x.forgotten;}))return;
@@ -663,15 +640,13 @@
     });return result;
   }
   function s150Builtin(r,l){
+    if(activeCompany!=='PUSULA')return false;
     if(r.sourceKind==='xml'&&activeCompany==='PUSULA'&&!l.s150Edited){
       var source=String(l.pdfDescription||l.sourceDescription||''),expected=serviceForDescription(source),special=r.s149Withholding&&((l.code==='P01.17'&&/HBYS\s+BAKIM\s+BEDEL[Iİ]/i.test(source))||(l.code==='P01.34'&&/HBYS\s+L[Iİ]SANS\s+K[Iİ]RALAMA\s+BEDEL[Iİ]/i.test(source)));
       var knownDct=/HBYS\s+L[İI]SANS\s+BAKIM\s+BEDEL[İI]/i.test(source)&&((r.vkn==='2710839371'&&l.code==='P01.14')||(r.vkn==='2720805474'&&l.code==='P01.12'));
       if((special||knownDct||expected&&expected.code===l.code)&&s150Text(l.masterDef)===s150Text(s156Defs(activeCompany)[l.code]))return true;
     }
-    if(activeCompany!=='KIB'&&activeCompany!=='PUSULA')return !l.s150Edited&&((s156ExtraCompanies[activeCompany]||{}).serviceRules||[]).some(function(x){return x.code===l.code&&s150Description(x.phrase)===s150Description(l.pdfDescription||l.sourceDescription)&&s150Text(l.masterDef)===s150Text(s156Defs(activeCompany)[l.code]);});
     var n=s150Description(l.pdfDescription||l.sourceDescription),known={
-      '03':['KENDINE IYI BAK MOBIL UYGULAMA HIZMET BEDELI'],
-      '06':['KIB UYGULAMA KOMISYON BEDELI'],
        'P01.09':['PACS KIRA BEDELI'], 'P01.17':['HBYS BAKIM BEDELI'], 'P01.23':['MOBIL UYGULAMA BAKIM BEDELI'], 'P01.32':['ELIS AYLIK KIRA BEDELI'],
       'P02.14':['LABORATUAR YAZILIMI COMED LIS'],
       'P04.01':['ENTEGRASYON GELISTIRME BAKIM BEDELI'],
@@ -732,7 +707,7 @@
       // Preserve competing choices as conflicts instead of silently picking a code.
       data.branches.forEach(function(x){if(!s102Memory.some(function(y){return JSON.stringify(x)===JSON.stringify(y);}))s102Memory.push(x);});
       data.services.forEach(function(x){if(!s150Services.some(function(y){return JSON.stringify(x)===JSON.stringify(y);}))s150Services.push(x);});
-      s151RepairNisa();s153Storage.setItem(s102MemoryKey,JSON.stringify(s102Memory));s150Dirty=true;s150Flush();
+      s153Storage.setItem(s102MemoryKey,JSON.stringify(s102Memory));s150Dirty=true;s150Flush();
       Object.keys(companyStates).forEach(function(c){companyStates[c].records.forEach(function(r){r.s102Confirmed='';r.s102FromMemory=false;});});
       state.records.forEach(function(r){s102Restore(r);r.lines.forEach(function(l){s150ApplyService(r,l);});});render();showNotice(s151MigrationMessage||'Cari/şube ve açıklama hafızası yüklendi. Çelişen eşleşmeler kontrol için işaretlenir.');
     }catch(e){showNotice('Hafıza yüklenemedi: '+e.message);}
@@ -749,16 +724,12 @@
   function s151Lookup(company,vkn,title,address){
     if(!s151CompanyKnown(company))return {code:'',known:false,branch:false,candidates:[],reason:'Firma için ayrı hesap planı tanımlanmalı.'};
     var names=s150Text(title),rules=(SALES_BRANCH_RULES[company]||{})[vkn]||[],codes=[];
-    // Pusula's verified chart intentionally uses one customer account for these units;
-    // KIB has different branch codes. Only the enumerated units share this exception.
+    // Pusula's verified chart intentionally uses one customer account for these units.
     if(company==='PUSULA'&&vkn==='4810552613')rules=['SUAM DIS','SEFAKOY','SUAM ESENLER','SUAM CAMLICA','PENDIK'].map(function(name){return [name,CUSTOMER_BY_VKN[vkn]];});
-    if(company==='KIB'&&/\bPINAR\b/.test(names)&&/\bMEDIKAL\b/.test(names)){
-      var p=s102PinarCode(title);return {code:p,branch:true,candidates:p?[p]:[],reason:p?'Pınar Medikal şubesi tanındı.':'Pınar Medikal şubesi belirsiz.'};
-    }
-    if((company==='KIB'||company==='PUSULA')&&vkn==='6200443970'){
+    if(company==='PUSULA'&&vkn==='6200443970'){
       // The generic hospital title can coexist with Nisa in the legal title.
       // Explicit, conflicting branch names must still remain ambiguous.
-      var explicit=company==='KIB'?[['NISA','120.01.004'],['KOSUYOLU','120.01.003'],['MEDIPOL MEGA','120.01.005'],['MEGA HASTANESI','120.01.005'],['ACIBADEM BOLGE','120.01.026']]:[['NISA','120.01.185'],['MEGA HASTANESI','120.01.050'],['ACIBADEM BOLGE','120.01.206'],['KOSUYOLU','120.01.184']];
+      var explicit=[['NISA','120.01.185'],['MEGA HASTANESI','120.01.050'],['ACIBADEM BOLGE','120.01.206'],['KOSUYOLU','120.01.184']];
       explicit.forEach(function(pair){if((' '+names+' ').indexOf(' '+pair[0]+' ')>=0&&codes.indexOf(pair[1])<0)codes.push(pair[1]);});
     }
     if(!codes.length)rules.forEach(function(pair){if(vkn==='7420398563'&&pair[0]==='LIV SUBESI'&&names.includes('VADI LIV'))return;if((' '+names+' ').indexOf(' '+s150Text(pair[0])+' ')>=0&&codes.indexOf(pair[1])<0)codes.push(pair[1]);});
@@ -824,13 +795,6 @@
     r.s102Confirmed=s102Signature(r);r.s102NeedsConfirmation=false;r.s102FromMemory=false;
     state.records.forEach(function(other){if(s102Identity(other)===identity){other.arpCode=item.arpCode;other.s102NeedsConfirmation=false;other.s102Confirmed='';s102Restore(other);}});
     return s151Persist();
-  }
-  function s151RepairNisa(){
-    var entries=s102Memory.filter(function(x){return x.company==='KIB'&&x.vkn==='6200443970'&&x.arpCode==='120.01.003'&&s151Expected('KIB',x)==='120.01.004';});
-    if(!entries.length)return 0;
-    s151Checkpoint('KIB','Eski Nisa 120.01.003 eşleşmesi 120.01.004 olarak düzeltildi');
-    entries.forEach(function(x){var identity=s150MemoryIdentity(x);x.arpCode='120.01.004';x.identity=identity;x.verified=true;x.correctedFrom='120.01.003';x.updatedAt=new Date().toISOString();s150Services=s150Services.filter(function(y){return !(y.company==='KIB'&&y.identity===identity&&y.arpCode==='120.01.003');});});
-    s151MigrationMessage='KİB: Nisa için '+entries.length+' eski 120.01.003 eşleşmesi 120.01.004 olarak düzeltildi. Koşuyolu 120.01.003 olarak korundu.';s151Persist();return entries.length;
   }
   function s151MemoryRows(){return s102Memory.filter(function(x){return x.company===activeCompany;});}
   function s151EditMemory(index,code){
@@ -1137,19 +1101,19 @@
     }catch(e){showNotice('Ayarlı kopya oluşturulamadı: '+e.message);}
   }
   var s153PortableButton=document.createElement('button');s153PortableButton.type='button';s153PortableButton.className='s79-btn';s153PortableButton.id='s153Portable';s153PortableButton.textContent='Ayarlarımla Birlikte Kaydet / Gönder';s153PortableButton.addEventListener('click',s153DownloadPortable);s150Tools.insertBefore(s153PortableButton,s150Tools.firstChild);
-  var s153PortableHelp=document.createElement('div');s153PortableHelp.style.cssText='flex-basis:100%;font-size:12px;color:#425a72;line-height:1.5';s153PortableHelp.textContent='Başka bilgisayarda devam etmek için ayarlı kopyayı indirin ve o dosyayı gönderin. Pusula ve KİB eşleşmeleri otomatik açılır; tutarlar her yeni PDF’den okunur.';s150Tools.appendChild(s153PortableHelp);
+  var s153PortableHelp=document.createElement('div');s153PortableHelp.style.cssText='flex-basis:100%;font-size:12px;color:#425a72;line-height:1.5';s153PortableHelp.textContent='Başka bilgisayarda devam etmek için ayarlı kopyayı indirin ve o dosyayı gönderin. Doğrulanmış Pusula eşleşmeleri otomatik açılır; diğer firmaların Logo kuralları ayrı tanımlanır.';s150Tools.appendChild(s153PortableHelp);
 
-  s151RepairNisa();if(s151MigrationMessage)showNotice(s151MigrationMessage);
+  if(s151MigrationMessage)showNotice(s151MigrationMessage);
 
   var s102Style=document.createElement('style');s102Style.textContent='#page-satis .s102-review{padding:12px;margin:12px 0;background:#f5f7f1;border:1px solid #c9d5c2;border-radius:8px;font-size:12px;overflow-wrap:anywhere}#page-satis .s102-review p{margin:7px 0}#page-satis .s102-memory{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;font-size:11px;color:#5c6b58}';document.head.append(s102Style);
   var s149Style=document.createElement('style');s149Style.textContent='#page-satis .s149-attention{border:2px solid #d69b20;background:#fff8df;color:#44360e}#page-satis .s149-attention>b{display:block;font-size:14px}';document.head.append(s149Style);
 
-  function s156Defs(company){return company==='KIB'?KIB_SERVICE_DEFS:company==='PUSULA'?SERVICE_DEFS:(s156ExtraCompanies[company]||{}).serviceDefs||{};}
-  function s156ServiceGL(company){return company==='KIB'?KIB_SERVICE_GL:(s156ExtraCompanies[company]||{}).serviceGL||{};}
-  function s156DefaultGL(company){return company==='PUSULA'?'600.01.001':(s156ExtraCompanies[company]||{}).defaultServiceGL||'';}
-  function s156Customers(company){return company==='KIB'?KIB_CUSTOMER_BY_VKN:company==='PUSULA'?CUSTOMER_BY_VKN:(s156ExtraCompanies[company]||{}).customers||{};}
-  function s156Docs(company){return company==='KIB'?KIB_KNOWN_DOC_ARP:company==='PUSULA'?KNOWN_DOC_ARP:{};}
-  function s156Profile(company){return company==='KIB'?'KIB':company==='PUSULA'?'PUSULA':(s156ExtraCompanies[company]||{}).xmlProfile;}
+  function s156Defs(company){return company==='PUSULA'?SERVICE_DEFS:{};}
+  function s156ServiceGL(company){return {};}
+  function s156DefaultGL(company){return company==='PUSULA'?'600.01.001':'';}
+  function s156Customers(company){return company==='PUSULA'?CUSTOMER_BY_VKN:{};}
+  function s156Docs(company){return company==='PUSULA'?KNOWN_DOC_ARP:{};}
+  function s156Profile(company){return company==='PUSULA'?'PUSULA':null;}
   function s156ValidateCompany(c){return !!(c&&/^[A-Z][A-Z0-9_]{1,29}$/.test(c.id)&&c.id!=='PUSULA'&&c.id!=='KIB'&&typeof c.label==='string'&&c.label.trim()&&/^[A-Z]{3}$/.test(c.prefix)&&['PUSULA','KIB'].indexOf(c.xmlProfile)>=0&&c.customers&&typeof c.customers==='object'&&Object.keys(c.customers).every(function(vkn){return /^\d{10,11}$/.test(vkn)&&/^120\.[0-9A-Za-z.]+$/.test(c.customers[vkn]);})&&c.serviceDefs&&c.serviceGL&&Array.isArray(c.serviceRules)&&c.serviceRules.every(function(r){return r&&typeof r.phrase==='string'&&typeof r.code==='string'&&!!c.serviceDefs[r.code]&&/^\d{3}(?:\.[0-9A-Za-z]+)+$/.test(c.serviceGL[r.code]||c.defaultServiceGL||'');}));}
   function s156LoadCompanies(){var result={};try{var parsed=JSON.parse(s153Storage.getItem('fc_sales_companies_v156')||'{}');Object.keys(parsed).forEach(function(key){var c=parsed[key];if(key===c.id&&s156ValidateCompany(c)){result[key]=c;SALES_COMPANIES[key]={label:c.label,prefix:c.prefix};SALES_BRANCH_RULES[key]=c.branches||{};}});}catch(e){}return result;}
   function s156RegisterCompany(config){

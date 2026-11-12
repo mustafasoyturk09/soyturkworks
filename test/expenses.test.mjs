@@ -90,6 +90,17 @@ test('Export requires manual card choice and company mappings, blocks missing ma
   r.reviewed=false;assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'));r.reviewed=true;r.lines[0].category='flight';assert.equal(exportReadiness([r],{},'PUSULA').ready,false); // %10 flight VAT account was not supplied
   assert.equal(categoryProfile('bakery',{},'PUSULA').serviceCode,'770.02.013');
 });
+
+test('Pusula gider ve kart kuralları diğer firmalarda kullanılmaz',()=>{
+  const r=receipt();r.paymentCard='309.07';
+  const inherited={categories:{meal:{serviceCode:'770.02.013',accountCode:'770.02.013',costCenter:'DB.01',vatCode10:'191.01.005'}}};
+  for(const company of ['COMED','KIB','DIJITAL_GARAJ','KIB_DIJITAL']){
+    assert.deepEqual(categoryProfile('meal',inherited,company),{});
+    assert.equal(exportReadiness([r],inherited,company).ready,false);
+    assert.throws(()=>buildPurchaseXML([r],inherited,company),/henüz tanımlanmadı/);
+  }
+  assert.equal(exportReadiness([r],{},'PUSULA').ready,true);
+});
 test('Bakery stays meal without substituting its printed VAT rate; wash and food labels are recognized',()=>{
   for(const word of ['UNLU MAM','UNLU MAMÜLLER','YİYECEK','IZGARA TAVUK SALATASI'])assert.equal(guessCategory(word),'meal');
   const r=parseReceipt('ÖRNEK FIRIN\n1234567890\nUNLU MAMÜLLER %01 *5.500,00\nTOPKDV *54,46\nTOPLAM *5.500,00');

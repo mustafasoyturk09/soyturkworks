@@ -63,9 +63,12 @@
     }
     restrictSelectors();
     const salesCompanies=document.querySelector('#page-satis .s79-company');if(salesCompanies)new MutationObserver(restrictSelectors).observe(salesCompanies,{childList:true});
-    const description=document.getElementById('s86PageDesc');if(description)description.textContent=names[companyId]+' satış e-faturalarını PDF’den oku, kritik alanları kontrol et ve Logo Tiger 3 için toplu XML hazırla.';
+    const description=document.getElementById('s86PageDesc');if(description)description.textContent=companyId==='PUSULA'?names[companyId]+' satış e-faturalarını İzibiz XML’lerinden oku, satırları kontrol et ve Logo Tiger 3 için toplu XML hazırla.':names[companyId]+' faturalarını görüntüle ve satırlarını düzenle. Logo aktarım kuralları bu firma için henüz tanımlanmadı.';
+    if(companyId!=='PUSULA'){
+      const page=document.getElementById('page-satis');if(page){const note=document.createElement('div');note.className='sw-configuration-note';note.setAttribute('role','status');note.textContent=names[companyId]+' için satış faturası Logo kodları henüz tanımlı değil. Pusula eşleştirmeleri kullanılmaz; bu firmanın XML aktarımı kapalıdır.';page.querySelector('header')?.after(note);}
+    }
     if(!['PUSULA','KIB'].includes(companyId)){
-      for(const id of ['page-yevmiye','page-satis']){const page=document.getElementById(id);if(!page)continue;const note=document.createElement('div');note.className='sw-configuration-note';note.setAttribute('role','status');note.textContent=names[companyId]+' için doğrulanmış hesap planı henüz tanımlı değil. Başka firmanın kodları kullanılmaz. Hesap kodları tanımlanmadan muhasebe çıktısı oluşturulamaz.';page.querySelector('header')?.after(note);}
+      const page=document.getElementById('page-yevmiye');if(page){const note=document.createElement('div');note.className='sw-configuration-note';note.setAttribute('role','status');note.textContent=names[companyId]+' için doğrulanmış hesap planı henüz tanımlı değil. Başka firmanın kodları kullanılmaz. Hesap kodları tanımlanmadan muhasebe çıktısı oluşturulamaz.';page.querySelector('header')?.after(note);}
     }
     if(window.SW_CONTEXT){let verifying=false;const check=async()=>{if(verifying||document.hidden)return;verifying=true;try{const r=await fetch('/api/session',{cache:'no-store'});if(r.ok){const session=await r.json();if(!session.account)location.replace('/login');else if(!session.companies.some(c=>c.id===companyId&&c.active&&!c.deleted))location.replace('/companies');}}catch{}finally{verifying=false;}};document.addEventListener('visibilitychange',check);window.addEventListener('pageshow',check);setInterval(check,120000);}
   }

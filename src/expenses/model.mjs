@@ -116,6 +116,7 @@ export function duplicateIds(receipts){
 }
 export const paymentCards=Object.freeze({'309.07':{label:'9190 KK',glCode:'309.01.007'},'309.03':{label:'3915 KK',glCode:'309.01.001'}});
 export function categoryProfile(category,profiles={},company=''){
+  if(company&&company!=='PUSULA')return {};
   category=category==='bakery'?'meal':category;
   const defaults=company==='PUSULA'?{
     meal:{serviceCode:'770.02.013',accountCode:'770.02.013',costCenter:'DB.01',vatCode10:'191.01.005'},
@@ -125,6 +126,7 @@ export function categoryProfile(category,profiles={},company=''){
   return {...defaults[category],...profiles.categories?.[category]};
 }
 export function exportReadiness(receipts,profiles={},company=''){
+  if(company&&company!=='PUSULA')return {ready:false,reasons:['Bu firma için Logo gider ve ödeme kartı kuralları henüz tanımlanmadı.']};
   const reasons=[],active=receipts.filter(r=>!r.archived),duplicates=duplicateIds(active);
   if(!active.length)reasons.push('Aktarılacak fiş yok.');
   for(const r of active){
