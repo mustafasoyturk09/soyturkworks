@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile,splitFlight} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
@@ -84,10 +84,10 @@ test('Sample purchase workflow preserves receipt totals, selected card and categ
     r.paymentCard='309.07';assert.match(buildPurchaseXML([r],{},'PUSULA'),/<GL_CODE>309.01.007<\/GL_CODE>/);
   }
 });
-test('Export requires manual card choice and company mappings, blocks flight and unreviewed documents',()=>{
+test('Export requires manual card choice and company mappings, blocks missing mappings and unreviewed documents',()=>{
   const r=receipt();assert.equal(exportReadiness([r],{},'PUSULA').ready,false);
   r.paymentCard='309.07';assert.equal(exportReadiness([r],{},'PUSULA').ready,true);assert.equal(exportReadiness([r],{},'COMED').ready,false);
-  r.reviewed=false;assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'));r.reviewed=true;r.lines[0].category='flight';assert.equal(exportReadiness([r],{},'PUSULA').ready,false);
+  r.reviewed=false;assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'));r.reviewed=true;r.lines[0].category='flight';assert.equal(exportReadiness([r],{},'PUSULA').ready,false); // %10 flight VAT account was not supplied
   assert.equal(categoryProfile('bakery',{},'PUSULA').serviceCode,'770.02.013');
 });
 test('Bakery stays meal without substituting its printed VAT rate; wash and food labels are recognized',()=>{
@@ -110,4 +110,18 @@ test('Fuel and parking share sample mappings without a second 30 percent deducti
   assert.match(xml,/<KKEG_GL_CODE>689.03.012<\/KKEG_GL_CODE>/);assert.match(xml,/<TOTAL_NET>120.00<\/TOTAL_NET>/);
   r.date='2027-01-01';assert.equal(exportReadiness([r],{},'PUSULA').ready,false);assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'),/belge yılı/);
   r.lines[0].category='meal';assert.equal(exportReadiness([r],{categories:{meal:{vatCode20:'191.TEST'}}},'PUSULA').ready,true);
+});
+
+test('Flight XML follows the supplied net-price two-line example and reconciles payment',()=>{
+  const r={...receipt(),total:371286,vat:58906,paymentCard:'309.07',lines:[]};r.lines=splitFlight(r,20);
+  assert.deepEqual(r.lines.map(l=>[l.gross,l.vatRate]),[[353436,20],[17850,0]]);assert.deepEqual(issues(r),[]);
+  const xml=buildPurchaseXML([r],{},'PUSULA');
+  for(const tag of ['<PRICE>2945.30</PRICE>','<PRICE>178.50</PRICE>','<TOTAL_SERVICES>3123.80</TOTAL_SERVICES>','<TOTAL_VAT>589.06</TOTAL_VAT>','<TOTAL_NET>3712.86</TOTAL_NET>','<MASTER_CODE>770.02.014</MASTER_CODE>','<VAT_INCLUDED>0</VAT_INCLUDED>'])assert(xml.includes(tag),tag);
+  assert(!xml.includes('<OHP_CODE1>'));assert(!xml.includes('KKEG_GL_CODE'));
+  assert.throws(()=>splitFlight({...r,total:10000},20),/uyuşmuyor/);assert.throws(()=>splitFlight(r,0));
+  assert.throws(()=>splitFlight({...r,lines:[{category:'meal'}]},20),/diğer masraf/);
+});
+test('Flight OCR distinguishes issue date from flight date and issuer identity from passenger TCKN',()=>{
+  const r=parseReceipt('ÖRNEK AIRLINES\nBüyük Mükellefler V.D. 123 456 7890\nMükellef / Tax Payer: ÖRNEK (TCKN:11111111111)\nBelge No / Bilet No / Document No: 5555555555555\nDüzenlenme Tarihi / Issue Date: 22-10-2026\nUçuş Tarihi: 25/10/2026\nKDV / VAT : 589,06 TRY\nToplam Tutar / Total Amount : 3.712,86 TRY (KDV Dahildir/VAT Included)');
+  assert.equal(r.total,371286);assert.equal(r.vat,58906);assert.equal(r.taxId,'1234567890');assert.equal(r.number,'5555555555555');assert.equal(r.date,'2026-10-22');assert.equal(r.lines[0].category,'flight');assert.equal(r.lines[0].vatRate,null);
 });

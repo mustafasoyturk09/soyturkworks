@@ -10,6 +10,14 @@ export function cents(value){
   const n=Math.round(Number(s)*100);return Number.isSafeInteger(n)&&n<=1e11?n:null;
 }
 export const amount=value=>Number.isSafeInteger(value)?(value/100).toFixed(2).replace('.',','):'';
+export function splitFlight(receipt,rate){
+  if(receipt.lines?.some(l=>l.category!=='flight'))throw Error('Bilet ayrımı için bütün satırlar uçak bileti olmalı; diğer masraf satırlarını koruyarak ayrı belge kullan.');
+  if(!Number.isFinite(rate)||rate<=0||rate>100)throw Error('Biletin KDV oranını doğrula.');
+  if(!Number.isSafeInteger(receipt.total)||receipt.total<=0||!Number.isSafeInteger(receipt.vat)||receipt.vat<=0)throw Error('Biletin toplamını ve KDV tutarını doldur.');
+  const net=Math.round(receipt.vat*100/rate),gross=net+receipt.vat,remainder=receipt.total-gross;
+  if(remainder<0)throw Error('KDV tutarı ve oranı belge toplamıyla uyuşmuyor.');
+  return [{description:'Uçak bileti — KDV’li tutar',category:'flight',gross,vatRate:rate},...(remainder?[{description:'Uçak bileti — KDV’siz tutar',category:'flight',gross:remainder,vatRate:0}]:[])];
+}
 export function validDate(value){return /^20\d{2}-\d{2}-\d{2}$/.test(value||'')&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;}
 export function guessCategory(text){
   const n=normalize(text),matches=[['fuel',/\b(motorin|benzin|akaryakit|kursunsuz|lpg)\b/],['parking',/otopark|park ucreti/],['flight',/ucak|havayol|airlines|e.bilet|ucus/],['wash',/yikama|car wash/],['meal',/unlu mam|firin|pastane|pogaca|simit|yemek|yiyecek|izgara|corba|cay|asure|su pet|restoran|restaurant|lokanta|doner|kebap|kafe|cafe/],['transport',/taksi|otobus|ulasim|tren/]].filter(([,re])=>re.test(n));
@@ -38,7 +46,21 @@ export function parseReceipt(rawText,confidence=null){
   if(!items.length){items.push({description:'',category:guessCategory(text),gross:totals.length===1?totals[0]:null,vatRate:rates.length===1?rates[0]:null});notes.push('Ürün kalemleri ayrıştırılamadı; özet masraf satırını belgeyle karşılaştır.');}
   if(confidence!==null&&confidence<75)notes.push('Okuma güveni düşük; fotoğraf ve tüm alanları karşılaştır.');
   const seller=lines.find(l=>/[A-ZÇĞİÖŞÜ]/i.test(l)&&!/^\d|^(?:F[İI][ŞS]|TAR[İI]H|SAAT|VKN|TCKN|TOPLAM)/i.test(l))||'';
-  return {seller:seller.slice(0,200),taxId:vkns.length===1?vkns[0]:'',date:dates.length===1?dates[0]:'',number:nums.length===1?nums[0]:'',currency:/\b(?:USD|EUR|GBP)\b/.test(text)?(text.match(/\b(?:USD|EUR|GBP)\b/)||[])[0]:'TRY',total:totals.length===1?totals[0]:null,vat:taxes.length===1?taxes[0]:null,lines:items.slice(0,40),rawText:text,confidence,notes,reviewed:false};
+  const result={seller:seller.slice(0,200),taxId:vkns.length===1?vkns[0]:'',date:dates.length===1?dates[0]:'',number:nums.length===1?nums[0]:'',currency:/\b(?:USD|EUR|GBP)\b/.test(text)?(text.match(/\b(?:USD|EUR|GBP)\b/)||[])[0]:'TRY',total:totals.length===1?totals[0]:null,vat:taxes.length===1?taxes[0]:null,lines:items.slice(0,40),rawText:text,confidence,notes,reviewed:false};
+  if(guessCategory(text)==='flight'){
+    const unique=values=>{const distinct=[...new Set(values.filter(v=>v!==null&&v!==undefined&&v!==''))];return distinct.length===1?distinct[0]:null;};
+    const total=unique(lines.filter(l=>/toplam tutar|total amount/.test(normalize(l))).map(l=>trailingMoney(l.replace(/\s*\([^)]*\)\s*$/,''))));
+    const vat=unique(lines.filter(l=>/^kdv\s*\/\s*vat/.test(normalize(l))).map(trailingMoney));
+    if(total!==null)result.total=total;if(vat!==null)result.vat=vat;
+    const date=unique(lines.filter(l=>/duzenlenme tarihi|issue date/.test(normalize(l))).map(l=>{const m=l.match(/(\d{2})[./-](\d{2})[./-](20\d{2})/);if(!m)return null;const d=m[3]+'-'+m[2]+'-'+m[1];try{return validDate(d)?d:null;}catch{return null;}}));
+    if(date){result.date=date;result.notes=result.notes.filter(n=>!n.startsWith('Birden fazla tarih'));}
+    const number=unique(lines.filter(l=>/bilet no|ticket number|document no/.test(normalize(l))).map(l=>l.match(/:\s*([A-Z0-9-]+)\s*$/i)?.[1]));
+    if(number)result.number=number;
+    // Passenger TCKN is not the seller's tax identity.
+    result.taxId=unique(lines.filter(l=>/v\.?\s*d\.?|vergi|vkn/.test(normalize(l))&&!/tckn|tax payer/.test(normalize(l))).map(l=>l.match(/\b(\d{3}\s+\d{3}\s+\d{4}|\d{10})\b/)?.[1]?.replace(/\s/g,'')))||'';
+    if(result.lines.length===1&&result.lines[0].vatRate===null)result.lines[0]={description:'Uçak bileti',category:'flight',gross:result.total,vatRate:null};
+  }
+  return result;
 }
 export function issues(receipt){
   const out=[];
@@ -77,6 +99,7 @@ export function categoryProfile(category,profiles={},company=''){
   category=category==='bakery'?'meal':category;
   const defaults=company==='PUSULA'?{
     meal:{serviceCode:'770.02.013',accountCode:'770.02.013',costCenter:'DB.01',vatCode10:'191.01.005'},
+    flight:{serviceCode:'770.02.014',accountCode:'770.02.014',vatCode20:'191.01.004'},
     ...Object.fromEntries(['fuel','parking','wash','transport'].map(k=>[k,{serviceCode:'770.11.004',accountCode:'770.11.004',costCenter:'DB.01',vatCode20:'191.01.004',kkegCode:'689.03.012',kkegVatCode:'689.03.003'}]))
   }:{};
   return {...defaults[category],...profiles.categories?.[category]};
@@ -95,8 +118,7 @@ export function exportReadiness(receipts,profiles={},company=''){
       // The supplied vehicle examples and GIB review cover 2026 only. Do not
       // silently carry accounting assumptions into a different document year.
       if(company==='PUSULA'&&['fuel','parking','wash'].includes(l.category)&&r.date?.slice(0,4)!=='2026')reasons.push('Binek araç gideri: belge yılı için mevzuat ve Logo KKEG tanımlarını doğrula.');
-      if(l.category==='flight')reasons.push('Uçak bileti için Logo XML örneği gerekiyor.');
-      if(!p.serviceCode||!p.accountCode||!p.costCenter)reasons.push(label+': Logo eşleştirmesini tamamla.');
+      if(!p.serviceCode||!p.accountCode||(!p.costCenter&&l.category!=='flight'))reasons.push(label+': Logo eşleştirmesini tamamla.');
       if(l.vatRate>0&&!p['vatCode'+l.vatRate])reasons.push(label+': %'+l.vatRate+' KDV hesap kodunu tanımla.');
     }
   }
@@ -113,9 +135,9 @@ export function buildPurchaseXML(receipts,profiles={},company=''){
     if(adjustment&&lastTaxed<0)throw Error('KDV toplamını kontrol et.');
     if(lastTaxed>=0)taxes[lastTaxed]+=adjustment;
     const rows=r.lines.map((l,i)=>{const p=categoryProfile(l.category,profiles,company),vat=taxes[i],net=l.gross-vat;
-      return '<TRANSACTION>'+tag('TYPE',4)+tag('MASTER_CODE',p.serviceCode)+tag('OHP_CODE1',p.costCenter)+tag('GL_CODE1',p.accountCode)+(vat?tag('GL_CODE2',p['vatCode'+l.vatRate]):'')+tag('QUANTITY',1)+tag('PRICE',money(l.gross))+tag('TOTAL',money(l.gross))+tag('DESCRIPTION','FİŞ NO:'+r.number+' '+r.seller+' · '+l.description)+tag('UNIT_CODE','ADET')+tag('UNIT_CONV1',1)+tag('UNIT_CONV2',1)+tag('VAT_INCLUDED',1)+tag('VAT_RATE',l.vatRate)+tag('VAT_AMOUNT',money(vat))+tag('VAT_BASE',money(net))+tag('TOTAL_NET',money(net))+tag('BILLED',1)+(p.kkegCode?tag('KKEG_GL_CODE',p.kkegCode)+tag('KKEG_OHP_CODE',p.costCenter):'')+(p.kkegVatCode?tag('KKEG_VAT_GL_CODE',p.kkegVatCode)+tag('KKEG_VAT_OHP_CODE',p.costCenter):'')+'</TRANSACTION>';
+      return '<TRANSACTION>'+tag('TYPE',4)+tag('MASTER_CODE',p.serviceCode)+(p.costCenter?tag('OHP_CODE1',p.costCenter):'')+tag('GL_CODE1',p.accountCode)+(vat?tag('GL_CODE2',p['vatCode'+l.vatRate]):'')+tag('QUANTITY',1)+tag('PRICE',money(l.category==='flight'?net:l.gross))+tag('TOTAL',money(l.category==='flight'?net:l.gross))+tag('DESCRIPTION','FİŞ NO:'+r.number+' '+r.seller+' · '+l.description)+tag('UNIT_CODE','ADET')+tag('UNIT_CONV1',1)+tag('UNIT_CONV2',1)+tag('VAT_INCLUDED',l.category==='flight'?0:1)+tag('VAT_RATE',l.vatRate)+tag('VAT_AMOUNT',money(vat))+tag('VAT_BASE',money(net))+tag('TOTAL_NET',money(net))+tag('BILLED',1)+(p.kkegCode?tag('KKEG_GL_CODE',p.kkegCode)+tag('KKEG_OHP_CODE',p.costCenter):'')+(p.kkegVatCode?tag('KKEG_VAT_GL_CODE',p.kkegVatCode)+tag('KKEG_VAT_OHP_CODE',p.costCenter):'')+'</TRANSACTION>';
     }).join('');
     const vat=r.vat,net=r.total-vat;
-    return '<INVOICE DBOP="INS">'+tag('TYPE',4)+tag('NUMBER','~')+tag('DATE',date)+tag('DOC_DATE',date)+tag('DOC_NUMBER',r.number)+tag('ARP_CODE',r.paymentCard)+tag('GL_CODE',card.glCode)+tag('TOTAL_DISCOUNTED',money(net))+tag('TOTAL_GROSS',money(net))+tag('TOTAL_VAT',money(vat))+tag('TOTAL_NET',money(r.total))+tag('TC_NET',money(r.total))+tag('CURRSEL_TOTALS',2)+'<TRANSACTIONS>'+rows+'</TRANSACTIONS><PAYMENT_LIST><PAYMENT>'+tag('DATE',date)+tag('MODULENR',4)+tag('SIGN',1)+tag('TRCODE',4)+tag('TOTAL',money(r.total))+tag('PROCDATE',date)+tag('PAY_NO',1)+'</PAYMENT></PAYMENT_LIST>'+tag('TOTAL_SERVICES',money(r.total))+tag('EBOOK_DOCTYPE',99)+'</INVOICE>';
+    return '<INVOICE DBOP="INS">'+tag('TYPE',4)+tag('NUMBER','~')+tag('DATE',date)+tag('DOC_DATE',date)+tag('DOC_NUMBER',r.number)+tag('ARP_CODE',r.paymentCard)+tag('GL_CODE',card.glCode)+tag('TOTAL_DISCOUNTED',money(net))+tag('TOTAL_GROSS',money(net))+tag('TOTAL_VAT',money(vat))+tag('TOTAL_NET',money(r.total))+tag('TC_NET',money(r.total))+tag('CURRSEL_TOTALS',2)+'<TRANSACTIONS>'+rows+'</TRANSACTIONS><PAYMENT_LIST><PAYMENT>'+tag('DATE',date)+tag('MODULENR',4)+tag('SIGN',1)+tag('TRCODE',4)+tag('TOTAL',money(r.total))+tag('PROCDATE',date)+tag('PAY_NO',1)+'</PAYMENT></PAYMENT_LIST>'+tag('TOTAL_SERVICES',money(r.lines.reduce((sum,l,i)=>sum+l.gross-(l.category==='flight'?taxes[i]:0),0)))+tag('EBOOK_DOCTYPE',99)+'</INVOICE>';
   }).join('\n')+'</PURCHASE_INVOICES>';
 }

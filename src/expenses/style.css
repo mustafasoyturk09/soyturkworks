@@ -11,3 +11,5 @@
 @media(max-height:500px) and (orientation:landscape){main{padding-top:20px}.source{position:static}.editor-body{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}.dialog-foot{position:static}.field-grid{grid-template-columns:1fr 1fr}}
 
 .dialog-head{position:sticky;top:0;z-index:2}.profile-row summary{cursor:pointer;min-height:44px;padding:10px 0;color:#bfd4f3;font-weight:650}
+
+#flightSplit label{display:block;font-size:12px;color:#b1c3db}#flightSplit input{margin-top:6px}#flightSplit button{width:100%;margin-top:10px;white-space:normal}

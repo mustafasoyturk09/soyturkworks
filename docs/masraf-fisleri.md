@@ -43,7 +43,7 @@ Kullanıcının yerel XML örneklerinden türetilen `PURCHASE_INVOICES / INVOICE
 adaptörü TL hizmet faturası üretir. Pusula için yemek, otopark, yıkama ve ulaşım
 hizmet/gider/merkez kodları örneklerden gelir; diğer firmalara taşınmaz. KDV oranı
 belgeden alınır. %1 unlu mamul yemek olarak kalır; bu oran için KDV hesabı ayarlardan
-tanımlanmalıdır. Uçak bileti ve dövizli belgelerin XML aktarımı henüz açık değildir.
+tanımlanmalıdır. Uçak bileti aktarımı desteklenir; dövizli belgelerin aktarımı henüz açık değildir.
 Kaynak görseller, tarihler, belge numaraları ve satıcı kimlikleri depoya eklenmez.
 
 XML öncesinde belge onayı, kart seçimi, toplamlar, mükerrerlik ve hesap eşleştirmeleri
@@ -100,8 +100,7 @@ cihazları bu aşamada doğrulanmış sayılmaz; kullanıcı örnekleriyle kalib
   KDV oranı = vergiye tabi matrah; matrah + KDV = KDV'li brüt;
   belge genel toplamı − KDV'li brüt = KDV'siz kısım. Toplamdan yalnızca matrah
   çıkarılmaz. Negatif kalan veya toplam uyuşmazlığı varsa aktarım durmalıdır.
-  %20 her belge ve yıl için koşulsuz sabitlenmez. Uçak bileti XML'inin hizmet ve
-  KDV'siz satır eşleştirmeleri dosya okunmadan tahmin edilmez.
+  %20 her belge ve yıl için koşulsuz sabitlenmez. Uçak bileti XML'i 12.11.2026 tarihinde okundu: iki satırda `770.02.014` hizmet/gider, KDV'li satırda `191.01.004`; masraf merkezi ve KKEG alanı yok. Fiyatlar KDV hariç (`VAT_INCLUDED=0`), `TOTAL_SERVICES` net satır toplamıdır. Düzenlemede Uçak bileti seçilir, KDV oranı elle doğrulanır ve tutarlar ayır düğmesiyle iki satıra bölünür. Ödeme kartını kullanıcı seçer.
 
 Resmî kaynak:
 https://www.gib.gov.tr/vergi-konulari/2_isletme_ve_girisimci/18_binek_otomobillerde_gider_ve_amortismanlarin_vergi_matrahindan_indirimi/18
