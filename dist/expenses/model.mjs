@@ -77,7 +77,7 @@ export function categoryProfile(category,profiles={},company=''){
   category=category==='bakery'?'meal':category;
   const defaults=company==='PUSULA'?{
     meal:{serviceCode:'770.02.013',accountCode:'770.02.013',costCenter:'DB.01',vatCode10:'191.01.005'},
-    ...Object.fromEntries(['parking','wash','transport'].map(k=>[k,{serviceCode:'770.11.004',accountCode:'770.11.004',costCenter:'DB.01',vatCode20:'191.01.004',kkegCode:'689.03.012',kkegVatCode:'689.03.003'}]))
+    ...Object.fromEntries(['fuel','parking','wash','transport'].map(k=>[k,{serviceCode:'770.11.004',accountCode:'770.11.004',costCenter:'DB.01',vatCode20:'191.01.004',kkegCode:'689.03.012',kkegVatCode:'689.03.003'}]))
   }:{};
   return {...defaults[category],...profiles.categories?.[category]};
 }
@@ -92,6 +92,9 @@ export function exportReadiness(receipts,profiles={},company=''){
     if(r.currency!=='TRY')reasons.push('Dövizli belgeler için aktarım henüz desteklenmiyor.');
     for(const l of r.lines||[]){
       const p=categoryProfile(l.category,profiles,company),label=categories[l.category]||'Masraf';
+      // The supplied vehicle examples and GIB review cover 2026 only. Do not
+      // silently carry accounting assumptions into a different document year.
+      if(company==='PUSULA'&&['fuel','parking','wash'].includes(l.category)&&r.date?.slice(0,4)!=='2026')reasons.push('Binek araç gideri: belge yılı için mevzuat ve Logo KKEG tanımlarını doğrula.');
       if(l.category==='flight')reasons.push('Uçak bileti için Logo XML örneği gerekiyor.');
       if(!p.serviceCode||!p.accountCode||!p.costCenter)reasons.push(label+': Logo eşleştirmesini tamamla.');
       if(l.vatRate>0&&!p['vatCode'+l.vatRate])reasons.push(label+': %'+l.vatRate+' KDV hesap kodunu tanımla.');

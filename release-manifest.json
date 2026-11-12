@@ -255,7 +255,7 @@
     },
     {
       "file": "expenses/model.mjs",
-      "sha256": "65258d1c0246f24fe9babefa040be9588bad1a00c21fbfe87bc83ac95b371de7"
+      "sha256": "2894f800dd78eab745f5a544c0d7511f445f69cfcdacf2df7738a5403eb955f6"
     },
     {
       "file": "expenses/ocr-core.js",

@@ -77,3 +77,31 @@ erişimi ve siteler arası yazma koruması.
 Sentetik net fiş görseli gerçek OCR motoruyla tarayıcıda okundu. Kamera donanımı,
 gerçek buruşuk/soluk fişler, uçak bileti biçimleri ve fiziksel iPhone/Android
 cihazları bu aşamada doğrulanmış sayılmaz; kullanıcı örnekleriyle kalibrasyon gerekir.
+
+## Kalıcı işlem notları — 12 Kasım 2026
+
+- Kullanıcı yakıt ve otoparkın aynı şekilde işlenmesini istedi. Pusula varsayılanları
+  aynı hizmet, gider, KDV ve KKEG hesaplarını kullanır; kaydedilmiş firma ayarları korunur.
+- Yerel otopark/yıkama örnekleri KDV dahil (`VAT_INCLUDED=1`), miktar 1, birim ADET
+  olarak düzenlenmiştir. Belge üzerindeki KDV oranı ve tutarı ayrıca doğrulanır;
+  kategori tek başına KDV oranı belirlemez. Kod içindeki `gross` daima KDV dahil tutardır.
+- GİB'in 12.11.2026 tarihinde kontrol edilen açıklamasında, ilgili istisnalar hariç
+  binek otomobil giderlerinin en fazla %70'i indirilebilir. Bu oran yıllık kira ve
+  amortisman parasal sınırlarından ayrıdır. 2027'de değiştiği varsayılmaz;
+  belge yılına ilişkin resmî kaynak yeniden kontrol edilir.
+- Otopark/yıkama örnek XML'lerinde matrah ve KDV tam tutardır; KKEG gider ve KDV
+  hesap kodları vardır, açık bir %70/%30 oran alanı yoktur. `DEDUCTIONPART1=2` ve
+  `DEDUCTIONPART2=3` alanları %70 kuralı olarak yorumlanamaz. XML'e tahmini oran
+  eklenmez, tutarlardan ikinci kez %30 düşülmez. Logo hizmet kartı / muhasebeleştirme
+  tanımının %70 gider ve ilişkili KKEG uygulaması ayrıca doğrulanmalıdır.
+- Pusula yakıt, otopark ve yıkama XML'i için 2026 dışındaki belge yılları, mevzuat
+  ve Logo tanımları doğrulanana kadar dışa aktarılamaz; kayıt/düzenleme korunur.
+- Uçak bileti için kullanıcının belirttiği hesap: KDV tutarı × 100 / doğrulanmış
+  KDV oranı = vergiye tabi matrah; matrah + KDV = KDV'li brüt;
+  belge genel toplamı − KDV'li brüt = KDV'siz kısım. Toplamdan yalnızca matrah
+  çıkarılmaz. Negatif kalan veya toplam uyuşmazlığı varsa aktarım durmalıdır.
+  %20 her belge ve yıl için koşulsuz sabitlenmez. Uçak bileti XML'inin hizmet ve
+  KDV'siz satır eşleştirmeleri dosya okunmadan tahmin edilmez.
+
+Resmî kaynak:
+https://www.gib.gov.tr/vergi-konulari/2_isletme_ve_girisimci/18_binek_otomobillerde_gider_ve_amortismanlarin_vergi_matrahindan_indirimi/18

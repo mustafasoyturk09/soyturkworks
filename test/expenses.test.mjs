@@ -101,3 +101,13 @@ test('Selected card and legacy bakery category survive server save and reload',a
   const draft={...r,...receipt(),paymentCard:'309.07'};draft.lines[0].category='bakery';
   const saved=await(await call(store,'record/'+id,draft)).json();assert.equal(saved.paymentCard,'309.07');assert.equal(saved.lines[0].category,'meal');
 });
+
+test('Fuel and parking share sample mappings without a second 30 percent deduction; new years require review',()=>{
+  assert.deepEqual(categoryProfile('fuel',{},'PUSULA'),categoryProfile('parking',{},'PUSULA'));
+  const r={...receipt(),paymentCard:'309.07',total:12000,vat:2000,lines:[{description:'Test yakıt',category:'fuel',gross:12000,vatRate:20}]};
+  const xml=buildPurchaseXML([r],{},'PUSULA');
+  assert.match(xml,/<VAT_BASE>100.00<\/VAT_BASE>/);assert.match(xml,/<VAT_AMOUNT>20.00<\/VAT_AMOUNT>/);
+  assert.match(xml,/<KKEG_GL_CODE>689.03.012<\/KKEG_GL_CODE>/);assert.match(xml,/<TOTAL_NET>120.00<\/TOTAL_NET>/);
+  r.date='2027-01-01';assert.equal(exportReadiness([r],{},'PUSULA').ready,false);assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'),/belge yılı/);
+  r.lines[0].category='meal';assert.equal(exportReadiness([r],{categories:{meal:{vatCode20:'191.TEST'}}},'PUSULA').ready,true);
+});
