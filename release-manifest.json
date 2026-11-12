@@ -55,11 +55,11 @@
     },
     {
       "file": "app/izibiz.css",
-      "sha256": "ac4ad94d19c8df83e1f8b6b2a0348216221a686cbaa9ae3e330a8dfd2c58123e"
+      "sha256": "ef888c61ca2d45dea30dcac8c6dbf4b39e432fcac439beb3a22a6c27feb458d3"
     },
     {
       "file": "app/izibiz.js",
-      "sha256": "c01bf6657c392d9d709f4e722a26da40b90cbf28847504da497f2c2fd4d80bfa"
+      "sha256": "d5892267d3c6b9455f3b338a08af0a801efc9877008cc99a724e479a6d59db4b"
     },
     {
       "file": "app/mobile.css",
@@ -74,8 +74,8 @@
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
     {
-      "file": "app/portable-template-732e6f79385cc662.json",
-      "sha256": "732e6f79385cc6623733e24314349d9adc9e47ea553ceb1dc45d1bc7b93019bf"
+      "file": "app/portable-template-4ce4a75a1194ecfb.json",
+      "sha256": "4ce4a75a1194ecfb2b12bea5b351530064c6937277f16dbefce6c40b7389d221"
     },
     {
       "file": "app/runtime.js",
@@ -107,7 +107,7 @@
     },
     {
       "file": "app/workspace.js",
-      "sha256": "f403667e36dbe03cbd949fe3aba0417f3491729ea7ae2b09404c0db204ce7b6c"
+      "sha256": "ebf75aad37e57ad803cb933ed9e88e07ee175a410d44d47ab52363bff5cd7355"
     },
     {
       "file": "assets/brand/apple-touch-icon.png",
@@ -231,11 +231,11 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "afa19f6523a084a481bfa14eb4e9aa150489a9213e15e8b88db0d8467af965d6"
+      "sha256": "278d8eb136a8a04783779d33ae8aef3855044de63b8259277ab94a48daae53b4"
     },
     {
       "file": "automation/index.html",
-      "sha256": "53bc83a2087e4a9eafd8cb8ac33503d15bf6dbd96d6286ce8601f07eefbfe93a"
+      "sha256": "b58f1e80a118834a47d3b0b66f0b5171ab453c10b92967a336d6d16b7f0aa27f"
     },
     {
       "file": "automation/style.css",
@@ -243,7 +243,7 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "2323830df5462016e765a42393fa8e5a930d2eefc74355d33163228872e85713"
+      "sha256": "1724e338e4a1c759e7c55b31bb78bb8ce74c66a570ee74b96b38ff25f0c4673e"
     },
     {
       "file": "expenses/eng.traineddata",
@@ -255,7 +255,7 @@
     },
     {
       "file": "expenses/model.mjs",
-      "sha256": "eee098e07dd3563f3f209d28ae68909edcd27c9fdc77d976a022914bbbc31352"
+      "sha256": "5d24981d6a4d40c50df7939761bded485559fc5d453c4329b20e985e90e915b1"
     },
     {
       "file": "expenses/ocr-core.js",
@@ -267,7 +267,7 @@
     },
     {
       "file": "expenses/style.css",
-      "sha256": "2cad2bb1cbde04fadd28760781a86badeb12cf7d81af83d23d818f864c8788b1"
+      "sha256": "ee51f5dfdb1c09462ab9b2b2efe324585d3e90c834741be7ade2d1c455483c69"
     },
     {
       "file": "expenses/tur.traineddata",
@@ -279,7 +279,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "f65a0800fdebbae55dae3f9a184a1b8983ce9487b2cd282d089a89ef27ae4636"
+      "sha256": "a80ca7c8ec61fd7ebc1b2913b0666f79ef0ad39be815962aa8fe19df851950df"
     },
     {
       "file": "manifest.webmanifest",

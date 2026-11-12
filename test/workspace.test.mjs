@@ -44,3 +44,11 @@ test('Portable and deployed app retain company guards and synchronized workspace
     assert(app.includes("workspace:{companyId:window.SWWorkspace.companyId}"));
   }
 });
+
+test('Izibiz follow-up has its own sidebar entry directly after incoming invoices',async()=>{
+  const izibiz=await readFile(new URL('../src/izibiz.js',import.meta.url),'utf8');
+  assert.match(script,/incoming\.after\(follow,expenses\)/);
+  assert.match(script,/follow\.href='\/workspace\/'.*?'\/takip\/'/);
+  assert.match(script,/Gelen E-Fatura İzibiz/);
+  assert(!izibiz.includes('swAutoFollow'));
+});

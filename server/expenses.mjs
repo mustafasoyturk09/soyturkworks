@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {categories,issues} from '../src/expenses/model.mjs';
+import {categories,issues,validExpenseCode} from '../src/expenses/model.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const MAX_FILE=8*1024*1024,CHUNK=96*1024;
@@ -15,7 +15,7 @@ function cleanReceipt(input){
   const out={};for(const [key,max] of Object.entries({seller:200,taxId:11,date:10,number:40,currency:3,rawText:18000,error:300,paymentCard:20}))out[key]=String(input[key]??'').slice(0,max);
   const money=v=>v===null||v===undefined||v===''?null:Number.isSafeInteger(v)&&v>=0&&v<=1e11?v:fail('Tutar geçersiz.');
   out.total=money(input.total);out.vat=money(input.vat);
-  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),descriptionReady:true,category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.'),vatIncluded:l.vatIncluded===undefined?true:typeof l.vatIncluded==='boolean'?l.vatIncluded:fail('KDV dahil/hariç seçimi geçersiz.')}));
+  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),descriptionReady:true,category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',expenseCode:l.expenseCode===undefined?'':validExpenseCode(l.expenseCode)||l.expenseCode===''?l.expenseCode:fail('Gider hesabı kodu geçersiz.'),gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.'),vatIncluded:l.vatIncluded===undefined?true:typeof l.vatIncluded==='boolean'?l.vatIncluded:fail('KDV dahil/hariç seçimi geçersiz.')}));
   out.notes=Array.isArray(input.notes)?input.notes.slice(0,12).map(n=>String(n).slice(0,250)):[];
   out.confidence=typeof input.confidence==='number'&&Number.isFinite(input.confidence)?Math.max(0,Math.min(100,input.confidence)):null;
   out.reviewed=input.reviewed===true;out.archived=input.archived===true;out.ocrDone=input.ocrDone===true;
@@ -32,8 +32,13 @@ export class ExpenseStore{
     }
     if(action==='profiles'&&request.method==='POST'){
       const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,16000))),map={};
+      if(body.memory){
+        const key=body.memory.key,code=body.memory.code;
+        if(typeof key!=='string'||!key||key.length>300||!/^.{1,120}\|(?:meal|wash|fuel|parking|flight|transport|other)\|.{1,120}$/.test(key)||typeof code!=='string'||code!==''&&!validExpenseCode(code))fail('Gider kodu hafıza bilgisi geçersiz.');
+        return this.storage.transaction(async tx=>{const previous=await tx.get('profiles')||{revision:0,categories:{}},memories={...previous.memories};if(body.revision!==previous.revision)fail('Kod hafızası başka cihazda değişti. Yenileyip tekrar dene.',409);if(code)memories[key]=code;else delete memories[key];if(Object.keys(memories).length>500)fail('Kod hafızası sınırına ulaşıldı.',409);const value={...previous,revision:previous.revision+1,memories};await tx.put('profiles',value);return json(value);});
+      }
       for(const key of Object.keys(categories)){const p=body.categories?.[key]||{};map[key]={};for(const field of ['serviceCode','accountCode','costCenter','vatCode1','vatCode10','vatCode20','kkegCode','kkegVatCode'])map[key][field]=String(p[field]||'').trim().slice(0,60);}
-      return this.storage.transaction(async tx=>{const previous=await tx.get('profiles')||{revision:0};if(body.revision!==previous.revision)fail('Eşleştirmeler başka cihazda değişti. Yenileyip tekrar dene.',409);const value={revision:previous.revision+1,categories:map,verified:false};await tx.put('profiles',value);return json(value);});
+      return this.storage.transaction(async tx=>{const previous=await tx.get('profiles')||{revision:0};if(body.revision!==previous.revision)fail('Eşleştirmeler başka cihazda değişti. Yenileyip tekrar dene.',409);const value={...previous,revision:previous.revision+1,categories:map,verified:false};await tx.put('profiles',value);return json(value);});
     }
     if(!/^[a-f0-9]{64}$/.test(id||''))fail('Fiş kimliği geçersiz.');
     if(action==='image'&&request.method==='POST'){

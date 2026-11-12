@@ -82,9 +82,9 @@ async function changeView(next,preloadedInvoices=null,targetOffset=0){
   try{if(next==='dashboard')renderDashboard();if(next==='invoices')await loadInvoices(targetOffset,preloadedInvoices);if(next==='folders')await loadFolders();if(next==='notifications')await renderNotifications();}catch(e){notice(e.message);}
 }
 function renderIdentity(){
-  $('systemTitle').textContent='İzibiz - '+companyContext.name+' Gelen E-Fatura Takip Sistemi';$('breadcrumb').textContent=companyContext.name+' / Fatura Takibi';
+  $('systemTitle').textContent='Gelen E-Fatura İzibiz';$('breadcrumb').textContent=companyContext.name+' / Gelen E-Fatura İzibiz';
   $('workspaceBack').href='/workspace/'+company+'/';$('workspaceBack').textContent=companyContext.name+' çalışma alanına dön ↗';
-  document.querySelectorAll('.brand,.mobile-brand').forEach(a=>a.href='/workspace/'+company+'/');document.title=companyContext.name+' · Gelen E-Fatura Takibi · Soyturk Works';
+  document.querySelectorAll('.brand,.mobile-brand').forEach(a=>a.href='/workspace/'+company+'/');document.title=companyContext.name+' · Gelen E-Fatura İzibiz · Soyturk Works';
 }
 function renderDashboard(){
   const c=info(company);if(!c)return;const enabled=!!c.settings?.enabled,counts=monthCounts(),connected=devices.filter(d=>d.active!==false);

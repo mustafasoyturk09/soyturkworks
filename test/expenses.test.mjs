@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile,splitFlight,lineAmounts} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
@@ -136,4 +136,25 @@ test('Per-line VAT inclusion changes arithmetic, persists, and writes the edited
   assert.deepEqual(lineAmounts(saved.lines[0]),{gross:12000,net:10000,vat:2000,vatIncluded:true});
   const included=buildPurchaseXML([saved],{},'PUSULA');assert(included.includes('<VAT_INCLUDED>1</VAT_INCLUDED>'));assert(included.includes('<PRICE>120.00</PRICE>'));
   await assert.rejects(()=>call(store,'record/'+id,{...saved,lines:[{...saved.lines[0],vatIncluded:'false'}]}),/KDV dahil/);
+});
+
+test('Expense code memory is company scoped, reversible, and overrides only the selected Logo line',async()=>{
+  const storage=new Storage(),pusula=new ExpenseStore(storage,'PUSULA');
+  const r={...receipt(),paymentCard:'309.07',lines:[{description:'FİŞ NO:0072 ÖRNEK LOKANTA YEMEK',category:'meal',gross:11000,vatRate:10,expenseCode:'770.99.123'}]};
+  const key=memoryKey(r,r.lines[0]);
+  assert.equal(key,memoryKey({...r,number:'0099'},{...r.lines[0],description:'FİŞ NO:0099 ÖRNEK LOKANTA YEMEK'}));
+  const remembered=await(await call(pusula,'profiles',{revision:0,memory:{key,code:'770.99.123'}})).json();
+  assert.equal(remembered.memories[key],'770.99.123');
+  assert.equal((await(await call(pusula,'list')).json()).profiles.memories[key],'770.99.123');
+  assert.equal((await(await call(new ExpenseStore(new Storage(),'COMED'),'list')).json()).profiles.memories?.[key],undefined);
+  assert.match(buildPurchaseXML([r],{},'PUSULA'),/<GL_CODE1>770\.99\.123<\/GL_CODE1>/);
+  const initial=(await(await call(pusula,'image/'+id,jpg,true)).json()).receipt;
+  const saved=await(await call(pusula,'record/'+id,{...initial,...r,reviewed:true})).json();
+  assert.equal(saved.lines[0].expenseCode,'770.99.123');
+  await assert.rejects(()=>call(pusula,'profiles',{revision:0,memory:{key,code:''}}),e=>e.status===409);
+  const forgotten=await(await call(pusula,'profiles',{revision:remembered.revision,memory:{key,code:''}})).json();
+  assert.equal(forgotten.memories[key],undefined);
+  r.lines[0].expenseCode='';
+  assert.match(buildPurchaseXML([r],{},'PUSULA'),/<GL_CODE1>770\.02\.013<\/GL_CODE1>/);
+  await assert.rejects(()=>call(pusula,'profiles',{revision:forgotten.revision,memory:{key,code:'<bad>'}}),/geçersiz/);
 });
