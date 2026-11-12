@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile,splitFlight} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile,splitFlight,lineAmounts} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
@@ -114,7 +114,7 @@ test('Fuel and parking share sample mappings without a second 30 percent deducti
 
 test('Flight XML follows the supplied net-price two-line example and reconciles payment',()=>{
   const r={...receipt(),total:371286,vat:58906,paymentCard:'309.07',lines:[]};r.lines=splitFlight(r,20);
-  assert.deepEqual(r.lines.map(l=>[l.gross,l.vatRate]),[[353436,20],[17850,0]]);assert.deepEqual(issues(r),[]);
+  assert.deepEqual(r.lines.map(l=>[l.gross,l.vatRate]),[[294530,20],[17850,0]]);assert.deepEqual(issues(r),[]);
   const xml=buildPurchaseXML([r],{},'PUSULA');
   for(const tag of ['<PRICE>2945.30</PRICE>','<PRICE>178.50</PRICE>','<TOTAL_SERVICES>3123.80</TOTAL_SERVICES>','<TOTAL_VAT>589.06</TOTAL_VAT>','<TOTAL_NET>3712.86</TOTAL_NET>','<MASTER_CODE>770.02.014</MASTER_CODE>','<VAT_INCLUDED>0</VAT_INCLUDED>'])assert(xml.includes(tag),tag);
   assert(!xml.includes('<OHP_CODE1>'));assert(!xml.includes('KKEG_GL_CODE'));
@@ -124,4 +124,16 @@ test('Flight XML follows the supplied net-price two-line example and reconciles 
 test('Flight OCR distinguishes issue date from flight date and issuer identity from passenger TCKN',()=>{
   const r=parseReceipt('ÖRNEK AIRLINES\nBüyük Mükellefler V.D. 123 456 7890\nMükellef / Tax Payer: ÖRNEK (TCKN:11111111111)\nBelge No / Bilet No / Document No: 5555555555555\nDüzenlenme Tarihi / Issue Date: 22-10-2026\nUçuş Tarihi: 25/10/2026\nKDV / VAT : 589,06 TRY\nToplam Tutar / Total Amount : 3.712,86 TRY (KDV Dahildir/VAT Included)');
   assert.equal(r.total,371286);assert.equal(r.vat,58906);assert.equal(r.taxId,'1234567890');assert.equal(r.number,'5555555555555');assert.equal(r.date,'2026-10-22');assert.equal(r.lines[0].category,'flight');assert.equal(r.lines[0].vatRate,null);
+});
+
+test('Per-line VAT inclusion changes arithmetic, persists, and writes the edited Logo description verbatim',async()=>{
+  const store=new ExpenseStore(new Storage(),'PUSULA');const initial=(await(await call(store,'image/'+id,jpg,true)).json()).receipt;
+  const draft={...initial,...receipt(),paymentCard:'309.07',total:12000,vat:2000,lines:[{description:'Düzeltilmiş Logo & açıklaması',category:'parking',gross:10000,vatRate:20,vatIncluded:false}]};
+  assert.deepEqual(lineAmounts(draft.lines[0]),{gross:12000,net:10000,vat:2000,vatIncluded:false});assert.deepEqual(issues(draft),[]);
+  const saved=await(await call(store,'record/'+id,draft)).json();assert.equal(saved.lines[0].vatIncluded,false);
+  const xml=buildPurchaseXML([saved],{},'PUSULA');assert(xml.includes('<VAT_INCLUDED>0</VAT_INCLUDED>'));assert(xml.includes('<PRICE>100.00</PRICE>'));assert(xml.includes('<TOTAL_NET>120.00</TOTAL_NET>'));assert(xml.includes('<DESCRIPTION>Düzeltilmiş Logo &amp; açıklaması</DESCRIPTION>'));
+  saved.lines[0].vatIncluded=true;saved.lines[0].gross=12000;
+  assert.deepEqual(lineAmounts(saved.lines[0]),{gross:12000,net:10000,vat:2000,vatIncluded:true});
+  const included=buildPurchaseXML([saved],{},'PUSULA');assert(included.includes('<VAT_INCLUDED>1</VAT_INCLUDED>'));assert(included.includes('<PRICE>120.00</PRICE>'));
+  await assert.rejects(()=>call(store,'record/'+id,{...saved,lines:[{...saved.lines[0],vatIncluded:'false'}]}),/KDV dahil/);
 });

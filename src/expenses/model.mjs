@@ -10,13 +10,21 @@ export function cents(value){
   const n=Math.round(Number(s)*100);return Number.isSafeInteger(n)&&n<=1e11?n:null;
 }
 export const amount=value=>Number.isSafeInteger(value)?(value/100).toFixed(2).replace('.',','):'';
+export function lineAmounts(line){
+  const value=line.gross,rate=line.vatRate,vatIncluded=line.vatIncluded!==false;
+  if(!Number.isSafeInteger(value)||value<0||!Number.isFinite(rate)||rate<0||rate>100)return {gross:null,net:null,vat:null,vatIncluded};
+  const net=vatIncluded?Math.round(value*100/(100+rate)):value;
+  const vat=vatIncluded?value-net:Math.round(value*rate/100);
+  return {gross:net+vat,net,vat,vatIncluded};
+}
 export function splitFlight(receipt,rate){
   if(receipt.lines?.some(l=>l.category!=='flight'))throw Error('Bilet ayrımı için bütün satırlar uçak bileti olmalı; diğer masraf satırlarını koruyarak ayrı belge kullan.');
   if(!Number.isFinite(rate)||rate<=0||rate>100)throw Error('Biletin KDV oranını doğrula.');
   if(!Number.isSafeInteger(receipt.total)||receipt.total<=0||!Number.isSafeInteger(receipt.vat)||receipt.vat<=0)throw Error('Biletin toplamını ve KDV tutarını doldur.');
   const net=Math.round(receipt.vat*100/rate),gross=net+receipt.vat,remainder=receipt.total-gross;
   if(remainder<0)throw Error('KDV tutarı ve oranı belge toplamıyla uyuşmuyor.');
-  return [{description:'Uçak bileti — KDV’li tutar',category:'flight',gross,vatRate:rate},...(remainder?[{description:'Uçak bileti — KDV’siz tutar',category:'flight',gross:remainder,vatRate:0}]:[])];
+  const prefix='FİŞ NO:'+receipt.number+' '+receipt.seller;
+  return [{description:prefix+' · Uçak bileti KDV’li tutar',category:'flight',gross:net,vatRate:rate,vatIncluded:false},...(remainder?[{description:prefix+' · Uçak bileti KDV’siz tutar',category:'flight',gross:remainder,vatRate:0,vatIncluded:false}]:[])];
 }
 export function validDate(value){return /^20\d{2}-\d{2}-\d{2}$/.test(value||'')&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;}
 export function guessCategory(text){
@@ -38,12 +46,12 @@ export function parseReceipt(rawText,confidence=null){
   for(const line of lines){
     if(/^(?:TOP|KDV|GENEL|NAK[İI]T|KRED[İI]|PARA|[ÖO]DENECEK)/i.test(line))continue;
     const rate=line.match(/%\s*(\d{1,2})(?!\d)/),gross=trailingMoney(line);
-    if(rate&&gross!==null&&/[A-ZÇĞİÖŞÜ]/i.test(line.slice(0,rate.index))){items.push({description:line.slice(0,rate.index).trim().slice(0,200),category:guessCategory(line)==='other'?guessCategory(text):guessCategory(line),gross,vatRate:Number(rate[1])});}
+    if(rate&&gross!==null&&/[A-ZÇĞİÖŞÜ]/i.test(line.slice(0,rate.index))){items.push({description:line.slice(0,rate.index).trim().slice(0,200),category:guessCategory(line)==='other'?guessCategory(text):guessCategory(line),gross,vatRate:Number(rate[1]),vatIncluded:true});}
   }
   if(dates.length>1)notes.push('Birden fazla tarih okundu; belge tarihini seç.');
   if(totals.length>1)notes.push('Birden fazla toplam okundu; belge toplamını kontrol et.');
   if(rates.length>1&&!items.length)notes.push('Birden fazla KDV oranı var; kalemleri ayrı satırlara böl.');
-  if(!items.length){items.push({description:'',category:guessCategory(text),gross:totals.length===1?totals[0]:null,vatRate:rates.length===1?rates[0]:null});notes.push('Ürün kalemleri ayrıştırılamadı; özet masraf satırını belgeyle karşılaştır.');}
+  if(!items.length){items.push({description:'',category:guessCategory(text),gross:totals.length===1?totals[0]:null,vatRate:rates.length===1?rates[0]:null,vatIncluded:true});notes.push('Ürün kalemleri ayrıştırılamadı; özet masraf satırını belgeyle karşılaştır.');}
   if(confidence!==null&&confidence<75)notes.push('Okuma güveni düşük; fotoğraf ve tüm alanları karşılaştır.');
   const seller=lines.find(l=>/[A-ZÇĞİÖŞÜ]/i.test(l)&&!/^\d|^(?:F[İI][ŞS]|TAR[İI]H|SAAT|VKN|TCKN|TOPLAM)/i.test(l))||'';
   const result={seller:seller.slice(0,200),taxId:vkns.length===1?vkns[0]:'',date:dates.length===1?dates[0]:'',number:nums.length===1?nums[0]:'',currency:/\b(?:USD|EUR|GBP)\b/.test(text)?(text.match(/\b(?:USD|EUR|GBP)\b/)||[])[0]:'TRY',total:totals.length===1?totals[0]:null,vat:taxes.length===1?taxes[0]:null,lines:items.slice(0,40),rawText:text,confidence,notes,reviewed:false};
@@ -58,8 +66,9 @@ export function parseReceipt(rawText,confidence=null){
     if(number)result.number=number;
     // Passenger TCKN is not the seller's tax identity.
     result.taxId=unique(lines.filter(l=>/v\.?\s*d\.?|vergi|vkn/.test(normalize(l))&&!/tckn|tax payer/.test(normalize(l))).map(l=>l.match(/\b(\d{3}\s+\d{3}\s+\d{4}|\d{10})\b/)?.[1]?.replace(/\s/g,'')))||'';
-    if(result.lines.length===1&&result.lines[0].vatRate===null)result.lines[0]={description:'Uçak bileti',category:'flight',gross:result.total,vatRate:null};
+    if(result.lines.length===1&&result.lines[0].vatRate===null)result.lines[0]={description:'Uçak bileti',category:'flight',gross:result.total,vatRate:null,vatIncluded:true};
   }
+  for(const line of result.lines){if(result.number&&result.seller)line.description=('FİŞ NO:'+result.number+' '+result.seller+(line.description?' · '+line.description:'')).slice(0,200);}
   return result;
 }
 export function issues(receipt){
@@ -77,9 +86,10 @@ export function issues(receipt){
     const prefix=(i+1)+'. satır: ';
     if(!line.description?.trim())out.push(prefix+'açıklama eksik.');
     if(!Object.hasOwn(categories,line.category))out.push(prefix+'kategori seçilmedi.');
-    if(!Number.isSafeInteger(line.gross)||line.gross<=0){out.push(prefix+'KDV dahil tutar eksik.');complete=false;}
+    if(!Number.isSafeInteger(line.gross)||line.gross<=0){out.push(prefix+'satır tutarı eksik.');complete=false;}
     if(!Number.isFinite(line.vatRate)||line.vatRate<0||line.vatRate>100){out.push(prefix+'KDV oranı eksik veya geçersiz.');complete=false;}
-    if(Number.isSafeInteger(line.gross)&&Number.isFinite(line.vatRate)){gross+=line.gross;vat+=line.gross-Math.round(line.gross*100/(100+line.vatRate));}
+    if(line.vatIncluded!==undefined&&typeof line.vatIncluded!=='boolean')out.push(prefix+'KDV dahil/hariç seçimi geçersiz.');
+    const calculated=lineAmounts(line);if(calculated.gross!==null){gross+=calculated.gross;vat+=calculated.vat;}
   }
   if(complete&&Number.isSafeInteger(receipt.total)&&Math.abs(gross-receipt.total)>2)out.push('Satır toplamları belge toplamıyla uyuşmuyor.');
   if(complete&&Number.isSafeInteger(receipt.vat)&&Math.abs(vat-receipt.vat)>2)out.push('Satırlardan hesaplanan KDV, belgedeki KDV ile uyuşmuyor.');
@@ -109,7 +119,7 @@ export function exportReadiness(receipts,profiles={},company=''){
   if(!active.length)reasons.push('Aktarılacak fiş yok.');
   for(const r of active){
     if(issues(r).length||!r.reviewed)reasons.push('Fişlerin kontrolünü tamamla.');
-    if((r.lines||[]).reduce((sum,l)=>sum+(l.gross||0),0)!==r.total)reasons.push('Satır toplamını belge toplamına eşitle.');
+    if((r.lines||[]).reduce((sum,l)=>sum+(lineAmounts(l).gross||0),0)!==r.total)reasons.push('Satır toplamını belge toplamına eşitle.');
     if(duplicates.has(r.id))reasons.push('Olası mükerrer fişleri kontrol et.');
     if(!Object.hasOwn(paymentCards,r.paymentCard||''))reasons.push('Her fiş için kredi kartını seç.');
     if(r.currency!=='TRY')reasons.push('Dövizli belgeler için aktarım henüz desteklenmiyor.');
@@ -130,14 +140,14 @@ export function buildPurchaseXML(receipts,profiles={},company=''){
   const tag=(k,v)=>'<'+k+'>'+esc(v)+'</'+k+'>',money=v=>(v/100).toFixed(2);
   return '<?xml version="1.0" encoding="UTF-8"?>\n<PURCHASE_INVOICES>'+receipts.filter(r=>!r.archived).map(r=>{
     const date=r.date.split('-').reverse().join('.'),card=paymentCards[r.paymentCard];
-    const taxes=r.lines.map(l=>l.gross-Math.round(l.gross*100/(100+l.vatRate)));
+    const taxes=r.lines.map(l=>lineAmounts(l).vat);
     const adjustment=r.vat-taxes.reduce((a,b)=>a+b,0),lastTaxed=r.lines.findLastIndex(l=>l.vatRate>0);
     if(adjustment&&lastTaxed<0)throw Error('KDV toplamını kontrol et.');
     if(lastTaxed>=0)taxes[lastTaxed]+=adjustment;
-    const rows=r.lines.map((l,i)=>{const p=categoryProfile(l.category,profiles,company),vat=taxes[i],net=l.gross-vat;
-      return '<TRANSACTION>'+tag('TYPE',4)+tag('MASTER_CODE',p.serviceCode)+(p.costCenter?tag('OHP_CODE1',p.costCenter):'')+tag('GL_CODE1',p.accountCode)+(vat?tag('GL_CODE2',p['vatCode'+l.vatRate]):'')+tag('QUANTITY',1)+tag('PRICE',money(l.category==='flight'?net:l.gross))+tag('TOTAL',money(l.category==='flight'?net:l.gross))+tag('DESCRIPTION','FİŞ NO:'+r.number+' '+r.seller+' · '+l.description)+tag('UNIT_CODE','ADET')+tag('UNIT_CONV1',1)+tag('UNIT_CONV2',1)+tag('VAT_INCLUDED',l.category==='flight'?0:1)+tag('VAT_RATE',l.vatRate)+tag('VAT_AMOUNT',money(vat))+tag('VAT_BASE',money(net))+tag('TOTAL_NET',money(net))+tag('BILLED',1)+(p.kkegCode?tag('KKEG_GL_CODE',p.kkegCode)+tag('KKEG_OHP_CODE',p.costCenter):'')+(p.kkegVatCode?tag('KKEG_VAT_GL_CODE',p.kkegVatCode)+tag('KKEG_VAT_OHP_CODE',p.costCenter):'')+'</TRANSACTION>';
+    const rows=r.lines.map((l,i)=>{const p=categoryProfile(l.category,profiles,company),vat=taxes[i],net=lineAmounts(l).gross-vat,price=l.vatIncluded===false?net:lineAmounts(l).gross;
+      return '<TRANSACTION>'+tag('TYPE',4)+tag('MASTER_CODE',p.serviceCode)+(p.costCenter?tag('OHP_CODE1',p.costCenter):'')+tag('GL_CODE1',p.accountCode)+(vat?tag('GL_CODE2',p['vatCode'+l.vatRate]):'')+tag('QUANTITY',1)+tag('PRICE',money(price))+tag('TOTAL',money(price))+tag('DESCRIPTION',l.description)+tag('UNIT_CODE','ADET')+tag('UNIT_CONV1',1)+tag('UNIT_CONV2',1)+tag('VAT_INCLUDED',l.vatIncluded===false?0:1)+tag('VAT_RATE',l.vatRate)+tag('VAT_AMOUNT',money(vat))+tag('VAT_BASE',money(net))+tag('TOTAL_NET',money(net))+tag('BILLED',1)+(p.kkegCode?tag('KKEG_GL_CODE',p.kkegCode)+tag('KKEG_OHP_CODE',p.costCenter):'')+(p.kkegVatCode?tag('KKEG_VAT_GL_CODE',p.kkegVatCode)+tag('KKEG_VAT_OHP_CODE',p.costCenter):'')+'</TRANSACTION>';
     }).join('');
     const vat=r.vat,net=r.total-vat;
-    return '<INVOICE DBOP="INS">'+tag('TYPE',4)+tag('NUMBER','~')+tag('DATE',date)+tag('DOC_DATE',date)+tag('DOC_NUMBER',r.number)+tag('ARP_CODE',r.paymentCard)+tag('GL_CODE',card.glCode)+tag('TOTAL_DISCOUNTED',money(net))+tag('TOTAL_GROSS',money(net))+tag('TOTAL_VAT',money(vat))+tag('TOTAL_NET',money(r.total))+tag('TC_NET',money(r.total))+tag('CURRSEL_TOTALS',2)+'<TRANSACTIONS>'+rows+'</TRANSACTIONS><PAYMENT_LIST><PAYMENT>'+tag('DATE',date)+tag('MODULENR',4)+tag('SIGN',1)+tag('TRCODE',4)+tag('TOTAL',money(r.total))+tag('PROCDATE',date)+tag('PAY_NO',1)+'</PAYMENT></PAYMENT_LIST>'+tag('TOTAL_SERVICES',money(r.lines.reduce((sum,l,i)=>sum+l.gross-(l.category==='flight'?taxes[i]:0),0)))+tag('EBOOK_DOCTYPE',99)+'</INVOICE>';
+    return '<INVOICE DBOP="INS">'+tag('TYPE',4)+tag('NUMBER','~')+tag('DATE',date)+tag('DOC_DATE',date)+tag('DOC_NUMBER',r.number)+tag('ARP_CODE',r.paymentCard)+tag('GL_CODE',card.glCode)+tag('TOTAL_DISCOUNTED',money(net))+tag('TOTAL_GROSS',money(net))+tag('TOTAL_VAT',money(vat))+tag('TOTAL_NET',money(r.total))+tag('TC_NET',money(r.total))+tag('CURRSEL_TOTALS',2)+'<TRANSACTIONS>'+rows+'</TRANSACTIONS><PAYMENT_LIST><PAYMENT>'+tag('DATE',date)+tag('MODULENR',4)+tag('SIGN',1)+tag('TRCODE',4)+tag('TOTAL',money(r.total))+tag('PROCDATE',date)+tag('PAY_NO',1)+'</PAYMENT></PAYMENT_LIST>'+tag('TOTAL_SERVICES',money(r.lines.reduce((sum,l,i)=>sum+(l.vatIncluded===false?lineAmounts(l).net:lineAmounts(l).gross),0)))+tag('EBOOK_DOCTYPE',99)+'</INVOICE>';
   }).join('\n')+'</PURCHASE_INVOICES>';
 }

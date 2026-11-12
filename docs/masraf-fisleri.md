@@ -104,3 +104,13 @@ cihazları bu aşamada doğrulanmış sayılmaz; kullanıcı örnekleriyle kalib
 
 Resmî kaynak:
 https://www.gib.gov.tr/vergi-konulari/2_isletme_ve_girisimci/18_binek_otomobillerde_gider_ve_amortismanlarin_vergi_matrahindan_indirimi/18
+
+## Satırda KDV dahil/hariç ve açıklama düzeltme
+
+Her satırda KDV Dahil/Hariç seçimi saklanır ve Logo `VAT_INCLUDED` alanına yazılır.
+Eski fiş satırları Dahil açılır. Hariç seçiliyse girilen tutar KDV hariç fiyat,
+Dahil seçiliyse KDV dahil fiyattır. KDV, satır toplamı ve belge toplamı seçime göre
+yeniden karşılaştırılır. Örnek uçak bileti bölme işleminde iki satır da Hariç açılır.
+`Logo satır açıklaması` alanındaki metin kullanıcının düzenlediği biçimiyle XML
+`DESCRIPTION` alanına yazılır. OCR taslağında fiş numarası ve satıcı önerilir;
+sonraki kullanıcı düzenlemesine otomatik önek eklenmez.

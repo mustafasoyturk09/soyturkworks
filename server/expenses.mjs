@@ -15,7 +15,7 @@ function cleanReceipt(input){
   const out={};for(const [key,max] of Object.entries({seller:200,taxId:11,date:10,number:40,currency:3,rawText:18000,error:300,paymentCard:20}))out[key]=String(input[key]??'').slice(0,max);
   const money=v=>v===null||v===undefined||v===''?null:Number.isSafeInteger(v)&&v>=0&&v<=1e11?v:fail('Tutar geçersiz.');
   out.total=money(input.total);out.vat=money(input.vat);
-  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.')}));
+  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),descriptionReady:true,category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.'),vatIncluded:l.vatIncluded===undefined?true:typeof l.vatIncluded==='boolean'?l.vatIncluded:fail('KDV dahil/hariç seçimi geçersiz.')}));
   out.notes=Array.isArray(input.notes)?input.notes.slice(0,12).map(n=>String(n).slice(0,250)):[];
   out.confidence=typeof input.confidence==='number'&&Number.isFinite(input.confidence)?Math.max(0,Math.min(100,input.confidence)):null;
   out.reviewed=input.reviewed===true;out.archived=input.archived===true;out.ocrDone=input.ocrDone===true;
