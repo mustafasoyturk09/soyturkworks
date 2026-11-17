@@ -27,7 +27,7 @@
     },
     {
       "file": "app/home.css",
-      "sha256": "c16466d12fd26680b5953ee463ee5a89c13a4ef44f7e313132f8194246095ef5"
+      "sha256": "bf4b26b9da5e935799e22714bd59afd4e959baa71f2b3b5ed30e898f07848b80"
     },
     {
       "file": "app/home.js",
@@ -86,8 +86,8 @@
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
     {
-      "file": "app/portable-template-aff4c2c8efd8ac00.json",
-      "sha256": "aff4c2c8efd8ac0038827e09b30e61f5a6dc7c5839081e106a696b4fe902e63c"
+      "file": "app/portable-template-c825a312ad2f7d64.json",
+      "sha256": "c825a312ad2f7d643c233f1cc6786673a83998ed97801eb00f7c349a5d387459"
     },
     {
       "file": "app/runtime.js",
@@ -291,7 +291,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "b324c0fa07c957adbd2d71c163c0ce1651cc5db0e906ec99441866066513fef1"
+      "sha256": "b2e0361927869a36e57d9941cbd8876689f82b717398e27c6aecd265649fdff0"
     },
     {
       "file": "manifest.webmanifest",
