@@ -10,8 +10,9 @@
     <div class="home-greeting"><p>Hoş geldin,</p><h2>SoyturkWorks <span class="home-verified">✓</span></h2><small id="homeFilterSummary"></small></div>
     <div class="home-view-switch" role="group" aria-label="Ana sayfa görünümü"><button id="homeDetailed" aria-pressed="true">▥ &nbsp; Detaylı Görünüm</button><button id="homeCompact" aria-pressed="false">▤ &nbsp; Özet Görünüm</button></div>
     <div class="home-period"><button data-home-month="-1" aria-label="Önceki ay">‹</button><button id="homePeriodOpen"><span data-hicon="calendar"></span><span id="homePeriodLabel"></span></button><button data-home-month="1" aria-label="Sonraki ay">›</button></div>
-    <button type="button" id="homeDateOpen" class="home-clock" aria-label="Takvimi aç"><span data-hicon="calendar"></span><span class="home-clock-copy"><time id="homeToday"></time><strong id="homeTime"></strong></span></button>
+    <button type="button" id="homeDateOpen" class="home-clock" aria-label="Takvimi aç" aria-haspopup="dialog" aria-expanded="false" aria-controls="homeCalendarPopover"><span data-hicon="calendar"></span><span class="home-clock-copy"><time id="homeToday"></time><strong id="homeTime"></strong></span></button>
   </div>
+  <div id="homeCalendarPopover" class="home-calendar-popover" role="dialog" aria-label="Takvim" tabindex="-1" hidden></div>
   <div class="home-filterline"><button id="homeRangeClear" hidden>Ayın tamamı ×</button><button id="homeSources">Veri kaynakları ⓘ</button></div>
   <div id="homeStatus" role="status" hidden></div>
   <div id="homeMetrics" class="home-metrics"></div>
