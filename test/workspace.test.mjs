@@ -37,7 +37,8 @@ test('Portable and deployed app retain company guards and synchronized workspace
   const web=source.replace(/<script\b[^>]*id="fc153PortableTemplate"[^>]*>[\s\S]*?<\/script>/,'');
   assert(template.replace(/\r\n/g,'\n').includes(script.replace(/\r\n/g,'\n')));
   for(const app of [template,web]){
-    assert(!app.includes('id="page-home"'));
+    assert(app.includes('id="page-home"'));
+    assert(!app.includes('data-page="notlar"'));
     assert(app.includes('if(!window.SWWorkspace.allows(company))return;'));
     assert(app.includes('window.SWWorkspace.databaseName('));
     assert(!/(?<![\w.])localStorage\./.test(app.replace(/<script>\/\* Company context is fixed[\s\S]*?<\/script>/,'')));

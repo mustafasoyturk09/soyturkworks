@@ -75,11 +75,11 @@ function saveMap(){ try{ window.SWWorkspace.storage.setItem('kd_entegrator_map',
    NOT: Yalnızca AKTİF MODÜL KİMLİĞİ (örn. "yevmiye") sessionStorage'da
    tutulur — bu sekmeye/pencereye özeldir, sekme kapanınca silinir ve kalıcı
    iş verisi (yüklenen PDF/XML, kartlar, tutarlar) İÇERMEZ. */
-const FC_KNOWN_PAGES = ['efatura','satis','satis-kesme','yevmiye','mutabakat','notlar'];
+const FC_KNOWN_PAGES = ['home','efatura','satis','satis-kesme','yevmiye','mutabakat'];
 const FC_ACTIVE_PAGE_KEY = 'fc_active_page';
 
 function showPage(pageId){
-  if(FC_KNOWN_PAGES.indexOf(pageId) === -1) pageId = 'efatura';
+  if(FC_KNOWN_PAGES.indexOf(pageId) === -1) pageId = 'home';
   if(pageId === 'satis-kesme' && window.SWWorkspace?.companyId !== 'PUSULA') pageId = 'efatura';
   document.body.classList.toggle('sw-issue-active', pageId === 'satis-kesme');
   document.querySelectorAll('.nav-item[data-page]').forEach(n=>{
@@ -158,8 +158,8 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item=>{
 // showPage('home') zaten güvenli varsayılana döner — hiçbir zaman tüm
 // ".page" elemanları görünmez kalmaz.
 (function fcRestoreActivePage(){
-  var saved = 'efatura';
-  try{ saved = window.SWWorkspace.session.getItem(FC_ACTIVE_PAGE_KEY) || 'efatura'; }catch(e){ saved = 'efatura'; }
+  var saved = 'home';
+  try{ saved = window.SWWorkspace.session.getItem(FC_ACTIVE_PAGE_KEY) || 'home'; }catch(e){ saved = 'home'; }
   showPage(saved);
 })();
 

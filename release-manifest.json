@@ -22,6 +22,22 @@
       "sha256": "2bbd70e4e33d639bcbdbfcce893878a4801c1bb1b4bf9f0cd0c893a3529cabe6"
     },
     {
+      "file": "app/home-model.js",
+      "sha256": "6f3b8d5157a50ee8e893f08ff0e04a12a5bf3d8abcac4f71064ac4a65c31d14d"
+    },
+    {
+      "file": "app/home.css",
+      "sha256": "ec10054f315d8156a81d6ef048ec318d243a0cb3f35a970818843aa0f62d1ad3"
+    },
+    {
+      "file": "app/home.js",
+      "sha256": "4b66cbff83672bfeb6ea955bfeec98984886533f866107ba309a1fc068625f2f"
+    },
+    {
+      "file": "app/inline-script-096c3dd5f0fe4e7a.js",
+      "sha256": "096c3dd5f0fe4e7aa3cd438cff0531e10f756f523caf3de538b8a04eefe1a9b2"
+    },
+    {
       "file": "app/inline-script-2da854a6ddba829c.js",
       "sha256": "2da854a6ddba829ce31aafb22a395be87b5caaf870df15179c505f8d16f1e595"
     },
@@ -34,16 +50,12 @@
       "sha256": "b27fe8453274c0101374179909ef2c310dfb638dbd01e23c2ea3c1e059c51d2a"
     },
     {
-      "file": "app/inline-script-de4a7661b2d15539.js",
-      "sha256": "de4a7661b2d1553918b5fe70b2c39aad939857b61a201a9b176fa48cea03c018"
-    },
-    {
       "file": "app/inline-script-ec6a24b65ddf64fa.js",
       "sha256": "ec6a24b65ddf64fa8a3de868b7cec2b3bcb90e701ee32b3c1d3b56b2e8eacf99"
     },
     {
-      "file": "app/inline-script-f987827d975128bd.js",
-      "sha256": "f987827d975128bd856ba1fc3a092ab7c5ecaec192517b05163f79e4decc248d"
+      "file": "app/inline-script-f22a161f40bc677a.js",
+      "sha256": "f22a161f40bc677a926b7efecf627f3bb62d5144f7f0dc090050bac11293acc0"
     },
     {
       "file": "app/inline-style-5b1ac1266f60f414.css",
@@ -63,7 +75,7 @@
     },
     {
       "file": "app/mobile.css",
-      "sha256": "da36292b4a07ec0c9a320ca43652b6679ab0ed3f6e5a496057d96440cb8644d2"
+      "sha256": "4a99dfb73320867fa3f949b55666d3eadcfdfb0de92355622e2bebefb43f0a45"
     },
     {
       "file": "app/mobile.js",
@@ -74,8 +86,8 @@
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
     {
-      "file": "app/portable-template-1ca551a51871f5db.json",
-      "sha256": "1ca551a51871f5dbd13b90b2be70dec5f1c4ba992978272eddd11237c34b2559"
+      "file": "app/portable-template-cbb2acfd4daf103d.json",
+      "sha256": "cbb2acfd4daf103d0e725f0a5e63b0c1432df333bd910881f7d82fb23b0bb79b"
     },
     {
       "file": "app/runtime.js",
@@ -128,6 +140,14 @@
     {
       "file": "assets/brand/sw-logo.png",
       "sha256": "131a09e9c447d567b058c4ef0fd7cc9bade523f76a1fdcef20337c2c492b83c0"
+    },
+    {
+      "file": "assets/home/erciyes-day.jpg",
+      "sha256": "d054f7b652779a13664f40b608bc69c0f13a7e56a6a740e97daec75f4d36aa25"
+    },
+    {
+      "file": "assets/home/erciyes-night.jpg",
+      "sha256": "d692d4bd1390b8f6f3085b215c2f1c47d96af0d9dfa539704c74c8057884efb1"
     },
     {
       "file": "assets/vendor/LICENSE-exceljs.txt",
@@ -279,7 +299,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "1e6b7cf3b0182d7ccff28a746cc73bbb7b94d623348d1dc8c89f06c14776c28e"
+      "sha256": "f8740d44011a95d9ffa39b2a6d643de4e1c309d4cc7999a09a04637158127294"
     },
     {
       "file": "manifest.webmanifest",
@@ -287,7 +307,7 @@
     },
     {
       "file": "portal/index.html",
-      "sha256": "bbe2cff52d535bc629f7a0b6c1a10d10463988eaf29b660be17e991448c89b78"
+      "sha256": "f4069f0b26b340a69179126d1d1f7f9e979f89070aae98f2304bbe5cf062d38c"
     },
     {
       "file": "portal/passkeys.js",
