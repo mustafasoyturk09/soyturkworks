@@ -24,7 +24,7 @@ function integrate(html,homeMarkup){
   return html;
 }
 source=integrate(source,markup);
-if(!source.includes('href="./app/home.css"'))source=source.replace('<link rel="stylesheet" href="./app/mobile.css',()=>'<link rel="stylesheet" href="./app/home.css">\n<link rel="stylesheet" href="./app/mobile.css');
+if(!/href="\.\/app\/home\.css(?:\?[^\"]*)?"/.test(source))source=source.replace('<link rel="stylesheet" href="./app/mobile.css',()=>'<link rel="stylesheet" href="./app/home.css">\n<link rel="stylesheet" href="./app/mobile.css');
 if(!source.includes('src="./app/home.js"'))source=source.replace('</head>','<script defer src="./app/home-model.js"></script>\n<script defer src="./app/home.js"></script>\n</head>');
 // Offline exports have no external home dependencies, including the panoramas.
 let offlineMarkup=markup;
