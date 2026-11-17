@@ -1272,8 +1272,9 @@ const y107Tools=document.createElement('div');y107Tools.innerHTML='<button type=
 y106Bar.lastElementChild.prepend(...y107Tools.children);
 let y107Mode='select',y107Drag=null;
 function y107SetMode(mode){y107Mode=mode;y107Sheet.classList.toggle('y107-hand',mode==='hand');for(const [id,m] of [['y107Select','select'],['y107Hand','hand']])document.getElementById(id).setAttribute('aria-pressed',String(mode===m));if(mode==='hand')window.getSelection()?.removeAllRanges();}
-document.getElementById('y107Select').style.display='none';document.getElementById('y107Hand').onclick=()=>y107SetMode('hand');y107SetMode('hand');
+document.getElementById('y107Select').onclick=()=>y107SetMode('select');document.getElementById('y107Hand').onclick=()=>y107SetMode('hand');y107SetMode('select');
 function y107Sync(){y107Sheet.style.width=y107Img.style.width;y107Sheet.style.height=y107Img.style.height;if(y106Zoom.w)y107Text.style.transform='scale('+(parseFloat(y107Img.style.width)/y106Zoom.w)+')';}
+async function y107LoadText(page,token){const content=await page.getTextContent();if(token!==yPreviewToken)return;const layer=document.createElement('div');layer.className='y107-text-layer';const vp=page.getViewport({scale:1});layer.style.setProperty('--scale-factor','1');await new pdfjsLib.TextLayer({textContentSource:content,container:layer,viewport:vp}).render();if(token!==yPreviewToken)return;y107Text.replaceChildren(layer);y107Text.style.width=vp.width+'px';y107Text.style.height=vp.height+'px';y107Sync();}
 const y107Scroll=document.getElementById('yLightboxScroll');
 y107Scroll.addEventListener('pointerdown',e=>{if(y107Mode!=='hand'||e.button!==0)return;e.preventDefault();y107Drag={id:e.pointerId,x:e.clientX,y:e.clientY,l:y107Scroll.scrollLeft,t:y107Scroll.scrollTop};y107Scroll.setPointerCapture(e.pointerId);y107Sheet.classList.add('y107-dragging');});
 y107Scroll.addEventListener('pointermove',e=>{if(!y107Drag)return;y107Scroll.scrollLeft=y107Drag.l+y107Drag.x-e.clientX;y107Scroll.scrollTop=y107Drag.t+y107Drag.y-e.clientY;});
@@ -1315,7 +1316,7 @@ function closeYLightbox(){
 }
 async function openYPreview(entry){
   const myToken = ++yPreviewToken;
-  y106ZoomReset(entry.name);y107Text.replaceChildren();y107Sheet.style.width="0px";y107Sheet.style.height="0px";y107SetMode("hand");
+  y106ZoomReset(entry.name);y107Text.replaceChildren();y107Sheet.style.width="0px";y107Sheet.style.height="0px";y107SetMode("select");
   // v70: hata mesajı artık Logo kartındaki (lxRenderCard) slotta gösterilir.
   const errEl = document.getElementById('lxpreverr-'+entry.id);
   if(errEl){ errEl.style.display = 'none'; errEl.textContent = ''; }
@@ -1342,6 +1343,8 @@ async function openYPreview(entry){
     if(myToken !== yPreviewToken) return; // bu sırada kullanıcı başka bir fatura açtı — bu sonucu yok say
     const dataUrl = canvas.toDataURL('image/png');
     if(lbImg){ lbImg.src = dataUrl; lbImg.style.display = 'block'; y106ZoomSize(baseViewport.width,baseViewport.height); }
+    try{await y107LoadText(page,myToken);}catch(err){if(myToken===yPreviewToken)console.warn('PDF metin katmanı oluşturulamadı:',err);}
+    if(myToken!==yPreviewToken)return;
     if(loadingEl) loadingEl.style.display = 'none';
   }catch(err){
     if(myToken !== yPreviewToken) return;
