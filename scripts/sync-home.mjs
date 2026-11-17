@@ -17,7 +17,8 @@ function integrate(html,homeMarkup){
   html=html.replace(/var saved = 'efatura';\s*try\{ saved = window.SWWorkspace.session.getItem\(FC_ACTIVE_PAGE_KEY\) \|\| 'efatura'; \}catch\(e\)\{ saved = 'efatura'; \}/,"var saved = 'home';\n  try{ saved = window.SWWorkspace.session.getItem(FC_ACTIVE_PAGE_KEY) || 'home'; }catch(e){ saved = 'home'; }");
   html=html.replace(/<div class="page[^\"]*" id="page-notlar"[^>]*>/,'<div id="page-notlar" hidden aria-hidden="true">');
   html=html.replace("$('ntSaveState').textContent='✓ Kaydedildi';nt144ScheduleSync();return true;","$('ntSaveState').textContent='✓ Kaydedildi';nt144ScheduleSync();document.dispatchEvent(new Event('sw:notes-changed'));return true;");
-  html=html.replace('function nt127Extras(n){const x={angle:',"function nt127Extras(n){const x={notebookId:typeof n.notebookId==='string'?n.notebookId:'',taskDay:/^\\d{4}-\\d{2}-\\d{2}$/.test(n.taskDay||'')?n.taskDay:'',angle:");
+  html=html.replace('function nt127Extras(n){const x={angle:',"function nt127Extras(n){const x={notebookId:typeof n.notebookId==='string'?n.notebookId:'',taskDay:/^\\d{4}-\\d{2}-\\d{2}$/.test(n.taskDay||'')?n.taskDay:'',taskOrder:Number.isFinite(n.taskOrder)?n.taskOrder:null,angle:");
+  html=html.replace("taskDay:/^\\d{4}-\\d{2}-\\d{2}$/.test(n.taskDay||'')?n.taskDay:'',angle:","taskDay:/^\\d{4}-\\d{2}-\\d{2}$/.test(n.taskDay||'')?n.taskDay:'',taskOrder:Number.isFinite(n.taskOrder)?n.taskOrder:null,angle:");
   if(html.includes('// SW_HOME_NOTES_START'))html=html.replace(/\/\/ SW_HOME_NOTES_START[\s\S]*?\/\/ SW_HOME_NOTES_END/,()=>'// SW_HOME_NOTES_START\n'+bridge+'\n// SW_HOME_NOTES_END');
   else html=html.replace(/\s+setInterval\(reminders,1000\);document.addEventListener/,()=> '\n// SW_HOME_NOTES_START\n'+bridge+'\n// SW_HOME_NOTES_END\n setInterval(reminders,1000);document.addEventListener');
   return html;
@@ -35,5 +36,5 @@ const scripts='<script id="sw-home-code">'+await read('src/home-model.js')+'\n'+
 template=template.includes('id="sw-home-code"')?template.replace(/<script id="sw-home-code">[\s\S]*?<\/script>/,()=>scripts):template.replace('</body>',()=>scripts+'</body>');
 const serialized=JSON.stringify(template).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
 source=source.replace('<!--SW_HOME_PORTABLE_TEMPLATE-->',()=>match[1]+serialized+match[3]);
-await writeFile(new URL('../src/app.html',import.meta.url),source);
+await writeFile(new URL('../src/app.html',import.meta.url),source.replace(/\r\n/g,'\n'));
 console.log('Ana sayfa ve taşınabilir sürüm eşitlendi.');

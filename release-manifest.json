@@ -27,11 +27,11 @@
     },
     {
       "file": "app/home.css",
-      "sha256": "69d46bebcea3bc54066f3c8152f7b88cfdadca319511676c30b41c9a1e1c100e"
+      "sha256": "c16466d12fd26680b5953ee463ee5a89c13a4ef44f7e313132f8194246095ef5"
     },
     {
       "file": "app/home.js",
-      "sha256": "4b66cbff83672bfeb6ea955bfeec98984886533f866107ba309a1fc068625f2f"
+      "sha256": "4411b97728e6ab8a95770ae56e69b5a7ca8461d602c66a095d3b2c06ea3d4649"
     },
     {
       "file": "app/inline-script-096c3dd5f0fe4e7a.js",
@@ -46,16 +46,16 @@
       "sha256": "54e63816b09f912124b455f3855bbd36d75246ce31e00847b5834033ec9b0809"
     },
     {
+      "file": "app/inline-script-a3f91ae2bd19374f.js",
+      "sha256": "a3f91ae2bd19374f4e65224d2431a36f31956622659e37022e991934047ba4f0"
+    },
+    {
       "file": "app/inline-script-b27fe8453274c010.js",
       "sha256": "b27fe8453274c0101374179909ef2c310dfb638dbd01e23c2ea3c1e059c51d2a"
     },
     {
       "file": "app/inline-script-ec6a24b65ddf64fa.js",
       "sha256": "ec6a24b65ddf64fa8a3de868b7cec2b3bcb90e701ee32b3c1d3b56b2e8eacf99"
-    },
-    {
-      "file": "app/inline-script-f22a161f40bc677a.js",
-      "sha256": "f22a161f40bc677a926b7efecf627f3bb62d5144f7f0dc090050bac11293acc0"
     },
     {
       "file": "app/inline-style-5b1ac1266f60f414.css",
@@ -86,8 +86,8 @@
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
     {
-      "file": "app/portable-template-85b999b24acf7766.json",
-      "sha256": "85b999b24acf7766a3ee76f8c6e275322f2fec0276bb14fa1078bbf6fad8890a"
+      "file": "app/portable-template-e6027811e8c0bbc1.json",
+      "sha256": "e6027811e8c0bbc1317ad266bc4275dd3960ea381c2599553755bdd0328c2f10"
     },
     {
       "file": "app/runtime.js",
@@ -291,7 +291,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "1eea9ebad085d943cb6bd9f3f9da1181cb3a131b78368e528f9addbebaf96dd4"
+      "sha256": "34eb9f6f3307c76ad50afd98c79ff0d603e9dbf04a2e7892cce3f30250891d8b"
     },
     {
       "file": "manifest.webmanifest",
@@ -299,7 +299,7 @@
     },
     {
       "file": "portal/index.html",
-      "sha256": "f4069f0b26b340a69179126d1d1f7f9e979f89070aae98f2304bbe5cf062d38c"
+      "sha256": "6ad48e5b93a4f863b3faa84aaf9750e237e34dc630981ea80ac180c059109a85"
     },
     {
       "file": "portal/passkeys.js",
