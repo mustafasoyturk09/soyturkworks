@@ -294,3 +294,51 @@ body.fc-home-full .sw-workspace-card{margin:4px 0 15px;min-height:64px}
 body.fc-home-full[data-home-theme="light"]{--home-border:#9eb2c8}
 body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-panel{border-color:#a6b9cc!important}
 body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-metric{border-color:color-mix(in srgb,var(--accent,#168ce0) 45%,#879eb5)!important}
+
+body.fc-home-full>aside .home-nav-secondary{display:flex;flex-direction:column;gap:2px;margin:12px 4px 0;padding-top:10px;border-top:1px solid var(--home-border)}
+body.fc-home-full>aside .home-nav-secondary .nav-item{width:100%;min-height:36px;padding:5px 9px;font-size:13px;text-align:left;cursor:pointer}
+body.fc-home-full>aside .home-nav-secondary .nav-item svg{width:20px;height:20px;flex:0 0 20px;color:var(--home-text);filter:none}
+#page-home.home-v2 .home-clock{border:0;background:transparent;color:var(--home-text);font:inherit;text-align:left;padding:0;cursor:pointer}
+#page-home.home-v2 .home-clock:hover,#page-home.home-v2 #homePeriodOpen:hover{color:var(--home-blue)}
+#page-home.home-v2 .home-weather{display:grid;grid-template-columns:auto 1fr 38px;grid-template-rows:16px 26px 12px;align-items:center;gap:1px 4px;min-width:0;padding:5px 8px;border:1px solid var(--home-border);border-radius:11px;background:var(--home-panel);color:var(--home-text)}
+#page-home.home-v2 #homeWeatherCity{grid-column:1/3;grid-row:1;text-align:left;font-size:10px;font-weight:700;color:var(--home-text);padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-home.home-v2 #homeWeatherIcon{grid-column:3;grid-row:1/3;font-size:31px;line-height:1;text-align:center}
+#page-home.home-v2 #homeWeatherTemp{grid-column:1;grid-row:2;font-size:24px;line-height:1;color:var(--home-text)}
+#page-home.home-v2 #homeWeatherText{grid-column:2;grid-row:2;font-size:10px;line-height:1.1;color:var(--home-muted)}
+#page-home.home-v2 #homeWeatherCredit{grid-column:1/4;grid-row:3;font-size:8px;text-align:right;color:var(--home-muted)}
+#page-home.home-v2 .home-blank-state{min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;color:var(--home-muted)}
+#page-home.home-v2 .home-blank-state>span{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--home-border);border-radius:11px;color:var(--home-blue);background:var(--home-row)}
+#page-home.home-v2 .home-blank-state svg{width:21px!important;height:21px!important}
+#page-home.home-v2 .home-blank-state strong{font-size:12px;color:var(--home-text)}
+#page-home.home-v2 .home-blank-state small{font-size:10px;max-width:240px;line-height:1.3;color:var(--home-muted)}
+
+@media(min-width:1100px){
+  body.fc-home-full{height:100dvh;min-height:0;overflow:hidden}
+  body.fc-home-full>aside{height:100dvh;min-height:0;overflow:hidden;padding-bottom:8px}
+  body.fc-home-full>aside .brand{min-height:66px}
+  body.fc-home-full .sw-workspace-card{min-height:58px;margin:2px 0 10px}
+  body.fc-home-full>aside .nav-item{min-height:35px}
+  body.fc-home-full>aside .sidebar-foot{margin-top:12px}
+  body.fc-home-full>main{height:100dvh;min-height:0;box-sizing:border-box;overflow:hidden;padding-bottom:8px}
+  body.fc-home-full #page-home.home-v2{display:flex!important;flex-direction:column;height:100%;min-height:0}
+  #page-home.home-v2 .sw-home-topbar{height:53px;flex:0 0 53px}
+  #page-home.home-v2 .home-welcome{flex:0 0 69px;grid-template-columns:minmax(175px,1.1fr) minmax(235px,1.35fr) minmax(190px,.95fr) minmax(145px,.75fr) minmax(155px,.8fr);gap:8px;padding:5px 4px}
+  #page-home.home-v2 .home-period,#page-home.home-v2 .home-clock{grid-column:auto;grid-row:auto}
+  #page-home.home-v2 .home-greeting h2{font-size:22px}
+  #page-home.home-v2 .home-view-switch button{font-size:11px;padding:7px 4px}
+  #page-home.home-v2 .home-period button{min-height:34px}
+  #page-home.home-v2 .home-period #homePeriodOpen{min-width:130px;font-size:13px}
+  #page-home.home-v2 .home-clock>span{padding:5px}
+  #page-home.home-v2 .home-clock svg{width:23px!important;height:23px!important}
+  #page-home.home-v2 .home-clock strong{font-size:18px}
+  #page-home.home-v2 .home-filterline{flex:0 0 17px;margin:0 4px 4px}
+  #page-home.home-v2 .home-metrics{flex:0 0 70px;grid-template-columns:repeat(6,minmax(0,1fr));margin-bottom:7px;gap:8px}
+  #page-home.home-v2 .home-metric{min-height:70px;padding:7px 9px}
+  #page-home.home-v2 .home-metric-icon svg{width:25px!important;height:25px!important}
+  #page-home.home-v2 .home-board,#page-home.home-v2[data-view="summary"] .home-board{flex:1;min-height:0;grid-template-columns:1.08fr 1fr 1fr;grid-template-rows:minmax(0,1.06fr) minmax(0,1fr) minmax(0,.85fr);grid-template-areas:'trend distribution quick' 'summary module tasks' 'recent reminders pinned';gap:8px}
+  #page-home.home-v2 .home-trend,#page-home.home-v2 .home-quick{min-height:0}
+  #page-home.home-v2 .home-panel{min-height:0;padding:8px 10px;overflow:auto}
+  #page-home.home-v2 .home-panel>header{margin-bottom:5px;padding-bottom:4px}
+  #page-home.home-v2 .home-source-caption{flex:0 0 12px;margin:3px 4px 0;font-size:9px}
+  #page-home.home-v2[data-view="summary"] .home-board{grid-template-areas:'summary module quick' 'tasks pinned pinned' 'reminders reminders reminders'}
+}

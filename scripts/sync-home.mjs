@@ -5,12 +5,16 @@ const match=source.match(/(<script\b[^>]*id="fc153PortableTemplate"[^>]*>)([\s\S
 if(!match)throw Error('Taşınabilir şablon bulunamadı.');
 let template=JSON.parse(match[2]);
 source=source.replace(match[0],'<!--SW_HOME_PORTABLE_TEMPLATE-->');
-const markup=await read('src/home.html'),bridge=await read('src/home-notes-bridge.js');
+const markup=await read('src/home.html'),bridge=await read('src/home-notes-bridge.js'),sidebar=await read('src/home-sidebar.html');
 const icon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10"/></svg>';
 function integrate(html,homeMarkup){
   if(html.includes('<!--SW_HOME_START-->'))html=html.replace(/<!--SW_HOME_START-->[\s\S]*?<!--SW_HOME_END-->/,()=>'<!--SW_HOME_START-->'+homeMarkup+'<!--SW_HOME_END-->');
   else html=html.replace('<main>',()=>'<main>\n<!--SW_HOME_START-->'+homeMarkup+'<!--SW_HOME_END-->');
   html=html.replace(/\s*<div class="nav-item" data-page="notlar">[^\n]*\n/,'\n');
+  html=html.replace(/\s*<div class="nav-item disabled">[^\n]*\n/,'\n');
+  const sidebarMarkup='<!--SW_HOME_SIDEBAR_START-->'+sidebar+'<!--SW_HOME_SIDEBAR_END-->';
+  if(html.includes('<!--SW_HOME_SIDEBAR_START-->'))html=html.replace(/<!--SW_HOME_SIDEBAR_START-->[\s\S]*?<!--SW_HOME_SIDEBAR_END-->/,()=>sidebarMarkup);
+  else html=html.replace('</nav>',()=>sidebarMarkup+'</nav>');
   if(!html.includes('class="nav-item" data-page="home"'))html=html.replace('<div class="nav-label">Modüller</div>',()=>'<div class="nav-label">Modüller</div>\n<div class="nav-item" data-page="home">'+icon+' Ana Sayfa</div>');
   html=html.replace(/const FC_KNOWN_PAGES = \[[^;]+;/,"const FC_KNOWN_PAGES = ['home','efatura','satis','satis-kesme','yevmiye','mutabakat'];");
   html=html.replace("if(FC_KNOWN_PAGES.indexOf(pageId) === -1) pageId = 'efatura';","if(FC_KNOWN_PAGES.indexOf(pageId) === -1) pageId = 'home';");

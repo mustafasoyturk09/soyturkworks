@@ -10,7 +10,8 @@
     <div class="home-greeting"><p>Hoş geldin,</p><h2>SoyturkWorks <span class="home-verified">✓</span></h2><small id="homeFilterSummary"></small></div>
     <div class="home-view-switch" role="group" aria-label="Ana sayfa görünümü"><button id="homeDetailed" aria-pressed="true">▥ &nbsp; Detaylı Görünüm</button><button id="homeCompact" aria-pressed="false">▤ &nbsp; Özet Görünüm</button></div>
     <div class="home-period"><button data-home-month="-1" aria-label="Önceki ay">‹</button><button id="homePeriodOpen"><span data-hicon="calendar"></span><span id="homePeriodLabel"></span></button><button data-home-month="1" aria-label="Sonraki ay">›</button></div>
-    <div class="home-clock"><span data-hicon="calendar"></span><div><time id="homeToday"></time><strong id="homeTime"></strong></div></div>
+    <button type="button" id="homeDateOpen" class="home-clock" aria-label="Tarih aralığını seç"><span data-hicon="calendar"></span><span class="home-clock-copy"><time id="homeToday"></time><strong id="homeTime"></strong></span></button>
+    <section class="home-weather" aria-label="Günlük hava durumu"><button type="button" id="homeWeatherCity" aria-label="Hava durumu konumunu seç">Kayseri ▾</button><span id="homeWeatherIcon" aria-hidden="true">☀️</span><strong id="homeWeatherTemp">--°</strong><small id="homeWeatherText">Hava durumu</small><a href="https://docs.api.met.no/doc/License" target="_blank" rel="noopener noreferrer" id="homeWeatherCredit" title="MET Norway verisi · CC BY 4.0 · günlük kart için özetlendi">MET Norway · CC BY</a></section>
   </div>
   <div class="home-filterline"><button id="homeRangeClear" hidden>Ayın tamamı ×</button><button id="homeSources">Veri kaynakları ⓘ</button></div>
   <div id="homeStatus" role="status" hidden></div>

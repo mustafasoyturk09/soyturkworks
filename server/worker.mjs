@@ -7,6 +7,7 @@ import {InvoiceCycles} from './invoice-cycles.mjs';
 import {automationHealth} from './automation-health.mjs';
 import {ExpenseStore} from './expenses.mjs';
 import {statusNotifications} from './notification-format.mjs';
+import {WEATHER_CITIES,summarizeWeather,weatherCacheSeconds} from './weather.mjs';
 import {pushAPI,enqueueNotification,flushNotifications,notificationHistory,clearNotificationHistory} from './push.mjs';
 import {generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse} from '@simplewebauthn/server';
 
@@ -26,6 +27,31 @@ const cookie = (value, secure, maxAge=14*86400) => `${secure?'__Host-':''}sw_ses
 const local = env => env.LOCAL_MAILBOX==='1' && /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(env.APP_ORIGIN||'');
 const sessionValue = request => (request.headers.get('Cookie')||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(new URL(request.url).protocol==='https:'?'__Host-sw_session=':'sw_session='))?.split('=')[1] || '';
 const fail = (message, status=400) => {throw Object.assign(new Error(message), {status});};
+
+async function weatherResponse(request,env,store,origin){
+  if(request.method!=='GET')return json({error:'Yöntem desteklenmiyor.'},405);
+  const auth=await (await store.fetch(new Request(new URL('/api/session',origin),{headers:request.headers}))).json();
+  if(!auth.account)return json({error:'Oturum açmanız gerekiyor.'},401);
+  if(env.WEATHER_TERMS_ACCEPTED!=='1')return json({error:'Hava durumu kaynağı henüz etkin değil.'},503);
+  const city=new URL(request.url).searchParams.get('city')||'Kayseri';
+  if(!Object.hasOwn(WEATHER_CITIES,city))return json({error:'Şehir bulunamadı.'},400);
+  const cache=globalThis.caches?.default,cacheKey=new Request(new URL('/__weather-cache/'+encodeURIComponent(city),origin));
+  const cached=await cache?.match(cacheKey),stored=cached?await cached.json():null;
+  if(stored?.weather&&Date.now()<stored.expires)return json(stored.weather);
+  const point=WEATHER_CITIES[city],url=new URL('https://api.met.no/weatherapi/locationforecast/2.0/compact');
+  url.searchParams.set('lat',String(point.lat));url.searchParams.set('lon',String(point.lon));
+  const headers={'User-Agent':'SoyturkWorks/1.0 github.com/mustafasoyturk09/soyturkworks','Accept':'application/json'};
+  if(stored?.lastModified)headers['If-Modified-Since']=stored.lastModified;
+  const upstream=await fetch(url,{headers,signal:AbortSignal.timeout(8000)});
+  if(!upstream.ok&&upstream.status!==304)return json({error:'Hava durumu verisi şu anda alınamadı.'},502);
+  const weather=upstream.status===304?stored?.weather:summarizeWeather(await upstream.json(),city);
+  if(!weather)return json({error:'Hava durumu verisi şu anda alınamadı.'},502);
+  const expires=Date.now()+weatherCacheSeconds(upstream.headers.get('Expires'))*1000;
+  const lastModified=upstream.headers.get('Last-Modified')||stored?.lastModified||null;
+  const entry=new Response(JSON.stringify({weather,expires,lastModified}),{headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':`public, max-age=${Math.max(86400,Math.ceil((expires-Date.now())/1000)+3600)}`}});
+  await cache?.put(cacheKey,entry);
+  return json(weather);
+}
 
 async function passwordHash(password, salt=randomBytes(16).toString('hex')) {
   const derived=await derive(password, salt, 32, {N:32768,r:8,p:3,maxmem:64*1024*1024});
@@ -64,6 +90,8 @@ export default {
         const target=env.AUTH.get(env.AUTH.idFromName('expense-receipts-v1:'+route[1]));
         const internal=new URL('https://expense-store.internal/'+route[2]+(route[3]?'/'+route[3]:''));internal.searchParams.set('company',route[1]);
         response=await target.fetch(new Request(internal,{method:request.method,headers:request.headers,body:request.method==='POST'?request.body:undefined}));
+      } else if(url.pathname==='/api/weather') {
+        response=await weatherResponse(request,env,store,origin);
       } else if(url.pathname.startsWith('/api/')) {
         if(request.method!=='GET' && (request.headers.get('Origin')!==origin || request.headers.get('Content-Type')?.split(';')[0]!=='application/json')) return json({error:'Geçersiz istek kaynağı.'},403);
         if(Number(request.headers.get('Content-Length')||0)>32768) return json({error:'İstek çok büyük.'},413);
