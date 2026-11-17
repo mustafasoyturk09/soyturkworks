@@ -290,19 +290,7 @@ body.fc-home-full .sw-workspace-card{margin:4px 0 15px;min-height:64px}
 @media(max-width:650px){#page-home.home-v2 .sw-home-topbar{gap:7px}#page-home.home-v2 .sw-home-topbar h1{font-size:20px}#page-home.home-v2 .home-welcome{grid-template-columns:1fr 1fr}#page-home.home-v2 .home-greeting{grid-column:1/-1}#page-home.home-v2 .home-view-switch{grid-column:1/-1}#page-home.home-v2 .home-period{grid-column:1/-1;grid-row:auto}#page-home.home-v2 .home-clock{grid-column:1/-1;grid-row:auto;justify-content:flex-start}#page-home.home-v2 .home-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#page-home.home-v2 .home-board,#page-home.home-v2[data-view="summary"] .home-board{grid-template-columns:minmax(0,1fr);grid-template-areas:'trend' 'distribution' 'tasks' 'summary' 'module' 'recent' 'reminders' 'pinned' 'quick'}#page-home.home-v2[data-view="summary"] .home-board{grid-template-areas:'tasks' 'summary' 'module' 'reminders' 'pinned' 'quick'}#page-home.home-v2 .home-metric{min-height:74px}#page-home.home-v2 .home-metric strong{font-size:18px}#page-home.home-v2 .home-donut-wrap{gap:14px}#page-home.home-v2 .home-donut{width:110px;height:110px;flex-basis:110px}}
 @media(max-height:500px) and (orientation:landscape){#page-home.home-v2 .home-board{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:'trend distribution' 'tasks pinned' 'summary module' 'recent reminders' 'quick quick'}#page-home.home-v2 .home-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-/* Clear surfaces and visible boundaries in the compact light dashboard. */
-body.fc-home-full[data-home-theme="light"]{--home-bg:#eef2f7;--home-panel:#fff;--home-border:#b8c7d9;--home-text:#15243b;--home-muted:#405570;--home-row:#f3f7fc;background:#eef2f7}
-body.fc-home-full[data-home-theme="light"]>main,
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2{background:#eef2f7!important}
-body.fc-home-full[data-home-theme="light"]>aside{background:#f8fafc!important;border-right:1px solid #b8c7d9!important}
-body.fc-home-full[data-home-theme="light"] .sw-workspace-card{background:#fff!important;border-color:#afc1d5!important;box-shadow:0 2px 6px #1b355118}
-body.fc-home-full[data-home-theme="light"]>aside .nav-item.active{background:#dcecff!important;border:1px solid #a7c8e9!important;box-shadow:inset 3px 0 #168ce0!important;color:#124878!important}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-metric.teal{--accent:#0aae9d}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-metric{background:color-mix(in srgb,var(--accent,#168ce0) 7%,#fff)!important;border:1px solid color-mix(in srgb,var(--accent,#168ce0) 48%,#b8c7d9)!important;box-shadow:0 2px 6px #1b35511a!important}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-panel{background:#fff!important;border:1px solid #afc0d3!important;box-shadow:0 2px 7px #1b355119!important}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-panel>header{border-bottom-color:#c5d1de!important}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 :is(.home-pin-row,#homeQuickEditor,.home-reminder){background:#f3f7fc!important;border-color:#b7c9dc!important}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 :is(#homeSearchForm,.home-round,.home-view-switch,.home-period button,.home-clock>span,#homeTaskDay){background:#fff!important;border:1px solid #b2c4d7!important;box-shadow:0 1px 3px #1b355117!important}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-empty,
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-source-caption{color:#425975!important}
-body.fc-home-full[data-home-theme="light"] #page-home.home-v2 :is(.home-metric-label,.home-empty,.home-finance-row,.home-module-row,.home-task-row>button:nth-child(2),.home-pin-row span,.home-recent-row,.home-reminder span,#homeQuickEditor){font-size:12px}
+/* Light theme: retain the shared layout and colors, strengthen card outlines only. */
+body.fc-home-full[data-home-theme="light"]{--home-border:#9eb2c8}
+body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-panel{border-color:#a6b9cc!important}
+body.fc-home-full[data-home-theme="light"] #page-home.home-v2 .home-metric{border-color:color-mix(in srgb,var(--accent,#168ce0) 45%,#879eb5)!important}
