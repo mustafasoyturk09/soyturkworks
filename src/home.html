@@ -11,7 +11,6 @@
     <div class="home-view-switch" role="group" aria-label="Ana sayfa görünümü"><button id="homeDetailed" aria-pressed="true">▥ &nbsp; Detaylı Görünüm</button><button id="homeCompact" aria-pressed="false">▤ &nbsp; Özet Görünüm</button></div>
     <div class="home-period"><button data-home-month="-1" aria-label="Önceki ay">‹</button><button id="homePeriodOpen"><span data-hicon="calendar"></span><span id="homePeriodLabel"></span></button><button data-home-month="1" aria-label="Sonraki ay">›</button></div>
     <button type="button" id="homeDateOpen" class="home-clock" aria-label="Tarih aralığını seç"><span data-hicon="calendar"></span><span class="home-clock-copy"><time id="homeToday"></time><strong id="homeTime"></strong></span></button>
-    <section class="home-weather" aria-label="Günlük hava durumu"><button type="button" id="homeWeatherCity" aria-label="Hava durumu konumunu seç">Kayseri ▾</button><span id="homeWeatherIcon" aria-hidden="true">☀️</span><strong id="homeWeatherTemp">--°</strong><small id="homeWeatherText">Hava durumu</small><a href="https://docs.api.met.no/doc/License" target="_blank" rel="noopener noreferrer" id="homeWeatherCredit" title="MET Norway verisi · CC BY 4.0 · günlük kart için özetlendi">MET Norway · CC BY</a></section>
   </div>
   <div class="home-filterline"><button id="homeRangeClear" hidden>Ayın tamamı ×</button><button id="homeSources">Veri kaynakları ⓘ</button></div>
   <div id="homeStatus" role="status" hidden></div>
@@ -19,13 +18,16 @@
   <div class="home-board">
     <section class="home-panel home-trend home-detail-only"><header><h3><span data-hicon="chart"></span>Aylık İşlem Trendi</h3></header><div id="homeTrend"></div></section>
     <section class="home-panel home-distribution home-detail-only"><header><h3><span data-hicon="pie"></span>Modül Kullanım Dağılımı</h3></header><div id="homeDistribution"></div></section>
+    <div class="home-side-top">
+      <section class="home-panel home-quick"><header><h3><span data-hicon="note"></span>Hızlı Not Defteri</h3><button id="homeQuickExpand" aria-label="Hızlı not defterini büyüt">↗</button></header><div id="homeQuickEditor" contenteditable="true" role="textbox" aria-label="Hızlı not defteri" data-placeholder="Doğrudan yazmaya başla..."></div><small id="homeQuickState">Kaydedildi</small></section>
+      <section class="home-panel home-weather" aria-label="İstanbul hava durumu görseli"><header><h3>İstanbul</h3></header><div class="home-weather-art" aria-hidden="true"><span class="home-weather-sun">☀</span><span class="home-weather-cloud">☁</span></div><small>Günlük hava</small></section>
+    </div>
     <section class="home-panel home-tasks"><header><h3><span data-hicon="check"></span>Günlük Yapılacaklar</h3><span id="homeTaskCount"></span></header><progress id="homeProgress" max="100" value="0" aria-label="Görevlerin tamamlanma oranı"></progress><div id="homeTasks"></div><form id="homeTaskForm"><input id="homeTaskEntry" aria-label="Yeni görev" placeholder="＋ Yeni görev yaz ve Enter'a bas" maxlength="160"><button type="submit" aria-label="Görev ekle">＋</button></form><input type="date" id="homeTaskDay" aria-label="Görev günü"></section>
     <section class="home-panel home-summary"><header><h3><span data-hicon="chart"></span>Dönem Özeti</h3></header><div id="homeFinance"></div></section>
     <section class="home-panel home-module"><header><h3><span data-hicon="stack"></span>Modül Durumu</h3></header><div id="homeSummary"></div></section>
     <section class="home-panel home-pinned"><header><h3><span data-hicon="note"></span>Sabit Notlar</h3><div><button id="homeBookAdd" aria-label="Not defterleri">▤</button><button data-home-add="permanent" aria-label="Sabit not ekle">＋</button></div></header><div id="homePinned"></div><button id="homeAllNotes" class="home-textlink">Tüm notlar</button></section>
     <section class="home-panel home-recent home-detail-only"><header><h3><span data-hicon="clock"></span>Son İşlemler</h3><button id="homeRecentAll" class="home-textlink">Tümü ›</button></header><div id="homeRecent"></div></section>
     <section class="home-panel home-reminders"><header><h3><span data-hicon="bell"></span>Hatırlatıcılar</h3><div><button id="homeReminderAll" class="home-textlink">Tümü ›</button><button data-home-add="reminder" aria-label="Hatırlatıcı ekle">＋</button></div></header><div id="homeReminders"></div></section>
-    <section class="home-panel home-quick"><header><h3><span data-hicon="note"></span>Hızlı Not Defteri</h3><button id="homeQuickExpand" aria-label="Hızlı not defterini büyüt">↗</button></header><div id="homeQuickEditor" contenteditable="true" role="textbox" aria-label="Hızlı not defteri" data-placeholder="Doğrudan yazmaya başla..."></div><small id="homeQuickState">Kaydedildi</small></section>
   </div>
   <p id="homeSourceCaption" class="home-source-caption"></p>
 </section>

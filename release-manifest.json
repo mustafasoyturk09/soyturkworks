@@ -27,11 +27,11 @@
     },
     {
       "file": "app/home.css",
-      "sha256": "f06bc521d764638a739638334a8c37368e2d33b84aea0d12b332088c5a7d8273"
+      "sha256": "d2b20aff72548f280aad1ab4780c5ca67c7df4d6e25da995db03df172cca2e5c"
     },
     {
       "file": "app/home.js",
-      "sha256": "cdbb70939d5ff187f8f2577de57db434d63a619400e524a3fcedd0e2b6882c7c"
+      "sha256": "5e1b14622b07c8161484e7e69d957231649d2bfa7b73e204a30e4620d7d60fe1"
     },
     {
       "file": "app/inline-script-2da854a6ddba829c.js",
@@ -86,8 +86,8 @@
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
     {
-      "file": "app/portable-template-0aab99c6c8b12f0e.json",
-      "sha256": "0aab99c6c8b12f0e6ff87d7beaafa81dfa4a1c314340580cee81fe97279f3494"
+      "file": "app/portable-template-d18bec37f915c935.json",
+      "sha256": "d18bec37f915c935d037a5149360b89b4163b09c4a945eecd2c8c2c5fd13565b"
     },
     {
       "file": "app/runtime.js",
@@ -291,7 +291,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "4c1f99cb408480969472e804623593ac9f34f9d9b39bdda1ccdf9571f9752e65"
+      "sha256": "4c5b9ef8c03ebe418fdbddf73fcea8b30cefc069e938a82af394b8e0e24df4fd"
     },
     {
       "file": "manifest.webmanifest",
