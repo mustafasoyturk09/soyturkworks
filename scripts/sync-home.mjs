@@ -27,7 +27,6 @@ if(!source.includes('href="./app/home.css"'))source=source.replace('<link rel="s
 if(!source.includes('src="./app/home.js"'))source=source.replace('</head>','<script defer src="./app/home-model.js"></script>\n<script defer src="./app/home.js"></script>\n</head>');
 // Offline exports have no external home dependencies, including the panoramas.
 let offlineMarkup=markup;
-for(const name of ['erciyes-day.jpg','erciyes-night.jpg']){const data=await readFile(new URL('../src/assets/home/'+name,import.meta.url));offlineMarkup=offlineMarkup.replace('./assets/home/'+name,'data:image/jpeg;base64,'+data.toString('base64'));}
 template=integrate(template,offlineMarkup);
 const responsive=(await read('src/mobile.css')).split('/* Dashboard uses')[1].split('@media(max-width:600px){\n  body .sw-izi-dialog')[0];
 const style='<style id="sw-home-style">'+await read('src/home.css')+'\n/* Dashboard uses'+responsive+'</style>';

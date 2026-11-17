@@ -3,7 +3,7 @@
 /* Dashboard uses the same order and controls in both themes. */
 @media(max-width:1024px){
   body.fc-home-full{display:block;padding-top:64px}
-  body.fc-home-full>main{padding:12px 16px 160px;width:100%;margin:0}
+  body.fc-home-full>main{padding:12px 16px 26px;width:100%;margin:0}
   body.fc-home-full>aside{position:fixed;inset:0 auto 0 0;width:min(320px,calc(100vw - 32px));height:100dvh;min-height:0;padding:22px 16px 30px;background:var(--home-bg)!important}
   body.fc-home-full>aside .brand{margin-top:25px}
   body.fc-home-full>aside .brand-sub{top:99px}
@@ -35,10 +35,9 @@
   #page-home .home-finance-row{font-size:14px}
   #page-home .home-finance-row strong{font-size:14px}
   #page-home .home-task footer input{min-height:36px}
-  body.fc-home-full .home-landscape img{width:150%;max-width:none;left:-25%}
 }
 @media(max-width:600px){
-  body.fc-home-full>main{padding:10px 12px 130px}
+  body.fc-home-full>main{padding:10px 12px 28px}
   #page-home .sw-home-topbar{gap:8px}
   #page-home .sw-home-topbar h1{font-size:23px;gap:9px}
   #page-home .sw-home-topbar h1 svg{width:27px!important;height:27px!important}
@@ -76,7 +75,6 @@
   .home-dialog .home-form-pair{grid-template-columns:minmax(0,1fr);gap:0}
   .home-dialog input,.home-dialog select,.home-dialog textarea{font-size:16px}
   .home-dialog .home-records>div{flex-wrap:wrap;gap:8px}
-  body.fc-home-full .home-landscape img{width:250%;left:-75%}
 }
 @media(max-height:500px) and (orientation:landscape){
   body.fc-home-full{padding-top:54px}
@@ -89,6 +87,7 @@
   #page-home .home-metric{gap:8px;padding:10px}
   .home-dialog{max-height:calc(100dvh - 16px);margin:8px auto}
 }
+@media(max-width:1024px){body.fc-home-full>aside .nav-item{font-size:12px}}
 @media(max-width:600px){
   body .sw-izi-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:16px;border-radius:12px}
   .sw-izi-dialog .sw-izi-dates{grid-template-columns:minmax(0,1fr);gap:10px}
