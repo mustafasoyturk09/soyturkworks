@@ -635,7 +635,8 @@ function ef115Render(){
  const rows=parsedRows.map((r,i)=>({r,i,key:ef115Key(r,i)})),valid=new Set(rows.map(x=>x.key));for(const k of ef115.selected)if(!valid.has(k))ef115.selected.delete(k);
  const labels=[['all','Tüm Faturalar'],['legal','Kanunen Kabul'],['new','Yeni Gelen'],['ret','Reddedilen'],['iade','İade'],['none','Yanıt Gerekmiyor']];
  document.getElementById('ef115Status').innerHTML=labels.map(([k,l])=>`<button data-status="${k}" aria-pressed="${ef115.status===k}">${l} · ${rows.filter(({r})=>k==='all'||(k==='new'?(!r.isRet&&!r.islendi):k==='iade'?ef115Iade(r):ef115Status(r)===k)).length}</button>`).join('');
- const filtered=rows.filter(({r})=>(ef115.tab==='all'||(!r.isRet&&(ef115.tab==='done'?r.islendi:!r.islendi)))&&(ef115.status==='all'||(ef115.status==='new'?(!r.isRet&&!r.islendi):ef115.status==='iade'?ef115Iade(r):ef115Status(r)===ef115.status)));
+ const term=(document.getElementById('pusulaInvoiceSearch')?.value||'').trim().toLocaleLowerCase('tr-TR');
+ const filtered=rows.filter(({r})=>(!term||[r.fatno,r.unvan,r.tutar].some(v=>String(v??'').toLocaleLowerCase('tr-TR').includes(term)))&&(ef115.tab==='all'||(!r.isRet&&(ef115.tab==='done'?r.islendi:!r.islendi)))&&(ef115.status==='all'||(ef115.status==='new'?(!r.isRet&&!r.islendi):ef115.status==='iade'?ef115Iade(r):ef115Status(r)===ef115.status)));
  ef115.page=Math.min(ef115.page,Math.max(0,Math.ceil(filtered.length/ef115.size)-1));const visible=filtered.slice(ef115.page*ef115.size,(ef115.page+1)*ef115.size);ef115.visible=visible;
  document.getElementById('ef115Tabs').innerHTML=[['all','Tümü'],['done','İşlenmiş'],['new','Yeni Gelen']].map(([k,l])=>`<button data-tab="${k}" aria-pressed="${ef115.tab===k}">${l}</button>`).join('')+'<button data-clearfilter>Filtreleri Kaldır</button>';
  document.getElementById('ledgerBody').innerHTML=visible.map(({r,i,key})=>`<tr class="${ef115Status(r)==='ret'?'ef115-ret':ef115Iade(r)?'ef115-iade':''}"><td><input type="checkbox" data-select="${i}" aria-label="Faturayı seç" ${ef115.selected.has(key)?'checked':''}></td><td>${ef115Esc(r.fatno)}</td><td><strong>${ef115Esc(r.unvan)}</strong></td><td>${ef115Esc(r.tarih)}</td><td>${ef115Esc(r.tip)}</td><td class="ef115-money">${Number(r.tutar).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${ef115Esc(r.birim||'Birim belirtilmemiş')}</td><td>${r.islendi&&!r.isRet?'Önceden İşlenmiş':'Yeni Gelenler'}<small>${ef115Esc(r.yanit||'—')}</small>${!r.isRet?`<label><input type="checkbox" data-done="${i}" ${r.islendi?'checked':''}> İşlendi</label>`:''}</td></tr>`).join('');
@@ -667,6 +668,34 @@ function ef115Init(){
  ef115Render();
 }
 ef115Init();
+if(window.SWWorkspace.companyId==='PUSULA'){
+ const page=document.getElementById('page-efatura');page.classList.add('pusula-invoice-design');
+ const side=document.getElementById('ef115Side'),layout=document.getElementById('ef115Layout'),status=document.getElementById('ef115Status'),main=document.getElementById('ef115Main');
+ const uploads=document.createElement('div');uploads.className='pusula-uploads';
+ const compare=document.createElement('button');compare.type='button';compare.className='pusula-compare';compare.textContent='⇄  Karşılaştır';
+ compare.onclick=()=>{if(!eskiIslenmisSet||!parsedRows.length){toast('Karşılaştırmak için işlenmiş ve yeni Excel dosyalarını yükleyin.');return;}ef115.status='all';ef115.tab='all';ef115.page=0;ef115Render();document.getElementById('ef115Tabs').scrollIntoView({behavior:'smooth',block:'center'});};
+ uploads.append(document.getElementById('step1'),compare,document.getElementById('step2'));page.insertBefore(uploads,status);main.prepend(status);main.append(document.getElementById('step3'));side.remove();
+ const search=document.createElement('input');search.id='pusulaInvoiceSearch';search.type='search';search.placeholder='Fatura no / unvan / tutar ara…';search.setAttribute('aria-label','Fatura ara');search.addEventListener('input',()=>{ef115.page=0;ef115Render();});main.insertBefore(search,document.getElementById('ef115Tabs'));
+ page.querySelector('#step1 .step-title').textContent='İşlenmiş Excel';page.querySelector('#step2 .step-title').textContent='Yeni Excel';
+ const style=document.createElement('style');style.textContent=`
+ #page-efatura.pusula-invoice-design{background:#10151e;color:#edf3ff}
+ .pusula-invoice-design .page-head h1{font-family:Arial,sans-serif;font-size:32px;color:#f2f6ff}
+ .pusula-invoice-design .page-head .page-desc{color:#bdcce2}
+ .pusula-invoice-design .pusula-uploads{display:grid;grid-template-columns:minmax(0,1fr) 170px minmax(0,1fr);gap:20px;align-items:center;margin:20px 0}
+ .pusula-invoice-design .pusula-uploads .step{position:relative;min-width:0;min-height:200px;margin:0;padding:22px;text-align:center;border-radius:18px;background:#111e2c;color:#f3f7ff;border:2px solid #47dca5;box-shadow:inset 0 0 25px #40cdb51c}
+ .pusula-invoice-design .pusula-uploads #step2{border-color:#4bafff;box-shadow:inset 0 0 25px #258aff25}
+ .pusula-invoice-design .pusula-uploads .step-head{justify-content:center}.pusula-invoice-design .pusula-uploads .step-num{display:none}
+ .pusula-invoice-design .pusula-uploads .step-title{font-size:22px;font-weight:700;color:#fff}.pusula-invoice-design .pusula-uploads .step-sub{color:#bacce2;font-size:12px;margin:8px 0}
+ .pusula-invoice-design .pusula-uploads .dropzone{margin:12px 0 0;padding:12px;border:1px dashed #76bfae;border-radius:12px;background:#ffffff08;color:#eaf4ff}
+ .pusula-invoice-design .pusula-uploads #step2 .dropzone{border-color:#76aaff}.pusula-invoice-design .pusula-uploads .dz-text,.pusula-invoice-design .pusula-uploads .dz-hint{color:#d8e6f9}.pusula-invoice-design .pusula-uploads .dz-icon{font-size:25px}
+ .pusula-invoice-design .pusula-compare{border:1px solid #58bfff;border-radius:16px;padding:19px 12px;background:linear-gradient(110deg,#08c4f1,#5a36ef);color:white;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 0 18px #209cf06b}
+ .pusula-invoice-design #ef115Layout{display:block}.pusula-invoice-design #ef115Status{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0 0 14px}
+ .pusula-invoice-design #ef115Status button{min-height:66px;border-radius:12px;background:#1c2a3d;color:#f3f7ff;font-weight:700}.pusula-invoice-design #ef115Status button:nth-child(2){border-color:#31dca3}.pusula-invoice-design #ef115Status button:nth-child(3){border-color:#f6bd36}.pusula-invoice-design #ef115Status button:nth-child(4){border-color:#b271f8}.pusula-invoice-design #ef115Status button:nth-child(5){border-color:#fa5497}.pusula-invoice-design #ef115Status button:nth-child(6){border-color:#41bdf0}
+ .pusula-invoice-design #countPanel{margin-bottom:14px}.pusula-invoice-design #step3{margin-top:14px;background:transparent;border:0}.pusula-invoice-design #step3 .step-head,.pusula-invoice-design #step3 .step-sub{display:none}
+ .pusula-invoice-design #pusulaInvoiceSearch{display:block;width:min(420px,100%);box-sizing:border-box;margin:12px 0;padding:12px 16px;border:1px solid #4d6886;border-radius:10px;background:#18263a;color:#fff;font-size:14px}.pusula-invoice-design #pusulaInvoiceSearch::placeholder{color:#adbed4}
+ .pusula-invoice-design .ledger tbody tr{background:#152236!important}.pusula-invoice-design .ledger td{color:#eef4ff!important}.pusula-invoice-design .ledger th{background:#25344c;color:#fff}.pusula-invoice-design #eskiInfo,.pusula-invoice-design #newInvoiceBanner{display:none!important}
+ `;document.head.append(style);
+}
 setInterval(updateCounts,60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateCounts();});
 window.addEventListener('storage',event=>{if(event.key===null||event.key==='sw:company:v2:'+window.SWWorkspace.companyId+':efatura_monthly_v1'){efMonthly.sync();updateCounts();}});
