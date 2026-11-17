@@ -3763,6 +3763,7 @@ async function handleYevmiyeFiles(files){
 const y106Zoom={percent:100,w:0,h:0};
 const y106Bar=document.createElement('div');y106Bar.className='y106-preview-toolbar';
 y106Bar.innerHTML='<span id="y106PreviewName">PDF önizleme</span><div><button type="button" id="y106Minus" aria-label="Görüntüyü küçült">−</button><label><input id="y106Percent" type="number" min="25" max="500" step="25" value="100" aria-label="Önizleme ölçeği"> %</label><button type="button" id="y106Plus" aria-label="Görüntüyü büyüt">+</button><button type="button" id="y106Fit">Ekrana sığdır</button></div>';
+document.body.appendChild(document.getElementById('yLightbox'));
 document.getElementById('yLightbox').prepend(y106Bar);
 const y106Percent=document.getElementById('y106Percent');
 function y106ZoomApply(value){
@@ -3782,7 +3783,7 @@ y106Percent.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();y106ZoomApply(y
 y106Percent.ondblclick=()=>y106Percent.select();
 window.addEventListener('resize',()=>{if(document.getElementById('yLightbox').classList.contains('show'))y106ZoomApply(y106Zoom.percent);});
 const y106ZoomStyle=document.createElement('style');y106ZoomStyle.textContent=`
- #yLightbox{padding:76px 20px 34px;box-sizing:border-box}
+ #yLightbox{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;z-index:2147483000;padding:76px 20px 34px;box-sizing:border-box}
  #yLightbox .y106-preview-toolbar{position:absolute;left:20px;right:125px;top:14px;height:48px;display:flex;align-items:center;justify-content:space-between;gap:16px;color:white;font:13px Arial,sans-serif}
  #y106PreviewName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
  #yLightbox .y106-preview-toolbar>div{display:flex;align-items:center;gap:7px;flex-shrink:0}
@@ -3802,9 +3803,8 @@ const y107Tools=document.createElement('div');y107Tools.innerHTML='<button type=
 y106Bar.lastElementChild.prepend(...y107Tools.children);
 let y107Mode='select',y107Drag=null;
 function y107SetMode(mode){y107Mode=mode;y107Sheet.classList.toggle('y107-hand',mode==='hand');for(const [id,m] of [['y107Select','select'],['y107Hand','hand']])document.getElementById(id).setAttribute('aria-pressed',String(mode===m));if(mode==='hand')window.getSelection()?.removeAllRanges();}
-document.getElementById('y107Select').onclick=()=>y107SetMode('select');document.getElementById('y107Hand').onclick=()=>y107SetMode('hand');y107SetMode('select');
+document.getElementById('y107Select').style.display='none';document.getElementById('y107Hand').onclick=()=>y107SetMode('hand');y107SetMode('hand');
 function y107Sync(){y107Sheet.style.width=y107Img.style.width;y107Sheet.style.height=y107Img.style.height;if(y106Zoom.w)y107Text.style.transform='scale('+(parseFloat(y107Img.style.width)/y106Zoom.w)+')';}
-async function y107LoadText(page,token){const content=await page.getTextContent();if(token!==yPreviewToken)return;const layer=document.createElement('div');layer.className='y107-text-layer';const vp=page.getViewport({scale:1});layer.style.setProperty('--scale-factor','1');await new pdfjsLib.TextLayer({textContentSource:content,container:layer,viewport:vp}).render();if(token!==yPreviewToken)return;y107Text.replaceChildren(layer);y107Text.style.width=vp.width+'px';y107Text.style.height=vp.height+'px';y107Sync();}
 const y107Scroll=document.getElementById('yLightboxScroll');
 y107Scroll.addEventListener('pointerdown',e=>{if(y107Mode!=='hand'||e.button!==0)return;e.preventDefault();y107Drag={id:e.pointerId,x:e.clientX,y:e.clientY,l:y107Scroll.scrollLeft,t:y107Scroll.scrollTop};y107Scroll.setPointerCapture(e.pointerId);y107Sheet.classList.add('y107-dragging');});
 y107Scroll.addEventListener('pointermove',e=>{if(!y107Drag)return;y107Scroll.scrollLeft=y107Drag.l+y107Drag.x-e.clientX;y107Scroll.scrollTop=y107Drag.t+y107Drag.y-e.clientY;});
@@ -3846,7 +3846,7 @@ function closeYLightbox(){
 }
 async function openYPreview(entry){
   const myToken = ++yPreviewToken;
-  y106ZoomReset(entry.name);y107Text.replaceChildren();y107Sheet.style.width="0px";y107Sheet.style.height="0px";y107SetMode("select");
+  y106ZoomReset(entry.name);y107Text.replaceChildren();y107Sheet.style.width="0px";y107Sheet.style.height="0px";y107SetMode("hand");
   // v70: hata mesajı artık Logo kartındaki (lxRenderCard) slotta gösterilir.
   const errEl = document.getElementById('lxpreverr-'+entry.id);
   if(errEl){ errEl.style.display = 'none'; errEl.textContent = ''; }
@@ -3858,18 +3858,21 @@ async function openYPreview(entry){
   if(lbImg){ lbImg.src = ''; lbImg.style.display = 'none'; }
   if(loadingEl){ loadingEl.textContent = 'Önizleme hazırlanıyor…'; loadingEl.style.display = 'block'; }
   if(lb) lb.classList.add('show');
+  let pdf=null;
   try{
     if(typeof pdfjsLib === 'undefined') throw new Error('PDF görüntüleme kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).');
-    const pdf = await pdfjsLib.getDocument({isEvalSupported:false,data: entry.arrayBuffer.slice(0)}).promise;
+    pdf = await pdfjsLib.getDocument({isEvalSupported:false,data: entry.arrayBuffer.slice(0)}).promise;
     const page = await pdf.getPage(1);
-    const viewport = page.getViewport({scale: 3.2}); // modal genişçe olduğu için net bir çözünürlük yeterli
+    const baseViewport = page.getViewport({scale:1});
+    if(!baseViewport.width||!baseViewport.height)throw new Error('PDF sayfa boyutu geçersiz.');
+    const renderScale = Math.min(3.2,4096/Math.max(baseViewport.width,baseViewport.height),Math.sqrt(8000000/(baseViewport.width*baseViewport.height)));
+    const viewport = page.getViewport({scale:renderScale});
     const canvas = document.createElement('canvas');
-    canvas.width = viewport.width; canvas.height = viewport.height;
+    canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
     await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
     if(myToken !== yPreviewToken) return; // bu sırada kullanıcı başka bir fatura açtı — bu sonucu yok say
     const dataUrl = canvas.toDataURL('image/png');
-    if(lbImg){ lbImg.src = dataUrl; lbImg.style.display = 'block'; y106ZoomSize(viewport.width/3.2,viewport.height/3.2); }
-    try{await y107LoadText(page,myToken);}catch(err){y107Text.replaceChildren();console.warn('PDF metin katmanı oluşturulamadı:',err);}
+    if(lbImg){ lbImg.src = dataUrl; lbImg.style.display = 'block'; y106ZoomSize(baseViewport.width,baseViewport.height); }
     if(loadingEl) loadingEl.style.display = 'none';
   }catch(err){
     if(myToken !== yPreviewToken) return;
@@ -3877,6 +3880,8 @@ async function openYPreview(entry){
     const msg = 'Önizleme açılamadı: ' + (err && err.message ? err.message : err);
     if(errEl){ errEl.textContent = msg; errEl.style.display = 'block'; }
     else toast(msg);
+  }finally{
+    if(pdf)try{await pdf.destroy();}catch{}
   }
 }
 document.getElementById('yLightboxClose').addEventListener('click', closeYLightbox);
