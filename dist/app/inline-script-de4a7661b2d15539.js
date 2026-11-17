@@ -46,7 +46,7 @@ function save(){
     // A failed secondary backup must not prevent the main save.
     if(lastSaved&&lastSaved!==data){try{window.SWWorkspace.storage.setItem(nt145BackupKey,lastSaved);}catch(backupError){}}
     window.SWWorkspace.storage.setItem(key,data);lastSaved=data;
-    $('ntSaveState').textContent='✓ Kaydedildi';nt144ScheduleSync();document.dispatchEvent(new Event('sw:notes-changed'));return true;
+    $('ntSaveState').textContent='✓ Kaydedildi';nt144ScheduleSync();return true;
   }catch(e){$('ntSaveState').textContent='Kaydedilemedi. Notları yedekleyin; bu pencereyi kapatmayın.';return false;}
 }
 
@@ -146,7 +146,7 @@ function nt126Button(text,label,fn){const b=document.createElement('button');b.t
  function nt127Pin(n){return ['auto','left','right','deep-left','deep-right','none'].includes(n.pin)?n.pin:'auto';}
  function nt127Font(n){return n.font==='sans'?'Arial, sans-serif':n.font==='serif'?'Georgia, serif':"'Segoe Print', 'Comic Sans MS', cursive";}
  function nt127CleanRun(r,base=16){return {text:String(r.text||''),bold:!!r.bold,italic:!!r.italic,underline:!!r.underline,size:Math.round(Math.max(8,Math.min(60,Number(r.size)||base))*100)/100,color:/^#[0-9a-f]{6}$/i.test(r.color||'')?r.color.toLowerCase():'#111111',mark:['none','strike','double','wave','scribble','cross'].includes(r.mark)?r.mark:'none'};}
- function nt127Extras(n){const x={notebookId:typeof n.notebookId==='string'?n.notebookId:'',taskDay:/^\d{4}-\d{2}-\d{2}$/.test(n.taskDay||'')?n.taskDay:'',taskOrder:Number.isFinite(n.taskOrder)?n.taskOrder:null,angle:nt131Angle(n.angle),table:nt133TableData(n.table),position:nt130Position(n.position),strokes:nt129Strokes(n.strokes),model:nt127Model(n),pin:nt127Pin(n),pinColor:/^#[0-9a-f]{6}$/i.test(n.pinColor||'')||['auto','red','gold','green','blue'].includes(n.pinColor)?n.pinColor:'auto',font:['hand','sans','serif'].includes(n.font)?n.font:'hand',width:Math.max(220,Math.min(700,Number(n.width)||310)),height:Math.max(150,Math.min(900,Number(n.height)||220))};for(const f of ['title','body']){const rs=n[f+'Runs'];if(Array.isArray(rs)&&rs.length<=12160&&rs.every(r=>r&&typeof r.text==='string')&&rs.map(r=>r.text).join('')===n[f])x[f+'Runs']=rs.map(r=>nt127CleanRun(r,f==='title'?20:16));}return x;}
+ function nt127Extras(n){const x={angle:nt131Angle(n.angle),table:nt133TableData(n.table),position:nt130Position(n.position),strokes:nt129Strokes(n.strokes),model:nt127Model(n),pin:nt127Pin(n),pinColor:/^#[0-9a-f]{6}$/i.test(n.pinColor||'')||['auto','red','gold','green','blue'].includes(n.pinColor)?n.pinColor:'auto',font:['hand','sans','serif'].includes(n.font)?n.font:'hand',width:Math.max(220,Math.min(700,Number(n.width)||310)),height:Math.max(150,Math.min(900,Number(n.height)||220))};for(const f of ['title','body']){const rs=n[f+'Runs'];if(Array.isArray(rs)&&rs.length<=12160&&rs.every(r=>r&&typeof r.text==='string')&&rs.map(r=>r.text).join('')===n[f])x[f+'Runs']=rs.map(r=>nt127CleanRun(r,f==='title'?20:16));}return x;}
  function nt127Runs(n,f){return n[f+'Runs']||[{text:n[f],bold:false,italic:false,underline:false,size:f==='title'?20:16,color:colorValue('ink',n.ink),mark:'none'}];}
  function nt127RunHTML(r){return `<span class="nt127-run nt127-mark-${r.mark}" data-nt-mark="${r.mark}" style="font-size:calc(${r.size}pt * var(--nt-scale,1));font-weight:${r.bold?700:400};font-style:${r.italic?'italic':'normal'};text-decoration-line:${r.underline?'underline':'none'};color:${r.color}">${esc(r.text)}</span>`;}
  function nt127Rich(n,f){return nt127Runs(n,f).map(nt127RunHTML).join('');}
@@ -446,36 +446,7 @@ function nt126Button(text,label,fn){const b=document.createElement('button');b.t
  nt141Border.addEventListener('click',e=>{if(e.target.closest('[data-close]')){nt141Border.close();nt141BorderDraft=null;return;}if(e.target.closest('[data-ok]')){const d=nt141BorderDraft,n=notes.find(n=>n.id===d?.id);if(n){n.table.format=d.format;nt133SaveTable(n);}nt141Border.close();nt141BorderDraft=null;return;}const line=e.target.closest('[data-line]');if(line){nt141BorderDraft.line=line.dataset.line;nt141Border.querySelectorAll('[data-line]').forEach(b=>b.classList.toggle('active',b===line));return;}const preset=e.target.closest('[data-preset]'),edge=e.target.closest('[data-edge]');if(preset)nt141BorderSet(preset.dataset.preset);if(edge)nt141BorderSet(edge.dataset.edge,true);});
  nt141Border.querySelector('input').addEventListener('input',e=>nt141BorderDraft.color=e.target.value);
  document.addEventListener('keydown',e=>{if(e.key==='Escape')nt141Fill.hidden=true;});
-// SW_HOME_NOTES_START
-// This bridge runs inside the existing Notes closure. It preserves its rich
-// editor, backup/recovery and reminder engine without exposing a separate page.
-function homeTransaction(change){
-  if(nt145StorageBlocked)throw Error('Not kaydı okunamadı. Yedekten ekle ile kurtarın; mevcut kayıt korunuyor.');
-  const raw=window.SWWorkspace.storage.getItem(key);
-  if(raw&&raw!==lastSaved){const fresh=nt145ReadNotes(raw);notes=fresh.notes;theme=fresh.theme;lastSaved=JSON.stringify({version:1,theme,notes});}
-  const before=structuredClone(notes);
-  try{change();if(!save())throw Error('Not kaydedilemedi. Mevcut kayıt korundu.');render();}
-  catch(error){notes=before;throw error;}
-}
-window.SWHomeNotes=Object.freeze({
-  list(){
-    if(nt145StorageBlocked)throw Error('Notlar okunamadı; mevcut kayıt korunuyor.');
-    const raw=window.SWWorkspace.storage.getItem(key);
-    if(raw&&raw!==lastSaved){const fresh=nt145ReadNotes(raw);notes=fresh.notes;theme=fresh.theme;lastSaved=JSON.stringify({version:1,theme,notes});}
-    return structuredClone(notes);
-  },
-  put(value){homeTransaction(()=>{
-    const old=notes.find(n=>n.id===value.id),n={paper:'cream',ink:'black',category:'work',finish:'strike',created:Date.now(),burn:false,ack:false,...old,...value};
-    if(!valid(n))throw Error('Not bilgilerini kontrol edin.');
-    if(old?.title!==n.title)delete n.titleRuns;if(old?.body!==n.body)delete n.bodyRuns;if(old?.due!==n.due)n.ack=false;
-    const index=notes.findIndex(x=>x.id===n.id);if(index<0)notes.push(normalize(n));else notes[index]=normalize(n);
-  });},
-  toggle(id,done){homeTransaction(()=>{const n=notes.find(n=>n.id===id);if(!n)throw Error('Not artık mevcut değil.');n.done=done;});},
-  remove(id){homeTransaction(()=>{notes=notes.filter(n=>n.id!==id);});},
-  edit(id){nt127Open(id);}
-});
 
-// SW_HOME_NOTES_END
  setInterval(reminders,1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reminders();});nt145LoadNotes();reset();render();
 })();
 

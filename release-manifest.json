@@ -22,18 +22,6 @@
       "sha256": "2bbd70e4e33d639bcbdbfcce893878a4801c1bb1b4bf9f0cd0c893a3529cabe6"
     },
     {
-      "file": "app/home-model.js",
-      "sha256": "6f3b8d5157a50ee8e893f08ff0e04a12a5bf3d8abcac4f71064ac4a65c31d14d"
-    },
-    {
-      "file": "app/home.css",
-      "sha256": "6f6a7eb829855a548dca1bc14c8dcec520f24d8e19f9637cc78fa224a9111c0c"
-    },
-    {
-      "file": "app/home.js",
-      "sha256": "7d14bdccbec54a0676f11dced47fcacfb21c6469e8216aef66262928f394ca5e"
-    },
-    {
       "file": "app/inline-script-2da854a6ddba829c.js",
       "sha256": "2da854a6ddba829ce31aafb22a395be87b5caaf870df15179c505f8d16f1e595"
     },
@@ -42,20 +30,20 @@
       "sha256": "54e63816b09f912124b455f3855bbd36d75246ce31e00847b5834033ec9b0809"
     },
     {
-      "file": "app/inline-script-730b1983bb628740.js",
-      "sha256": "730b1983bb628740de022d7d31fb3ea984016b588d7bcb48d0754cde5e2dbb1f"
-    },
-    {
-      "file": "app/inline-script-a3f91ae2bd19374f.js",
-      "sha256": "a3f91ae2bd19374f4e65224d2431a36f31956622659e37022e991934047ba4f0"
-    },
-    {
       "file": "app/inline-script-b27fe8453274c010.js",
       "sha256": "b27fe8453274c0101374179909ef2c310dfb638dbd01e23c2ea3c1e059c51d2a"
     },
     {
+      "file": "app/inline-script-de4a7661b2d15539.js",
+      "sha256": "de4a7661b2d1553918b5fe70b2c39aad939857b61a201a9b176fa48cea03c018"
+    },
+    {
       "file": "app/inline-script-ec6a24b65ddf64fa.js",
       "sha256": "ec6a24b65ddf64fa8a3de868b7cec2b3bcb90e701ee32b3c1d3b56b2e8eacf99"
+    },
+    {
+      "file": "app/inline-script-f987827d975128bd.js",
+      "sha256": "f987827d975128bd856ba1fc3a092ab7c5ecaec192517b05163f79e4decc248d"
     },
     {
       "file": "app/inline-style-5b1ac1266f60f414.css",
@@ -75,7 +63,7 @@
     },
     {
       "file": "app/mobile.css",
-      "sha256": "0c55a35e15bfc8fd13bc78f49104e34c46c96c0e51bd3d6251c2e04fe9f57d7b"
+      "sha256": "da36292b4a07ec0c9a320ca43652b6679ab0ed3f6e5a496057d96440cb8644d2"
     },
     {
       "file": "app/mobile.js",
@@ -86,8 +74,8 @@
       "sha256": "bc937a7477242263402010aae265b937bad2580323e2df281814953395544965"
     },
     {
-      "file": "app/portable-template-878a1de8305aa0dc.json",
-      "sha256": "878a1de8305aa0dc930b4ad3312d0cb294d648287f0acf0480607b10fadb0b19"
+      "file": "app/portable-template-1ca551a51871f5db.json",
+      "sha256": "1ca551a51871f5dbd13b90b2be70dec5f1c4ba992978272eddd11237c34b2559"
     },
     {
       "file": "app/runtime.js",
@@ -291,7 +279,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "5a7a3cd2ea90017f6fd35b69e85e3756eddbe1fa0c428af69e240207f3b94fa3"
+      "sha256": "1e6b7cf3b0182d7ccff28a746cc73bbb7b94d623348d1dc8c89f06c14776c28e"
     },
     {
       "file": "manifest.webmanifest",
@@ -299,7 +287,7 @@
     },
     {
       "file": "portal/index.html",
-      "sha256": "b27ab8f0488a058a861380ce5a4d03be1bb12ddb038bde2ce06d63fa3b3f5cfb"
+      "sha256": "bbe2cff52d535bc629f7a0b6c1a10d10463988eaf29b660be17e991448c89b78"
     },
     {
       "file": "portal/passkeys.js",
