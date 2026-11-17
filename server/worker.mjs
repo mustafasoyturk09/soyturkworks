@@ -33,7 +33,7 @@ async function weatherResponse(request,env,store,origin){
   const auth=await (await store.fetch(new Request(new URL('/api/session',origin),{headers:request.headers}))).json();
   if(!auth.account)return json({error:'Oturum açmanız gerekiyor.'},401);
   if(env.WEATHER_TERMS_ACCEPTED!=='1')return json({error:'Hava durumu kaynağı henüz etkin değil.'},503);
-  const city=new URL(request.url).searchParams.get('city')||'Kayseri';
+  const city=new URL(request.url).searchParams.get('city')||'İstanbul';
   if(!Object.hasOwn(WEATHER_CITIES,city))return json({error:'Şehir bulunamadı.'},400);
   const cache=globalThis.caches?.default,cacheKey=new Request(new URL('/__weather-cache/'+encodeURIComponent(city),origin));
   const cached=await cache?.match(cacheKey),stored=cached?await cached.json():null;

@@ -8,6 +8,8 @@ export const WEATHER_CITIES=Object.freeze({
 });
 
 const istanbulDay=value=>new Date(value).toLocaleDateString('sv-SE',{timeZone:'Europe/Istanbul'});
+const istanbulHour=value=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Istanbul',hour:'2-digit',hourCycle:'h23'}).format(new Date(value)));
+const symbolOf=row=>row?.data?.next_1_hours?.summary?.symbol_code||row?.data?.next_6_hours?.summary?.symbol_code||row?.data?.next_12_hours?.summary?.symbol_code||'';
 
 export function summarizeWeather(payload,city,now=Date.now()){
   const rows=payload?.properties?.timeseries;
@@ -17,8 +19,19 @@ export function summarizeWeather(payload,city,now=Date.now()){
   if(!Number.isFinite(temperature))throw Error('Sıcaklık okunamadı.');
   const today=istanbulDay(now);
   const temperatures=rows.filter(row=>istanbulDay(row.time)===today).map(row=>Number(row.data?.instant?.details?.air_temperature)).filter(Number.isFinite);
-  const symbol=current.data?.next_1_hours?.summary?.symbol_code||current.data?.next_6_hours?.summary?.symbol_code||current.data?.next_12_hours?.summary?.symbol_code||'';
-  return {city,temperature:Math.round(temperature),minimum:temperatures.length?Math.round(Math.min(...temperatures)):null,maximum:temperatures.length?Math.round(Math.max(...temperatures)):null,symbol,validAt:current.time,updatedAt:payload.properties?.meta?.updated_at||null};
+  const symbol=symbolOf(current);
+  const grouped=new Map();
+  for(const row of rows){
+    const date=istanbulDay(row.time),value=Number(row?.data?.instant?.details?.air_temperature);
+    if(date<today||!Number.isFinite(value))continue;
+    if(!grouped.has(date))grouped.set(date,[]);
+    grouped.get(date).push({row,value});
+  }
+  const days=[...grouped].slice(0,5).map(([date,entries])=>{
+    const representative=entries.reduce((best,item)=>Math.abs(istanbulHour(item.row.time)-12)<Math.abs(istanbulHour(best.row.time)-12)?item:best);
+    return {date,minimum:Math.round(Math.min(...entries.map(x=>x.value))),maximum:Math.round(Math.max(...entries.map(x=>x.value))),symbol:symbolOf(representative.row)||symbol};
+  });
+  return {city,temperature:Math.round(temperature),minimum:temperatures.length?Math.round(Math.min(...temperatures)):null,maximum:temperatures.length?Math.round(Math.max(...temperatures)):null,symbol,days,validAt:current.time,updatedAt:payload.properties?.meta?.updated_at||null};
 }
 
 export function weatherCacheSeconds(expires,now=Date.now()){
