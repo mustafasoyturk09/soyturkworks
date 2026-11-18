@@ -26,6 +26,16 @@ export class ExpenseStore{
   constructor(storage,company){this.storage=storage;this.company=company;}
   async handle(request){
     const url=new URL(request.url),parts=url.pathname.split('/').filter(Boolean),action=parts[0],id=parts[1];
+    if(action==='account-plan'){
+      if(this.company!=='PUSULA')fail('Hesap planı bu firma için tanımlı değil.',403);
+      if(request.method==='GET')return json(await this.storage.get('account-plan')||{revision:0,accounts:[]});
+      if(request.method==='POST'){
+        const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,1024*1024)));
+        if(!Array.isArray(body.accounts)||!body.accounts.length||body.accounts.length>10000)fail('Hesap planı geçersiz.');
+        const seen=new Set(),accounts=body.accounts.map(a=>{const code=String(a.code||'').trim(),name=String(a.name||'').trim();if(!validExpenseCode(code)||!name||name.length>200||seen.has(code))fail('Hesap planında geçersiz veya tekrarlanan kod var.');seen.add(code);return {code,name};});
+        return this.storage.transaction(async tx=>{const previous=await tx.get('account-plan')||{revision:0};if(body.revision!==previous.revision)fail('Hesap planı başka cihazda değişti; yenileyip tekrar deneyin.',409);const value={revision:previous.revision+1,accounts};await tx.put('account-plan',value);return json({revision:value.revision,count:accounts.length});});
+      }
+    }
     if(action==='list'&&request.method==='GET'){
       const records=[...(await this.storage.list({prefix:'receipt:'})).values()].map(({rawText,...r})=>r);
       return json({company:this.company,receipts:records.sort((a,b)=>b.created-a.created),profiles:await this.storage.get('profiles')||{revision:0,categories:{}}});

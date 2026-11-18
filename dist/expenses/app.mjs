@@ -2,9 +2,20 @@ import {categories,normalize,cents,amount,parseReceipt,issues,duplicateIds,expor
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
 const expenseRulesReady=company.id==='PUSULA';
+if(expenseRulesReady)document.body.classList.add('pusula-expenses');
+let accountPlan={revision:0,accounts:[]};
+if(expenseRulesReady){
+ const side=document.createElement('aside');side.className='expense-sidebar';side.setAttribute('aria-label','Modüller');
+ side.innerHTML='<div class="expense-sidebar-brand"><img src="/assets/brand/sw-logo.png" alt="" width="46" height="46"><strong>SoyturkWorks<small>Finans ve Muhasebe</small></strong></div><nav><a href="/workspace/PUSULA/" data-page="efatura"><i>▤</i> Gelen E-Fatura Takip</a><a href="/workspace/PUSULA/takip/"><i>☁</i> Gelen E-Fatura İzibiz</a><a href="/workspace/PUSULA/masraf/" class="active" aria-current="page"><i>▧</i> Masraf Fişleri</a><a href="/workspace/PUSULA/" data-page="satis"><i>▤</i> Satış Faturaları</a><a href="/workspace/PUSULA/" data-page="satis-kesme"><i>✎</i> Satış Faturası Kesme</a><a href="/workspace/PUSULA/" data-page="yevmiye"><i>✈</i> Yurt Dışı Yevmiye</a><a href="/workspace/PUSULA/" data-page="mutabakat"><i>♧</i> Cari Mutabakat</a><a href="/workspace/PUSULA/" data-page="notlar"><i>▣</i> Not Alma</a></nav>';
+ side.addEventListener('click',e=>{const link=e.target.closest('[data-page]');if(link)try{sessionStorage.setItem('sw:company:v2:PUSULA:fc_active_page',link.dataset.page);}catch{}});
+ document.body.prepend(side);
+ const list=document.querySelector('.worklist'),grid=document.createElement('div'),empty=document.createElement('section');grid.className='expense-work-grid';empty.className='expense-detail-empty panel';empty.innerHTML='<h2>▧ &nbsp; Fiş Detayı</h2><p>Görseli, okunan bilgileri ve muhasebe satırlarını incelemek için listeden bir fiş açın.</p>';list.before(grid);grid.append(list,empty,document.getElementById('editor'));
+}
 $('company').textContent=company.name;$('workspace').href='/workspace/'+company.id+'/';document.title=company.name+' · Masraf Fişleri';
 if(!expenseRulesReady){
   $('openProfiles').style.display='none';
+  $('accountImport').style.display='none';
+  $('expenseTheme').style.display='none';
   const cardLabel=$('editForm').elements.paymentCard.closest('label');
   cardLabel.style.display='none';
   if(cardLabel.previousElementSibling)cardLabel.previousElementSibling.style.display='none';
@@ -33,6 +44,7 @@ function render(){
   $('receipts').innerHTML=list.map(r=>{
     const problems=issues(r),duplicate=duplicates.has(r.id),ok=reviewed(r),types=[...new Set(r.lines.map(l=>categories[l.category]))].filter(Boolean).join(' · ');
     const warning=duplicate?'Olası mükerrer: aynı vergi no, tarih ve belge no.':r.error||(!r.ocrDone?'Okuma bekliyor.':problems.length?problems[0]+(problems.length>1?' +'+(problems.length-1)+' uyarı':''):ok?'Belge kontrol edildi.':'Alanları fotoğrafla karşılaştır ve onayla.');
+    if(expenseRulesReady)return '<article class="receipt panel expense-row"><div class="expense-thumb">'+(r.source.type==='application/pdf'?'<span>PDF</span>':'<img loading="lazy" src="'+imageURL(r.id)+'" alt="Fiş görseli">')+'</div><div class="expense-row-date">'+escape(r.date||'Tarih eksik')+'</div><div class="expense-row-seller"><strong>'+escape(r.seller||'Satıcı henüz okunmadı')+'</strong><small>'+escape(types||'Kategori seçilecek')+'</small></div><div class="money">'+escape(money(r.total,r.currency))+'</div><span class="badge '+(r.ocrDone?'ok':'')+'">'+(r.ocrDone?'Okundu':'Bekliyor')+'</span><span class="badge '+(ok?'ok':'')+'">'+(r.archived?'Arşiv':ok?'Hazır':'İnceleme')+'</span><button class="secondary" data-open="'+r.id+'" title="'+escape(warning)+'">Aç →</button></article>';
     return '<article class="receipt panel"><div class="receipt-top"><span class="step">'+(r.source.type==='application/pdf'?'PDF BELGE':'MASRAF FİŞİ')+'</span><span class="badge '+(ok?'ok':'')+'">'+(r.archived?'Arşiv':ok?'Kontrol edildi':'Kontrol gerekli')+'</span></div><h3>'+escape(r.seller||'Satıcı henüz okunmadı')+'</h3><div class="meta">'+escape(r.date||'Tarih eksik')+' · '+escape(r.number||'Belge no eksik')+'</div><div class="money">'+escape(money(r.total,r.currency))+'</div><div class="types">'+escape(types||'Kategori seçilecek')+'</div><p class="issue '+(ok?'good':'')+'">'+escape(warning)+'</p><button class="secondary" data-open="'+r.id+'">Fişi aç →</button></article>';
   }).join('');
   $('empty').hidden=list.length>0;$('empty').querySelector('h3').textContent=receipts.length?'Bu filtrede fiş yok.':'Henüz fiş eklenmedi.';
@@ -106,6 +118,7 @@ async function runQueue(files=null){
 function lineHTML(line,index){return '<div class="line" data-index="'+index+'"><div class="line-head"><strong>MASRAF SATIRI '+(index+1)+'</strong><button type="button" class="text-button" data-remove="'+index+'" aria-label="'+(index+1)+'. satırı kaldır">Kaldır</button></div><div class="line-grid"><label class="full">Logo satır açıklaması<input data-field="description" value="'+escape(line.description)+'" maxlength="200"></label></div><div class="categories" role="group" aria-label="'+(index+1)+'. satır kategorisi">'+Object.entries(categories).map(([key,label])=>'<button type="button" data-category="'+key+'" aria-pressed="'+(line.category===key)+'">'+label+'</button>').join('')+'</div><div class="expense-code"><label>Gider hesabı kodu (Logo GL_CODE1)<input data-field="expenseCode" value="'+escape(line.expenseCode||'')+'" maxlength="60" placeholder="Örn. 770.11.004" autocomplete="off"></label><div class="expense-code-actions"><button type="button" data-remember>Hafızaya kaydet</button><button type="button" data-forget>Geri al</button><span data-memory-status></span></div></div><div class="line-grid"><label>Satır tutarı ('+(line.vatIncluded===false?'KDV hariç':'KDV dahil')+')<input data-field="gross" inputmode="decimal" value="'+amount(line.gross)+'"></label><label>KDV oranı (%)<input data-field="vatRate" inputmode="decimal" value="'+escape(line.vatRate??'')+'" placeholder="Okunmadı"></label></div><div class="vat-choice" role="group" aria-label="'+(index+1)+'. satır KDV tutar biçimi"><span>KDV</span><button type="button" data-vat-included="true" aria-pressed="'+(line.vatIncluded!==false)+'">Dahil</button><button type="button" data-vat-included="false" aria-pressed="'+(line.vatIncluded===false)+'">Hariç</button></div><div class="line-summary" data-line-summary aria-live="polite"></div></div>';}
 function renderLines(){
   $('lines').innerHTML=editing.lines.map(lineHTML).join('');
+  if(expenseRulesReady)$('lines').querySelectorAll('[data-field=expenseCode]').forEach(input=>{input.setAttribute('list','accountCodes');const button=document.createElement('button');button.type='button';button.textContent='Hesap planında ara';button.dataset.plan='';input.closest('.expense-code').querySelector('.expense-code-actions').prepend(button);});
   if(!expenseRulesReady){
     $('lines').querySelectorAll('.expense-code-actions').forEach(node=>{node.style.display='none';});
     $('lines').querySelectorAll('[data-field=expenseCode]').forEach(input=>{input.placeholder='Bu firmada gider kodu henüz tanımlanmadı';});
@@ -133,15 +146,17 @@ async function displayPreview(record){
 }
 async function openEditor(id){
   if(busy){notice('Okuma bittikten sonra fişi düzenleyebilirsin.');return;}
+  if(editing&&editing.id===id&&$('editor').open)return;
+  if(editing&&editing.id!==id&&dirty&&!confirm('Kaydedilmemiş değişiklikler var. Başka fişe geçilsin mi?'))return;
   if(opening)return;opening=true;
   try{
   editing=await api('record/'+id);editing.lines=editing.lines.map(l=>suggestExpenseCode(editing,normalizeLine(l,editing)));$('flightRate').value=editing.lines.find(l=>l.category==='flight'&&l.vatRate>0)?.vatRate||'';dirty=false;$('editTitle').textContent=editing.seller||'Masraf fişi';const f=$('editForm').elements;
   for(const key of ['seller','taxId','date','number','currency','paymentCard'])f[key].value=editing[key]||'';for(const key of ['total','vat'])f[key].value=amount(editing[key]);f.reviewed.checked=editing.reviewed;
   $('archive').textContent=editing.archived?'Arşivden geri getir':'Arşive al';$('rawText').textContent=editing.rawText||'Henüz metin okunmadı.';$('editSaveState').textContent='Değişiklikler Kaydet ile hesaba aktarılır.';
-  renderLines();warningList();$('editor').showModal();await displayPreview(editing).catch(e=>{$('preview').textContent=e.message;});
+  renderLines();warningList();if(!$('editor').open){if(expenseRulesReady&&matchMedia('(min-width:1100px)').matches){$('editor').show();document.querySelector('.expense-detail-empty').hidden=true;}else $('editor').showModal();}await displayPreview(editing).catch(e=>{$('preview').textContent=e.message;});
   }finally{opening=false;}
 }
-function closeEditor(){if(saving||busy)return;if(dirty&&!confirm('Kaydedilmemiş değişiklikler var. Kaydetmeden kapatılsın mı?'))return;$('editor').close();editing=null;dirty=false;if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;$('preview').replaceChildren();}
+function closeEditor(){if(saving||busy)return;if(dirty&&!confirm('Kaydedilmemiş değişiklikler var. Kaydetmeden kapatılsın mı?'))return;$('editor').close();if(expenseRulesReady)document.querySelector('.expense-detail-empty').hidden=false;editing=null;dirty=false;if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;$('preview').replaceChildren();}
 async function saveEditor(){
   if(saving)return;saving=true;$('save').disabled=true;$('editForm').inert=true;
   try{collect();if(editing.reviewed&&duplicateIds([...receipts.filter(r=>r.id!==editing.id),editing]).has(editing.id))throw Error('Mükerrer görünen fişi arşive al veya belge bilgilerini düzelt.');editing=await api('record/'+editing.id,editing);dirty=false;$('editSaveState').textContent='Kaydedildi.';await refresh();warningList();}
@@ -150,6 +165,17 @@ async function saveEditor(){
 }
 function edited(){dirty=true;editing.reviewed=false;$('editForm').elements.reviewed.checked=false;$('editSaveState').textContent='Kaydedilmemiş değişiklikler var.';collect();warningList();renderLineSummaries();}
 const run=fn=>Promise.resolve().then(fn).catch(e=>notice(e.message));
+$('expenseTheme').onclick=()=>{document.body.classList.toggle('expense-light');try{localStorage.setItem('sw:expenses:theme',document.body.classList.contains('expense-light')?'light':'dark');}catch{}};
+try{if(localStorage.getItem('sw:expenses:theme')==='light')document.body.classList.add('expense-light');}catch{}
+function showAccountPlan(){ $('accountCodes').replaceChildren(...accountPlan.accounts.map(a=>{const option=document.createElement('option');option.value=a.code;option.label=a.name;return option;})); }
+let accountTarget=null;
+function renderAccountResults(){const query=normalize($('accountSearch').value).trim(),found=accountPlan.accounts.filter(a=>!query||normalize(a.code+' '+a.name).includes(query));$('accountResults').innerHTML=found.slice(0,100).map(a=>'<button type="button" data-account="'+escape(a.code)+'"><strong>'+escape(a.code)+'</strong><span>'+escape(a.name)+'</span></button>').join('')+(found.length>100?'<p>İlk 100 sonuç gösteriliyor; aramayı daraltın.</p>':'')+(!found.length?'<p>Hesap bulunamadı. Önce hesap planı Excel dosyasını yükleyin veya aramayı değiştirin.</p>':'');}
+$('accountSearch').oninput=renderAccountResults;$('closeAccountPicker').onclick=()=>$('accountPicker').close();
+$('accountResults').onclick=e=>{const button=e.target.closest('[data-account]');if(!button||!accountTarget)return;accountTarget.value=button.dataset.account;accountTarget.dispatchEvent(new Event('input',{bubbles:true}));$('accountPicker').close();};
+async function refreshAccountPlan(){if(!expenseRulesReady)return;accountPlan=await api('account-plan');showAccountPlan();}
+$('accountImport').onclick=()=>$('accountFile').click();
+$('accountFile').onchange=event=>{const file=event.target.files[0];event.target.value='';if(!file)return;run(async()=>{if(!window.XLSX)throw Error('Excel okuyucu yüklenemedi.');const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'}),map=new Map();for(const name of workbook.SheetNames){const rows=XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1,defval:''});for(const row of rows){const code=String(row[1]??'').trim(),description=String(row[2]??'').trim();if(/^\d{3}(?:\.\d+)+$/.test(code)&&description&&!map.has(code))map.set(code,{code,name:description.slice(0,200)});}}if(!map.size)throw Error('Excel içinde hesap kodu ve adı bulunamadı.');const result=await api('account-plan',{revision:accountPlan.revision,accounts:[...map.values()]});await refreshAccountPlan();notice(result.count+' hesap kodu Pusula hesabına kaydedildi. Fiş satırında kod alanından seçebilirsin.');});};
+if(expenseRulesReady)run(refreshAccountPlan);
 $('camera').onclick=()=>$('cameraInput').click();$('pick').onclick=()=>$('files').click();
 for(const id of ['cameraInput','files'])$(id).onchange=event=>{const files=[...event.target.files];event.target.value='';if(files.length)run(()=>runQueue(files));};
 $('stopQueue').onclick=()=>{stop=true;$('progressText').textContent='Bu belge tamamlanınca durdurulacak…';};
@@ -161,6 +187,7 @@ $('closeEditor').onclick=closeEditor;$('editor').addEventListener('cancel',e=>{e
 $('editForm').onsubmit=e=>{e.preventDefault();run(saveEditor);};
 $('editForm').addEventListener('input',e=>{if(e.target.name==='reviewed'){dirty=true;collect();warningList();}else edited();});
 $('lines').onclick=e=>{const b=e.target.closest('button');if(!b)return;const node=b.closest('[data-index]');if(!node)return;
+  if(b.hasAttribute('data-plan')){accountTarget=node.querySelector('[data-field=expenseCode]');$('accountSearch').value='';renderAccountResults();$('accountPicker').showModal();$('accountSearch').focus();return;}
   if(b.hasAttribute('data-remember')||b.hasAttribute('data-forget')){run(async()=>{try{collect();const line=editing.lines[+node.dataset.index],key=memoryKey(editing,line);if(!key)throw Error('Önce satıcıyı ve masraf kategorisini doldur.');const code=b.hasAttribute('data-forget')?'':line.expenseCode;if(code&&!validExpenseCode(code))throw Error('Gider kodu harf, rakam, nokta, tire veya alt çizgi içermeli.');if(!code&&b.hasAttribute('data-remember'))throw Error('Önce gider kodunu yaz.');profiles=await api('profiles',{revision:profiles.revision,memory:{key,code}});if(!code)line.expenseCode='';renderLines();edited();$('editSaveState').textContent=code?'Kod bu firmada hafızaya kaydedildi. Fiş için Kaydet düğmesine bas.':'Kod hafızadan kaldırıldı. Fiş için Kaydet düğmesine bas.';}catch(error){$('editSaveState').textContent=error.message;}});return;}
   collect();if(b.dataset.category)editing.lines[+node.dataset.index].category=b.dataset.category;else if(b.dataset.vatIncluded!==undefined)editing.lines[+node.dataset.index].vatIncluded=b.dataset.vatIncluded==='true';else if(b.dataset.remove!==undefined)editing.lines.splice(+b.dataset.remove,1);renderLines();edited();};
 $('addLine').onclick=()=>{if(editing.lines.length>=40){$('editSaveState').textContent='En fazla 40 satır eklenebilir.';return;}collect();editing.lines.push({description:(editing.number&&editing.seller?'FİŞ NO:'+editing.number+' '+editing.seller:'').slice(0,200),category:'other',expenseCode:'',gross:null,vatRate:null,vatIncluded:true,descriptionReady:true});renderLines();edited();};
@@ -170,7 +197,7 @@ $('retry').onclick=()=>run(async()=>{
   if(busy||saving)return;if(!confirm('Mevcut alanlar yeni okuma sonucu ile değiştirilecek. Kaynak belge korunur. Devam edilsin mi?'))return;
   const record=editing;busy=true;$('editor').close();$('progressPanel').hidden=false;render();
   try{await processReceipt(record,await getBlob(record.id));dirty=false;editing=null;await refresh();}
-  catch(e){$('editor').showModal();$('editSaveState').textContent=e.message+' Önceki düzenleme bu ekranda korunuyor.';return;}
+  catch(e){if(expenseRulesReady&&matchMedia('(min-width:1100px)').matches)$('editor').show();else $('editor').showModal();$('editSaveState').textContent=e.message+' Önceki düzenleme bu ekranda korunuyor.';return;}
   finally{worker?.terminate();worker=null;busy=false;$('progressPanel').hidden=true;render();}
   await openEditor(record.id);
 });

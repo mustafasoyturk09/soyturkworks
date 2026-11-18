@@ -17,6 +17,17 @@ class Storage{
 const jpg=Buffer.concat([Buffer.from([255,216,255]),Buffer.alloc(200000,42)]),id=createHash('sha256').update(jpg).digest('hex');
 const call=(store,path,body,raw=false)=>store.handle(new Request('https://expense-store.internal/'+path,{method:body===undefined?'GET':'POST',body:body===undefined?undefined:raw?body:JSON.stringify(body)}));
 
+test('Hesap planı Pusula ile sınırlıdır ve eşzamanlı değişikliklerin üzerine yazmaz',async()=>{
+  const storage=new Storage(),pusula=new ExpenseStore(storage,'PUSULA'),other=new ExpenseStore(new Storage(),'KIB');
+  assert.deepEqual(await(await call(pusula,'account-plan')).json(),{revision:0,accounts:[]});
+  const data={revision:0,accounts:[{code:'770.03.001',name:'Örnek gider'}]};
+  assert.equal((await(await call(pusula,'account-plan',data)).json()).count,1);
+  assert.equal((await(await call(pusula,'account-plan')).json()).accounts[0].code,'770.03.001');
+  await assert.rejects(()=>call(pusula,'account-plan',data),e=>e.status===409);
+  await assert.rejects(()=>call(other,'account-plan'),e=>e.status===403);
+  await assert.rejects(()=>call(pusula,'account-plan',{revision:1,accounts:[data.accounts[0],data.accounts[0]]}),/tekrarlanan/);
+});
+
 test('Expense OCR extracts explicit receipt fields without inventing missing identifiers or amounts',()=>{
   const r=receipt();assert.equal(r.number,'0072');assert.equal(r.date,'2026-11-10');assert.equal(r.total,11000);assert.equal(r.vat,1000);assert.equal(r.lines[0].category,'meal');assert.deepEqual(issues(r),[]);
   const unknown=parseReceipt('EKÜ NO: 8888\nZ NO: 1234\nNAKİT 999,00\nSAAT 10:11');assert.equal(unknown.number,'');assert.equal(unknown.total,null);assert.equal(unknown.date,'');assert.equal(unknown.lines[0].vatRate,null);assert(issues(unknown).length>=5);
