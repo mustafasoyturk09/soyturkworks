@@ -18,6 +18,7 @@ self.onmessage=async({data})=>{
     const {mod,api}=await initialize(),bitmap=await createImageBitmap(data.blob),scale=Math.min(1.5,2400/Math.max(bitmap.width,bitmap.height));
     const canvas=new OffscreenCanvas(Math.max(1,Math.round(bitmap.width*scale)),Math.max(1,Math.round(bitmap.height*scale))),ctx=canvas.getContext('2d',{willReadFrequently:true});
     ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+    let paper=null;try{const {receiptPaperFromPixels}=await import('/expenses/crop.mjs');const ratio=Math.min(1,600/Math.max(canvas.width,canvas.height)),small=new OffscreenCanvas(Math.max(1,Math.round(canvas.width*ratio)),Math.max(1,Math.round(canvas.height*ratio))),context=small.getContext('2d',{willReadFrequently:true});context.drawImage(canvas,0,0,small.width,small.height);paper=receiptPaperFromPixels(context.getImageData(0,0,small.width,small.height).data,small.width,small.height);}catch{}
     const results=[];
     for(const [index,psm] of [6,3].entries()){
       self.postMessage({progress:(index+1)+'/2 · Metin ve tutarlar okunuyor…'});
@@ -28,7 +29,7 @@ self.onmessage=async({data})=>{
       results.push({text:api.GetUTF8Text(),confidence:api.MeanTextConf(),crop});
     }
     if(!results.length)throw Error('Fotoğraf okunamadı. Daha net ve düz bir çekim dene.');
-    results.sort((a,b)=>b.confidence-a.confidence);const best=results[0];
+    results.sort((a,b)=>b.confidence-a.confidence);const best=results[0],textCrop=results.find(r=>r.crop)?.crop;if(paper){if(textCrop&&textCrop.y+textCrop.height>paper.y+paper.height*.35&&textCrop.y+textCrop.height<paper.y+paper.height)paper.height=textCrop.y+textCrop.height-paper.y;best.crop=paper;}else if(textCrop)best.crop={...textCrop,v:2};
     // Retain disagreements rather than treating confidence as proof of accuracy.
     self.postMessage({result:{...best,alternatives:results.map(r=>r.text)}});
   }catch(e){self.postMessage({error:e.message||'Fotoğraf okunamadı.'});}

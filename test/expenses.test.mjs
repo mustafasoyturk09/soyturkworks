@@ -4,7 +4,14 @@ import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
-import {receiptCropFromTSV} from '../src/expenses/crop.mjs';
+import {receiptCropFromTSV,receiptPaperFromPixels} from '../src/expenses/crop.mjs';
+
+test('Fotoğrafta belirgin kâğıt alanı bulunur, belirsiz görüntü kesilmez',()=>{
+  const width=160,height=240,pixels=new Uint8ClampedArray(width*height*4);
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x>=45&&x<115&&y>=20&&y<220?230:35;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
+  const crop=receiptPaperFromPixels(pixels,width,height);assert(crop);assert(crop.x<45/width&&crop.x+crop.width>115/width);assert(crop.y<20/height&&crop.y+crop.height>220/height);assert.equal(crop.v,2);
+  assert.equal(receiptPaperFromPixels(new Uint8ClampedArray(width*height*4).fill(220),width,height),null);
+});
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
 const receipt=()=>({...parseReceipt(sample,92),id:'one',reviewed:true});

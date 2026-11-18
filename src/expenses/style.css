@@ -64,3 +64,17 @@ body.pusula-expenses.expense-light .expense-left{background:#f6f9fc;border-color
 body.expense-light .expense-description-mirror textarea{background:#fff;color:#14243c;border-color:#8099af}
 @media(min-width:1100px){.pusula-expenses .expense-row-lines{grid-column:2/-1;overflow-x:auto}.pusula-expenses .expense-row-line{display:grid;grid-template-columns:100px 55px 80px 52px 45px 80px minmax(150px,1fr);gap:6px;align-items:center;min-width:620px;padding:5px 6px;border-top:1px solid #36566b;color:#d9ebf7;font-size:10px}.pusula-expenses .expense-row-line span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pusula-expenses .expense-row-line .missing{color:#ffac83;font-weight:700}.pusula-expenses.expense-light .expense-row-line{color:#173451;border-color:#9db6c9}}
 body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
+@media(min-width:1100px){
+.pusula-expenses .expense-inline-grid{grid-template-columns:minmax(120px,1fr) 50px 75px 76px 91px 74px minmax(135px,1.35fr) 25px;align-items:start}
+.pusula-expenses .expense-inline-grid>label,.pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.vat-choice,.pusula-expenses .expense-inline-grid>.expense-line-vat{height:65px;padding:3px 5px;display:flex;flex-direction:column;justify-content:flex-start;gap:4px}
+.pusula-expenses .expense-inline-grid .expense-code label{gap:4px}
+.pusula-expenses .expense-inline-grid .expense-code-actions [data-plan]{top:19px;right:7px}
+.pusula-expenses .expense-inline-grid .expense-code-actions [data-forget]{position:absolute;top:53px;left:5px;min-height:20px;padding:1px 5px}
+.pusula-expenses .expense-inline-grid .vat-choice>span,.pusula-expenses .expense-line-vat>span{height:15px;font-size:10px;white-space:nowrap}
+.pusula-expenses .expense-inline-grid .vat-choice>div{display:flex;gap:3px}
+.pusula-expenses .expense-inline-grid select{padding-right:18px;font-size:12px}
+.pusula-expenses .expense-inline-grid .vat-choice button{min-height:36px;font-size:10px}
+.pusula-expenses .expense-inline-grid .expense-line-vat strong{display:flex;align-items:center;min-height:36px;white-space:nowrap}
+.pusula-expenses #expenseDescriptionMirror{width:100%;resize:vertical;min-height:50px;padding:8px;border:1px solid #466482;border-radius:7px;background:#172a40;color:#eaf4ff;font:inherit}
+.pusula-expenses.expense-light #expenseDescriptionMirror{background:#fff;color:#14243c}
+}
