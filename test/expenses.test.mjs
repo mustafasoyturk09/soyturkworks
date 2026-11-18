@@ -41,6 +41,11 @@ test('Aktarım işareti yalnızca kontrol edilmiş fişte saklanır ve eski iste
   const old={...saved};delete old.exported;const unchanged=await(await call(store,'record/'+id,old)).json();assert.equal(unchanged.exported,true);
   const unreviewed=await(await call(store,'record/'+id,{...unchanged,reviewed:false,exported:false})).json();assert.equal(unreviewed.exported,false);
 });
+test('Diğer gider için seçili hesap, eksik Logo alanlarını ayrı gösterir',()=>{
+  const r=receipt();r.paymentCard='309.07';r.lines[0].category='other';r.lines[0].expenseCode='770.99.987';r.lines[0].vatRate=20;r.lines[0].gross=12000;r.total=12000;r.vat=2000;
+  const incomplete=exportReadiness([r],{},'PUSULA');assert.equal(incomplete.ready,false);assert(incomplete.reasons.some(x=>x.includes('hizmet/stok kodu')));assert(incomplete.reasons.some(x=>x.includes('masraf merkezi')));assert(incomplete.reasons.some(x=>x.includes('%20 KDV')));assert(!incomplete.reasons.some(x=>x.includes('gider hesabı kodu')));
+  const profiles={categories:{other:{serviceCode:'TEST.HIZMET',costCenter:'TEST.MERKEZ',vatCode20:'TEST.KDV'}}};const xml=buildPurchaseXML([r],profiles,'PUSULA');assert(xml.includes('<GL_CODE1>770.99.987</GL_CODE1>'));assert(xml.includes('<MASTER_CODE>TEST.HIZMET</MASTER_CODE>'));
+});
 
 test('Expense OCR extracts explicit receipt fields without inventing missing identifiers or amounts',()=>{
   const r=receipt();assert.equal(r.number,'0072');assert.equal(r.date,'2026-11-10');assert.equal(r.total,11000);assert.equal(r.vat,1000);assert.equal(r.lines[0].category,'meal');assert.deepEqual(issues(r),[]);

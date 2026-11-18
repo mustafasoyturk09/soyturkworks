@@ -140,7 +140,9 @@ export function exportReadiness(receipts,profiles={},company=''){
       // The supplied vehicle examples and GIB review cover 2026 only. Do not
       // silently carry accounting assumptions into a different document year.
       if(company==='PUSULA'&&['fuel','parking','wash'].includes(l.category)&&r.date?.slice(0,4)!=='2026')reasons.push('Binek araç gideri: belge yılı için mevzuat ve Logo KKEG tanımlarını doğrula.');
-      if(!p.serviceCode||!(l.expenseCode||p.accountCode)||(!p.costCenter&&l.category!=='flight'))reasons.push(label+': Logo eşleştirmesini tamamla.');
+      if(!p.serviceCode)reasons.push(label+': Logo eşleştirmesini tamamla — hizmet/stok kodu eksik.');
+      if(!(l.expenseCode||p.accountCode))reasons.push(label+': gider hesabı kodu eksik.');
+      if(!p.costCenter&&l.category!=='flight')reasons.push(label+': Logo eşleştirmesini tamamla — masraf merkezi eksik.');
       if(l.vatRate>0&&!p['vatCode'+l.vatRate])reasons.push(label+': %'+l.vatRate+' KDV hesap kodunu tanımla.');
     }
   }
