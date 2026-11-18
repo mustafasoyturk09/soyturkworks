@@ -2,6 +2,12 @@ export const categories=Object.freeze({meal:'Yemek',wash:'Araç yıkama',fuel:'Y
 export const normalize=value=>String(value??'').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i');
 export const validExpenseCode=code=>typeof code==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,59}$/.test(code);
 export const validQuantity=value=>typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=100000&&Math.abs(value*1000-Math.round(value*1000))<1e-7;
+// Logo'nun sağlanan XML örneği ISO-8859-9 kullanır. Bu kodlamada olmayan
+// karakterler XML sayısal karakter başvurusu olarak saklanır; kayıp oluşmaz.
+export function encodeLogoXML(xml){
+  const turkish=new Map([['Ğ',0xd0],['İ',0xdd],['Ş',0xde],['ğ',0xf0],['ı',0xfd],['ş',0xfe]]),replaced=new Set([0xd0,0xdd,0xde,0xf0,0xfd,0xfe]);
+  const bytes=[];for(const ch of String(xml).replace(/^<\?xml version="1\.0" encoding="UTF-8"\?>/,'<?xml version="1.0" encoding="ISO-8859-9"?>')){const code=ch.codePointAt(0);if(turkish.has(ch))bytes.push(turkish.get(ch));else if(code<256&&!replaced.has(code))bytes.push(code);else for(const c of '&#'+code+';')bytes.push(c.charCodeAt(0));}return Uint8Array.from(bytes);
+}
 export function memoryKey(receipt,line){
   const seller=normalize(receipt.seller).replace(/\|/g,' ').trim().slice(0,120),merchant=receipt.taxId?.trim()||seller;
   if(!merchant||!line.category)return '';

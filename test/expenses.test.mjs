@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 import {receiptCropFromTSV} from '../src/expenses/crop.mjs';
 
@@ -57,6 +57,10 @@ test('Miktar ve birim fiyat kaydedilir ve Logo XML toplamı korunur',async()=>{
 test('Miktar ve birim fiyat uyuşmazlığı sessizce yuvarlanıp aktarılmaz',()=>{
   const r=receipt();r.paymentCard='309.07';r.lines[0].quantity=3;r.lines[0].gross=11000;
   assert(issues(r).some(x=>x.includes('yuvarlama')));assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'),/kontrol/);
+});
+test('Logo XML Türkçe karakterleri ISO-8859-9 baytlarıyla korur',()=>{
+  const text='<?xml version="1.0" encoding="UTF-8"?><DESCRIPTION>FİŞ NO:002 ÇĞİÖŞÜ çğıöşü 😀</DESCRIPTION>';
+  const decoded=new TextDecoder('iso-8859-9').decode(encodeLogoXML(text));assert(decoded.startsWith('<?xml version="1.0" encoding="ISO-8859-9"?>'));assert(decoded.includes('FİŞ NO:002 ÇĞİÖŞÜ çğıöşü &#128512;'));
 });
 test('Paylaşılan Pusula XML örneğindeki tek hesap eşleşmesi yalnızca %20 için geçerlidir',()=>{
   const r=receipt();r.paymentCard='309.07';r.lines[0]={...r.lines[0],category:'other',expenseCode:'770.15.006',vatRate:20,gross:12000};r.total=12000;r.vat=2000;

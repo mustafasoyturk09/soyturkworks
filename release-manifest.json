@@ -243,11 +243,11 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "faa16e38a80efd0d4510964b1d1be819c3cb8bbe75ab38e1927b4eae2ced8f63"
+      "sha256": "411d8669b1409e3b0b02ae5ddf4fc2dc42c97b9fa5ad967dd9337c39fc4944b7"
     },
     {
       "file": "expenses/crop.mjs",
-      "sha256": "1355730bba8ea087cbdcfafe4a6520aa6d096f2ec4878356f2396c89d18e5875"
+      "sha256": "e1d413a16ca43b2c7d3f98848b47be0315bea8e3e977523cc64f524af58a6486"
     },
     {
       "file": "expenses/eng.traineddata",
@@ -259,7 +259,7 @@
     },
     {
       "file": "expenses/model.mjs",
-      "sha256": "fb7f233ae21848dceb6d6fb8f589acfbab16ec5b9f010d4207d77f89bef949ed"
+      "sha256": "005590b5fda3dd61bf5a347d428b09642e0c359ab1c354c36069b2131c08c423"
     },
     {
       "file": "expenses/ocr-core.js",
@@ -271,7 +271,7 @@
     },
     {
       "file": "expenses/style.css",
-      "sha256": "ce43b703a82619a3033b17d04b0f568c2ae3150f8c0998a5b11e286a774a59eb"
+      "sha256": "a23b1b2c4f3ed3c280caaeea205513ae8e0f4def5ec06a8f5d83b222ff7dcbc4"
     },
     {
       "file": "expenses/tur.traineddata",
