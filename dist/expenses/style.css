@@ -65,6 +65,16 @@ body.expense-light .expense-description-mirror textarea{background:#fff;color:#1
 @media(min-width:1100px){.pusula-expenses .expense-row-lines{grid-column:2/-1;overflow-x:auto}.pusula-expenses .expense-row-line{display:grid;grid-template-columns:100px 55px 80px 52px 45px 80px minmax(150px,1fr);gap:6px;align-items:center;min-width:620px;padding:5px 6px;border-top:1px solid #36566b;color:#d9ebf7;font-size:10px}.pusula-expenses .expense-row-line span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pusula-expenses .expense-row-line .missing{color:#ffac83;font-weight:700}.pusula-expenses.expense-light .expense-row-line{color:#173451;border-color:#9db6c9}}
 body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 @media(min-width:1100px){
+ .pusula-expenses .expense-extra-filters{align-items:end}
+ .pusula-expenses .expense-extra-filters>input,.pusula-expenses .expense-extra-filters>select,.pusula-expenses .expense-extra-filters label input{height:36px;min-height:36px}
+ .pusula-expenses .expense-extra-filters label{display:flex;flex-direction:column;gap:2px}
+ .pusula-expenses .stats>div{cursor:pointer}
+ .pusula-expenses #receipts{grid-template-columns:minmax(0,1fr)}
+ .pusula-expenses #receipts>.expense-accounting{grid-column:1;min-width:0;margin:0 0 10px}
+ .pusula-expenses .source #preview{overflow:hidden;max-height:65vh}
+ .pusula-expenses .source #preview img{width:100%;height:auto;max-height:65vh;object-fit:contain}
+}
+@media(min-width:1100px){
 .pusula-expenses .expense-inline-grid{grid-template-columns:minmax(120px,1fr) 50px 75px 76px 91px 74px minmax(135px,1.35fr) 25px;align-items:start}
 .pusula-expenses .expense-inline-grid>label,.pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.vat-choice,.pusula-expenses .expense-inline-grid>.expense-line-vat{height:65px;padding:3px 5px;display:flex;flex-direction:column;justify-content:flex-start;gap:4px}
 .pusula-expenses .expense-inline-grid .expense-code label{gap:4px}
