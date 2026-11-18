@@ -18,8 +18,9 @@ function cleanReceipt(input){
   out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),descriptionReady:true,category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',expenseCode:l.expenseCode===undefined?'':validExpenseCode(l.expenseCode)||l.expenseCode===''?l.expenseCode:fail('Gider hesabı kodu geçersiz.'),gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.'),vatIncluded:l.vatIncluded===undefined?true:typeof l.vatIncluded==='boolean'?l.vatIncluded:fail('KDV dahil/hariç seçimi geçersiz.')}));
   out.notes=Array.isArray(input.notes)?input.notes.slice(0,12).map(n=>String(n).slice(0,250)):[];
   out.confidence=typeof input.confidence==='number'&&Number.isFinite(input.confidence)?Math.max(0,Math.min(100,input.confidence)):null;
-  out.reviewed=input.reviewed===true;out.archived=input.archived===true;out.ocrDone=input.ocrDone===true;
+  out.reviewed=input.reviewed===true;out.archived=input.archived===true;out.ocrDone=input.ocrDone===true;out.exported=input.exported===true;
   if(out.reviewed&&issues(out).length)fail('Eksik veya tutarsız alanlar varken fiş onaylanamaz.');
+  if(out.exported&&!out.reviewed)fail('Kontrol edilmemiş fiş aktarılmış olarak işaretlenemez.');
   return out;
 }
 export class ExpenseStore{
@@ -73,7 +74,7 @@ export class ExpenseStore{
     if(action==='record'&&request.method==='GET')return json(record);
     if(action==='record'&&request.method==='POST'){
       const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,64000))),clean=cleanReceipt(body);
-      return this.storage.transaction(async tx=>{const current=await tx.get('receipt:'+id);if(current.revision!==body.revision)fail('Bu fiş başka cihazda değişti. Düzenlemeni yedekle, sonra yeniden aç.',409);const value={...current,...clean,revision:current.revision+1,updated:Date.now()};await tx.put('receipt:'+id,value);return json(value);});
+      return this.storage.transaction(async tx=>{const current=await tx.get('receipt:'+id);if(current.revision!==body.revision)fail('Bu fiş başka cihazda değişti. Düzenlemeni yedekle, sonra yeniden aç.',409);if(body.exported===undefined&&clean.reviewed)clean.exported=current.exported===true;const value={...current,...clean,revision:current.revision+1,updated:Date.now()};await tx.put('receipt:'+id,value);return json(value);});
     }
     fail('İşlem bulunamadı.',404);
   }

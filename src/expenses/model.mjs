@@ -127,7 +127,7 @@ export function categoryProfile(category,profiles={},company=''){
 }
 export function exportReadiness(receipts,profiles={},company=''){
   if(company&&company!=='PUSULA')return {ready:false,reasons:['Bu firma için Logo gider ve ödeme kartı kuralları henüz tanımlanmadı.']};
-  const reasons=[],active=receipts.filter(r=>!r.archived),duplicates=duplicateIds(active);
+  const reasons=[],active=receipts.filter(r=>!r.archived&&!r.exported),duplicates=duplicateIds(receipts.filter(r=>!r.archived));
   if(!active.length)reasons.push('Aktarılacak fiş yok.');
   for(const r of active){
     if(issues(r).length||!r.reviewed)reasons.push('Fişlerin kontrolünü tamamla.');
@@ -150,7 +150,7 @@ export function buildPurchaseXML(receipts,profiles={},company=''){
   const status=exportReadiness(receipts,profiles,company);if(!status.ready)throw Error(status.reasons.join(' '));
   const esc=v=>String(v??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const tag=(k,v)=>'<'+k+'>'+esc(v)+'</'+k+'>',money=v=>(v/100).toFixed(2);
-  return '<?xml version="1.0" encoding="UTF-8"?>\n<PURCHASE_INVOICES>'+receipts.filter(r=>!r.archived).map(r=>{
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<PURCHASE_INVOICES>'+receipts.filter(r=>!r.archived&&!r.exported).map(r=>{
     const date=r.date.split('-').reverse().join('.'),card=paymentCards[r.paymentCard];
     const taxes=r.lines.map(l=>lineAmounts(l).vat);
     const adjustment=r.vat-taxes.reduce((a,b)=>a+b,0),lastTaxed=r.lines.findLastIndex(l=>l.vatRate>0);

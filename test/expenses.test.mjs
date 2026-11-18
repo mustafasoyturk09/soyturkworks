@@ -27,6 +27,20 @@ test('Hesap planı Pusula ile sınırlıdır ve eşzamanlı değişikliklerin ü
   await assert.rejects(()=>call(other,'account-plan'),e=>e.status===403);
   await assert.rejects(()=>call(pusula,'account-plan',{revision:1,accounts:[data.accounts[0],data.accounts[0]]}),/tekrarlanan/);
 });
+test('Aktarıldığı işaretlenen fiş yeniden XML içine girmez',()=>{
+  const a=receipt();a.paymentCard='309.07';a.number='1001';
+  const b=receipt();b.paymentCard='309.07';b.number='1002';b.exported=true;
+  const xml=buildPurchaseXML([a,b],{},'PUSULA');assert(xml.includes('1001'));assert(!xml.includes('1002'));
+  assert.equal(exportReadiness([b],{},'PUSULA').ready,false);
+});
+test('Aktarım işareti yalnızca kontrol edilmiş fişte saklanır ve eski istemcide korunur',async()=>{
+  const store=new ExpenseStore(new Storage(),'PUSULA'),created=(await(await call(store,'image/'+id,jpg,true)).json()).receipt;
+  await assert.rejects(()=>call(store,'record/'+id,{...created,exported:true}),/kontrol edilmemiş/i);
+  const valid={...created,...receipt(),id:created.id,paymentCard:'309.07',exported:true};
+  const saved=await(await call(store,'record/'+id,valid)).json();assert.equal(saved.exported,true);
+  const old={...saved};delete old.exported;const unchanged=await(await call(store,'record/'+id,old)).json();assert.equal(unchanged.exported,true);
+  const unreviewed=await(await call(store,'record/'+id,{...unchanged,reviewed:false,exported:false})).json();assert.equal(unreviewed.exported,false);
+});
 
 test('Expense OCR extracts explicit receipt fields without inventing missing identifiers or amounts',()=>{
   const r=receipt();assert.equal(r.number,'0072');assert.equal(r.date,'2026-11-10');assert.equal(r.total,11000);assert.equal(r.vat,1000);assert.equal(r.lines[0].category,'meal');assert.deepEqual(issues(r),[]);
