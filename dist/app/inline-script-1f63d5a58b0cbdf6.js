@@ -681,6 +681,7 @@ if(window.SWWorkspace.companyId==='PUSULA'){
  const comparisonResult=document.createElement('div');comparisonResult.className='pusula-comparison-result';comparisonResult.setAttribute('role','status');comparisonResult.setAttribute('aria-live','polite');
  compare.onclick=()=>{if(efaturaUploads.reference.loading||efaturaUploads.raw.loading){comparisonResult.textContent='Dosyalar okunuyor, lütfen bekleyin.';return;}if(!eskiIslenmisSet||!parsedRows.length){comparisonResult.textContent='İşlenmiş ve yeni Excel dosyalarını yükleyin.';return;}const matched=parsedRows.filter(r=>!r.isRet&&eskiIslenmisSet.has(normFatno(r.fatno))).length,fresh=parsedRows.filter(r=>!r.isRet&&!eskiIslenmisSet.has(normFatno(r.fatno))).length,rejected=parsedRows.filter(r=>r.isRet).length;comparisonResult.textContent=`Karşılaştırıldı: ${matched} eşleşen, ${fresh} yeni${rejected?' · '+rejected+' RET':''}.`;ef115.status='all';ef115.tab='all';ef115.page=0;ef115Render();};
  uploads.append(document.getElementById('step1'),compare,document.getElementById('step2'));page.insertBefore(uploads,status);main.prepend(status);main.append(document.getElementById('step3'));side.remove();
+ const footer=document.createElement('div');footer.className='pusula-table-footer';const pagination=document.getElementById('ef115Pages');pagination.before(footer);footer.append(pagination,document.getElementById('step3'));
  uploads.after(comparisonResult);
  const search=document.createElement('input');search.id='pusulaInvoiceSearch';search.type='search';search.placeholder='Fatura no / unvan / tutar ara…';search.setAttribute('aria-label','Fatura ara');search.addEventListener('input',()=>{ef115.page=0;ef115Render();});main.insertBefore(search,document.getElementById('ef115Tabs'));
  const period=document.createElement('select');period.id='pusulaPeriod';period.setAttribute('aria-label','Fatura dönemi');period.addEventListener('change',()=>{ef115.page=0;ef115Render();});main.insertBefore(period,search);
@@ -726,9 +727,13 @@ if(window.SWWorkspace.companyId==='PUSULA'){
  #page-efatura.pusula-invoice-design #ef115Tabs{padding:8px 10px}
  #page-efatura.pusula-invoice-design .pusula-comparison-result:not(:empty){margin:0 0 12px;padding:10px 14px;border:1px solid #38bd9f;border-radius:9px;background:#103d38;color:#d6fff3;font-weight:600}
  #page-efatura.pusula-invoice-design #countPanel,#page-efatura.pusula-invoice-design #summaryRow{display:none!important}
- #page-efatura.pusula-invoice-design #titleEdit{margin:8px 0;padding:8px 12px;background:#1b293e;border:1px solid #405778;border-radius:8px}
+ #page-efatura.pusula-invoice-design #titleEdit{margin:8px 0;padding:8px 12px;background:linear-gradient(135deg,#919ba6 0%,#edf1f3 24%,#b0bac4 48%,#f7f8f9 68%,#a2adb7 100%);border:1px solid #e4eaf0;border-radius:8px;box-shadow:inset 0 1px 3px #fff9,0 3px 10px #0005}
  #page-efatura.pusula-invoice-design #titleEdit label{display:none}
- #page-efatura.pusula-invoice-design #titleInput{background:transparent;color:#f5f8ff;border:0;font-weight:700;min-height:30px;padding:4px}
+ #page-efatura.pusula-invoice-design #titleInput{background:transparent;color:#101419;border:0;font-weight:700;min-height:30px;padding:4px}
+ #page-efatura.pusula-invoice-design #ef115Main>.settings{display:none}
+ #page-efatura.pusula-invoice-design .pusula-table-footer{display:grid;grid-template-columns:1fr auto;align-items:center;background:#1e2632;padding-right:12px}
+ #page-efatura.pusula-invoice-design .pusula-table-footer #step3{margin:0;padding:0;min-width:0}
+ #page-efatura.pusula-invoice-design .pusula-table-footer #step3 .btn-row{margin:0}
  #page-efatura.pusula-invoice-design .pusula-uploads .step{min-height:160px;padding:12px}
  #page-efatura.pusula-invoice-design .pusula-uploads .dropzone{border:0;background:transparent;padding:4px;margin:0}
  #page-efatura.pusula-invoice-design .pusula-uploads .dz-icon{font-size:34px;color:#00db76;line-height:1;opacity:1;filter:drop-shadow(0 0 7px #00dc7777)}

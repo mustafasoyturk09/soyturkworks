@@ -22,8 +22,8 @@
       "sha256": "2bbd70e4e33d639bcbdbfcce893878a4801c1bb1b4bf9f0cd0c893a3529cabe6"
     },
     {
-      "file": "app/inline-script-1dcf035b9c7423b6.js",
-      "sha256": "1dcf035b9c7423b6b0a944d713e77ee29883caee48ec1124ca45cd24081993bf"
+      "file": "app/inline-script-1f63d5a58b0cbdf6.js",
+      "sha256": "1f63d5a58b0cbdf67f63daf1b0bb32a3463a56355595f88aa72958d5691aeb20"
     },
     {
       "file": "app/inline-script-2da854a6ddba829c.js",
@@ -279,7 +279,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "19e733717646711add942938a41030a63dc8784ad9dc6c7c87dfb94c9eb30868"
+      "sha256": "2f80162e7065f448ae8fa5ba40359d21e06eb06e44821147a575b9a20fdfbfb7"
     },
     {
       "file": "manifest.webmanifest",
@@ -287,7 +287,7 @@
     },
     {
       "file": "portal/index.html",
-      "sha256": "0aeeb5222ef98e284b904c8c5e89530c16532c916713d17a967ec955fcd3ebae"
+      "sha256": "4b12f7d9f27c251f0ee3c8adade6d34cd84ff66508c67e8d667f7780d4f95c35"
     },
     {
       "file": "portal/passkeys.js",
