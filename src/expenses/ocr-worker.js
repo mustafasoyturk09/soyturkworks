@@ -24,7 +24,8 @@ self.onmessage=async({data})=>{
       if(index){const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),v=pixels.data;for(let i=0;i<v.length;i+=4){const g=Math.max(0,Math.min(255,(v[i]*.299+v[i+1]*.587+v[i+2]*.114-128)*1.25+128));v[i]=v[i+1]=v[i+2]=g;}ctx.putImageData(pixels,0,0);}
       const bytes=new Uint8Array(await(await canvas.convertToBlob({type:'image/png'})).arrayBuffer());
       mod.FS.writeFile('/input',bytes);api.SetPageSegMode(psm);if(api.SetImageFile(1,0)===1)continue;api.Recognize(null);
-      results.push({text:api.GetUTF8Text(),confidence:api.MeanTextConf()});
+      let crop=null;try{const {receiptCropFromTSV}=await import('/expenses/crop.mjs');crop=receiptCropFromTSV(api.GetTSVText(0),canvas.width,canvas.height);}catch{}
+      results.push({text:api.GetUTF8Text(),confidence:api.MeanTextConf(),crop});
     }
     if(!results.length)throw Error('Fotoğraf okunamadı. Daha net ve düz bir çekim dene.');
     results.sort((a,b)=>b.confidence-a.confidence);const best=results[0];

@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
+import {receiptCropFromTSV} from '../src/expenses/crop.mjs';
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
 const receipt=()=>({...parseReceipt(sample,92),id:'one',reviewed:true});
@@ -45,6 +46,35 @@ test('Diğer gider için seçili hesap, eksik Logo alanlarını ayrı gösterir'
   const r=receipt();r.paymentCard='309.07';r.lines[0].category='other';r.lines[0].expenseCode='770.99.987';r.lines[0].vatRate=20;r.lines[0].gross=12000;r.total=12000;r.vat=2000;
   const incomplete=exportReadiness([r],{},'PUSULA');assert.equal(incomplete.ready,false);assert(incomplete.reasons.some(x=>x.includes('hizmet/stok kodu')));assert(incomplete.reasons.some(x=>x.includes('masraf merkezi')));assert(incomplete.reasons.some(x=>x.includes('%20 KDV')));assert(!incomplete.reasons.some(x=>x.includes('gider hesabı kodu')));
   const profiles={categories:{other:{serviceCode:'TEST.HIZMET',costCenter:'TEST.MERKEZ',vatCode20:'TEST.KDV'}}};const xml=buildPurchaseXML([r],profiles,'PUSULA');assert(xml.includes('<GL_CODE1>770.99.987</GL_CODE1>'));assert(xml.includes('<MASTER_CODE>TEST.HIZMET</MASTER_CODE>'));
+});
+test('Miktar ve birim fiyat kaydedilir ve Logo XML toplamı korunur',async()=>{
+  const store=new ExpenseStore(new Storage(),'PUSULA'),created=(await(await call(store,'image/'+id,jpg,true)).json()).receipt;
+  const r={...created,...receipt(),paymentCard:'309.07'};r.lines[0].quantity=2;r.lines[0].gross=11000;
+  const saved=await(await call(store,'record/'+id,r)).json();assert.equal(saved.lines[0].quantity,2);
+  const xml=buildPurchaseXML([saved],{},'PUSULA');assert(xml.includes('<QUANTITY>2</QUANTITY>'));assert(xml.includes('<PRICE>55.00</PRICE>'));assert(xml.includes('<TOTAL>110.00</TOTAL>'));
+  await assert.rejects(()=>call(store,'record/'+id,{...saved,lines:[{...saved.lines[0],quantity:-1}]}),/Miktar/);
+});
+test('Miktar ve birim fiyat uyuşmazlığı sessizce yuvarlanıp aktarılmaz',()=>{
+  const r=receipt();r.paymentCard='309.07';r.lines[0].quantity=3;r.lines[0].gross=11000;
+  assert(issues(r).some(x=>x.includes('yuvarlama')));assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'),/kontrol/);
+});
+test('Paylaşılan Pusula XML örneğindeki tek hesap eşleşmesi yalnızca %20 için geçerlidir',()=>{
+  const r=receipt();r.paymentCard='309.07';r.lines[0]={...r.lines[0],category:'other',expenseCode:'770.15.006',vatRate:20,gross:12000};r.total=12000;r.vat=2000;
+  const xml=buildPurchaseXML([r],{},'PUSULA');assert(xml.includes('<MASTER_CODE>770.15.006</MASTER_CODE>'));assert(xml.includes('<GL_CODE1>770.15.006</GL_CODE1>'));assert(xml.includes('<GL_CODE2>191.01.004</GL_CODE2>'));assert(xml.includes('<OHP_CODE1>DB.01</OHP_CODE1>'));
+  r.lines[0].expenseCode='770.99.987';assert.equal(exportReadiness([r],{},'PUSULA').ready,false);assert.equal(exportReadiness([r],{},'KIB').ready,false);
+});
+test('Fiş kırpma kredi sınırı güvenle bulunursa uygulanır',()=>{
+  const word=(y,text)=>`5\t1\t1\t1\t1\t1\t100\t${y}\t120\t20\t95\t${text}`;
+  const lines=['level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext',...[100,140,180,220,260,300].map((y,i)=>word(y,'ALAN'+i)),word(500,'TOPLAM'),word(650,'KREDİ')];
+  const crop=receiptCropFromTSV(lines.join('\n'),1000,1000);assert(crop);assert(crop.y<.1);assert(crop.y+crop.height>.67);assert(crop.y+crop.height<.75);
+  assert.equal(receiptCropFromTSV(lines.slice(0,-1).join('\n'),1000,1000),null);
+  assert.equal(receiptCropFromTSV([...lines,word(700,'KREDİ')].join('\n'),1000,1000),null);
+});
+test('Kırpma sınırları doğrulanır ve eski istemci kaydında korunur',async()=>{
+  const store=new ExpenseStore(new Storage(),'PUSULA'),created=(await(await call(store,'image/'+id,jpg,true)).json()).receipt,crop={x:.1,y:.05,width:.8,height:.75};
+  const saved=await(await call(store,'record/'+id,{...created,crop})).json();assert.deepEqual(saved.crop,crop);
+  const old={...saved};delete old.crop;const kept=await(await call(store,'record/'+id,old)).json();assert.deepEqual(kept.crop,crop);
+  await assert.rejects(()=>call(store,'record/'+id,{...kept,crop:{x:.8,y:0,width:.9,height:.5}}),/sınırları geçersiz/);
 });
 
 test('Expense OCR extracts explicit receipt fields without inventing missing identifiers or amounts',()=>{

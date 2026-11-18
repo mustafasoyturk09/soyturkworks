@@ -22,7 +22,7 @@ for(const name of await readdir(join(dist,'app')))if(generatedAsset.test(name))a
 const ocrIds=['sfOcrCoreData','sfOcrLangData','sfOcrLangDataEng'];
 const brandFiles=['sw-logo.png','favicon-16.png','favicon-32.png','favicon-48.png','apple-touch-icon.png'];
 const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','automation/index.html','automation/style.css','automation/app.js','manifest.webmanifest','push-sw.js','app/workspace.js','app/workspace.css','app/izibiz.js','app/izibiz.css','app/sales-issue.js','app/sales-issue.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
-const expenseFiles=['index.html','style.css','app.mjs','model.mjs','ocr-worker.js','ocr-core.js','tur.traineddata','eng.traineddata'];
+const expenseFiles=['index.html','style.css','app.mjs','model.mjs','crop.mjs','ocr-worker.js','ocr-core.js','tur.traineddata','eng.traineddata'];
 for(const file of expenseFiles)allowed.add('expenses/'+file);
 async function rejectUnexpected(dir,prefix=''){
  for(const name of await readdir(dir)){

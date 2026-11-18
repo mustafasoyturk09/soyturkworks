@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {categories,issues,validExpenseCode} from '../src/expenses/model.mjs';
+import {categories,issues,validExpenseCode,validQuantity} from '../src/expenses/model.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const MAX_FILE=8*1024*1024,CHUNK=96*1024;
@@ -15,8 +15,9 @@ function cleanReceipt(input){
   const out={};for(const [key,max] of Object.entries({seller:200,taxId:11,date:10,number:40,currency:3,rawText:18000,error:300,paymentCard:20}))out[key]=String(input[key]??'').slice(0,max);
   const money=v=>v===null||v===undefined||v===''?null:Number.isSafeInteger(v)&&v>=0&&v<=1e11?v:fail('Tutar geçersiz.');
   out.total=money(input.total);out.vat=money(input.vat);
-  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),descriptionReady:true,category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',expenseCode:l.expenseCode===undefined?'':validExpenseCode(l.expenseCode)||l.expenseCode===''?l.expenseCode:fail('Gider hesabı kodu geçersiz.'),gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.'),vatIncluded:l.vatIncluded===undefined?true:typeof l.vatIncluded==='boolean'?l.vatIncluded:fail('KDV dahil/hariç seçimi geçersiz.')}));
+  out.lines=input.lines.map(l=>({description:String(l.description??'').slice(0,200),descriptionReady:true,category:l.category==='bakery'?'meal':Object.hasOwn(categories,l.category)?l.category:'other',expenseCode:l.expenseCode===undefined?'':validExpenseCode(l.expenseCode)||l.expenseCode===''?l.expenseCode:fail('Gider hesabı kodu geçersiz.'),quantity:l.quantity===undefined?1:l.quantity===null?null:validQuantity(l.quantity)?l.quantity:fail('Miktar geçersiz.'),gross:money(l.gross),vatRate:l.vatRate===null||l.vatRate===undefined?null:typeof l.vatRate==='number'&&Number.isFinite(l.vatRate)&&l.vatRate>=0&&l.vatRate<=100?l.vatRate:fail('KDV oranı geçersiz.'),vatIncluded:l.vatIncluded===undefined?true:typeof l.vatIncluded==='boolean'?l.vatIncluded:fail('KDV dahil/hariç seçimi geçersiz.')}));
   out.notes=Array.isArray(input.notes)?input.notes.slice(0,12).map(n=>String(n).slice(0,250)):[];
+  if(input.crop!==undefined){const c=input.crop;if(c===null)out.crop=null;else if(c&&['x','y','width','height'].every(k=>typeof c[k]==='number'&&Number.isFinite(c[k])&&c[k]>=0&&c[k]<=1)&&c.width>0&&c.height>0&&c.x+c.width<=1.000001&&c.y+c.height<=1.000001)out.crop={x:c.x,y:c.y,width:c.width,height:c.height};else fail('Fiş görünüm sınırları geçersiz.');}
   out.confidence=typeof input.confidence==='number'&&Number.isFinite(input.confidence)?Math.max(0,Math.min(100,input.confidence)):null;
   out.reviewed=input.reviewed===true;out.archived=input.archived===true;out.ocrDone=input.ocrDone===true;out.exported=input.exported===true;
   if(out.reviewed&&issues(out).length)fail('Eksik veya tutarsız alanlar varken fiş onaylanamaz.');
