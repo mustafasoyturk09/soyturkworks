@@ -684,8 +684,9 @@ if(window.SWWorkspace.companyId==='PUSULA'){
  uploads.after(comparisonResult);
  const search=document.createElement('input');search.id='pusulaInvoiceSearch';search.type='search';search.placeholder='Fatura no / unvan / tutar ara…';search.setAttribute('aria-label','Fatura ara');search.addEventListener('input',()=>{ef115.page=0;ef115Render();});main.insertBefore(search,document.getElementById('ef115Tabs'));
  const period=document.createElement('select');period.id='pusulaPeriod';period.setAttribute('aria-label','Fatura dönemi');period.addEventListener('change',()=>{ef115.page=0;ef115Render();});main.insertBefore(period,search);
+ main.insertBefore(document.getElementById('titleEdit'),document.getElementById('tableWrap'));
  page.querySelector('#step1 .step-title').textContent='İşlenmiş Excel';page.querySelector('#step2 .step-title').textContent='Yeni Excel';
- for(const [id,sub] of [['step1','Daha önce işlenen faturalar'],['step2','Yeni gelen faturalar']]){const step=document.getElementById(id);step.querySelector('.step-sub').textContent=sub;step.querySelector('.dz-icon').textContent='▣';step.querySelector('.dz-text').innerHTML='<b>▱ &nbsp; Dosya Seç</b><span>veya dosyayı buraya sürükle-bırak</span>';step.querySelector('.dz-hint').textContent='';}
+ for(const [id,sub] of [['step1','Daha önce işlenen faturalar'],['step2','Yeni gelen faturalar']]){const step=document.getElementById(id);step.querySelector('.step-sub').textContent=sub;step.querySelector('.dz-icon').innerHTML='<svg class="pusula-excel-icon" viewBox="0 0 48 56" aria-hidden="true"><path d="M10 2h22l12 12v37a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="currentColor"/><path d="M32 2v12h12" fill="#ffffff77"/><path d="M15 21h19M15 27h19M15 33h19M15 39h19" stroke="#ffffff55" stroke-width="2"/><rect x="2" y="19" width="25" height="24" rx="3" fill="currentColor" stroke="#ffffff99"/><path d="m9 25 9 12m0-12L9 37" stroke="white" stroke-width="3"/></svg>';step.querySelector('.dz-text').innerHTML='<b>▱ &nbsp; Dosya Seç</b>';step.querySelector('.dz-hint').textContent='';}
  const style=document.createElement('style');style.textContent=`
  #page-efatura.pusula-invoice-design{background:#10151e;color:#edf3ff}
  .pusula-invoice-design .page-head h1{font-family:Arial,sans-serif;font-size:32px;color:#f2f6ff}
@@ -723,11 +724,15 @@ if(window.SWWorkspace.companyId==='PUSULA'){
  #page-efatura.pusula-invoice-design #ledgerTable td:last-child label{display:inline-flex;margin-left:8px;align-items:center;gap:4px}
  #page-efatura.pusula-invoice-design #ef115Tabs{padding:8px 10px}
  #page-efatura.pusula-invoice-design .pusula-comparison-result:not(:empty){margin:0 0 12px;padding:10px 14px;border:1px solid #38bd9f;border-radius:9px;background:#103d38;color:#d6fff3;font-weight:600}
- #page-efatura.pusula-invoice-design #countPanel,#page-efatura.pusula-invoice-design #summaryRow,#page-efatura.pusula-invoice-design #titleEdit{display:none!important}
- #page-efatura.pusula-invoice-design .pusula-uploads .step{min-height:190px;padding:16px}
+ #page-efatura.pusula-invoice-design #countPanel,#page-efatura.pusula-invoice-design #summaryRow{display:none!important}
+ #page-efatura.pusula-invoice-design #titleEdit{margin:8px 0;padding:8px 12px;background:#1b293e;border:1px solid #405778;border-radius:8px}
+ #page-efatura.pusula-invoice-design #titleEdit label{display:none}
+ #page-efatura.pusula-invoice-design #titleInput{background:transparent;color:#f5f8ff;border:0;font-weight:700;min-height:30px;padding:4px}
+ #page-efatura.pusula-invoice-design .pusula-uploads .step{min-height:160px;padding:12px}
  #page-efatura.pusula-invoice-design .pusula-uploads .dropzone{border:0;background:transparent;padding:4px;margin:0}
  #page-efatura.pusula-invoice-design .pusula-uploads .dz-icon{font-size:34px;color:#35d795;line-height:1}
  #page-efatura.pusula-invoice-design .pusula-uploads #step2 .dz-icon{color:#50b6ff}
+ #page-efatura.pusula-invoice-design .pusula-excel-icon{width:35px;height:40px;display:block;margin:auto}
  #page-efatura.pusula-invoice-design .pusula-uploads .dz-text b{display:inline-block;padding:9px 22px;border:1px solid #64809b;border-radius:24px;background:#263c57;color:#fff}
  #page-efatura.pusula-invoice-design .pusula-uploads .dz-text span{display:block;margin-top:7px;color:#d5e3f5}
  #page-efatura.pusula-invoice-design #ef115Status button{display:flex;align-items:center;justify-content:center;gap:12px;text-align:left;padding:10px;min-height:76px}
