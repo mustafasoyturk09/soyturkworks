@@ -87,6 +87,14 @@ export function parseReceipt(rawText,confidence=null){
   for(const line of result.lines){if(result.number&&result.seller)line.description=('FİŞ NO:'+result.number+' '+result.seller+(line.description?' · '+line.description:'')).slice(0,200);}
   return result;
 }
+// A missing line must remain editable; only use OCR item amounts when they
+// reconcile exactly with the stored document total. The source stays intact.
+export function draftMissingLines(receipt){
+  const parsed=parseReceipt(receipt.rawText||'',receipt.confidence),lines=parsed.lines||[];
+  const sum=lines.reduce((n,line)=>n+(Number.isSafeInteger(line.gross)?line.gross:0),0);
+  if(lines.length&&Number.isSafeInteger(receipt.total)&&sum===receipt.total&&lines.every(line=>Number.isSafeInteger(line.gross)&&Number.isFinite(line.vatRate)))return lines;
+  return [{description:('FİŞ NO:'+(receipt.number||'')+' '+(receipt.seller||'')).trim(),category:guessCategory(receipt.rawText||''),gross:Number.isSafeInteger(receipt.total)?receipt.total:null,vatRate:null,vatIncluded:true}];
+}
 export function issues(receipt){
   const out=[];
   if(!receipt.seller?.trim())out.push('Satıcı unvanı eksik.');

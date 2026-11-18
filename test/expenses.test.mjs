@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 import {receiptCropFromTSV,receiptPaperFromPixels} from '../src/expenses/crop.mjs';
 
@@ -15,6 +15,10 @@ test('Fotoğrafta belirgin kâğıt alanı bulunur, belirsiz görüntü kesilmez
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
 const receipt=()=>({...parseReceipt(sample,92),id:'one',reviewed:true});
+test('Satırı olmayan fiş düzenlenebilir taslak açar ve belirsiz KDV uydurmaz',()=>{
+  const r={...receipt(),lines:[]},draft=draftMissingLines(r);assert.equal(draft.length,1);assert.equal(draft[0].gross,r.total);assert.equal(draft[0].vatRate,10);assert.equal(r.lines.length,0);
+  const uncertain=draftMissingLines({...r,rawText:'okunamadı',total:25000});assert.equal(uncertain[0].gross,25000);assert.equal(uncertain[0].vatRate,null);
+});
 class Storage{
   data=new Map();queue=Promise.resolve();
   async get(k){return structuredClone(this.data.get(k));}
