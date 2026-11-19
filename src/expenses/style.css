@@ -64,6 +64,36 @@ body.pusula-expenses.expense-light .expense-left{background:#f6f9fc;border-color
 body.expense-light .expense-description-mirror textarea{background:#fff;color:#14243c;border-color:#8099af}
 @media(min-width:1100px){.pusula-expenses .expense-row-lines{grid-column:2/-1;overflow-x:auto}.pusula-expenses .expense-row-line{display:grid;grid-template-columns:100px 55px 80px 52px 45px 80px minmax(150px,1fr);gap:6px;align-items:center;min-width:620px;padding:5px 6px;border-top:1px solid #36566b;color:#d9ebf7;font-size:10px}.pusula-expenses .expense-row-line span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pusula-expenses .expense-row-line .missing{color:#ffac83;font-weight:700}.pusula-expenses.expense-light .expense-row-line{color:#173451;border-color:#9db6c9}}
 body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
+/* Keep the Pusula controls usable below the side-by-side workspace width. */
+.pusula-expenses #expenseDescriptionMirror{width:100%;min-height:50px;resize:vertical;font:inherit}
+@media(max-width:1099px){
+ .pusula-expenses .expense-table-head{display:none}
+ .pusula-expenses .worklist>[role=group]{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+ .pusula-expenses .worklist [data-filter]{background:#1e2939;color:#b7d4ff;border:1px solid #40536d;font-size:12px}
+ .pusula-expenses .worklist [data-filter][aria-pressed=true]{background:#166958;color:#effff9}
+ .pusula-expenses .expense-bulkbar,.pusula-expenses .expense-extra-filters{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin:14px 0}
+ .pusula-expenses .expense-bulkbar>select,.pusula-expenses .expense-extra-filters>*{flex:1 1 140px;min-width:0}
+ .pusula-expenses .expense-bulkbar label{display:flex;align-items:center;gap:8px}
+ .pusula-expenses input[type=checkbox][data-select],.pusula-expenses #expenseSelectAll{width:20px;height:20px;min-height:20px;accent-color:#166958}
+ .pusula-expenses .expense-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+ .pusula-expenses .expense-thumb{width:48px;height:64px;flex:none}
+ .pusula-expenses .expense-thumb img{width:100%;height:100%;object-fit:contain}
+ .pusula-expenses .expense-row-seller{flex:1 1 150px;min-width:0;overflow-wrap:anywhere}
+ .pusula-expenses .expense-row-seller small{display:block}
+ .pusula-expenses .expense-row .money{margin:0}
+ .pusula-expenses .expense-row-lines{width:100%;min-width:0}
+ .pusula-expenses .expense-row-line{display:flex;flex-wrap:wrap;gap:6px 12px;padding:8px 0;border-top:1px solid #40536d;font-size:12px;overflow-wrap:anywhere}
+ .pusula-expenses .expense-row-line span:last-child{flex-basis:100%}
+ .pusula-expenses .expense-detail-nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:5px}
+ .pusula-expenses .expense-detail-nav button{padding:6px 12px}
+ .pusula-expenses .expense-accounting{grid-column:1/-1;min-width:0}
+}
+@media(min-width:1100px){.pusula-expenses .expense-row{overflow-x:auto}}
+@media(min-width:1100px) and (max-width:1599px){
+ .pusula-expenses .editor .editor-body{grid-template-columns:minmax(0,1fr)}
+ .pusula-expenses .editor-body .source,.pusula-expenses .editor-body .fields{grid-column:1;grid-row:auto;position:static}
+ .pusula-expenses .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media(min-width:1100px){
  .pusula-expenses .expense-extra-filters{align-items:end}
  .pusula-expenses .expense-extra-filters>input,.pusula-expenses .expense-extra-filters>select,.pusula-expenses .expense-extra-filters label input{height:36px;min-height:36px}

@@ -3,7 +3,8 @@ import {receiptPaperFromPixels} from './crop.mjs';
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
 const expenseRulesReady=company.id==='PUSULA';
-const inlineAccounting=expenseRulesReady&&matchMedia('(min-width:1100px)').matches;
+const desktopLayout=matchMedia('(min-width:1100px)');
+let inlineAccounting=expenseRulesReady&&desktopLayout.matches;
 if(expenseRulesReady)document.body.classList.add('pusula-expenses');
 let accountPlan={revision:0,accounts:[]};
 if(expenseRulesReady){
@@ -199,7 +200,7 @@ async function saveEditor(){
   if(saving)return;const focused=inlineAccounting&&document.querySelector('.expense-accounting').contains(document.activeElement)?document.activeElement:null,selection=focused&&typeof focused.selectionStart==='number'?[focused.selectionStart,focused.selectionEnd]:null;clearTimeout(saveTimer);saving=true;$('save').disabled=true;$('editForm').inert=true;if(inlineAccounting)document.querySelector('.expense-accounting').inert=true;
   try{collect();if(editing.reviewed&&duplicateIds([...receipts.filter(r=>r.id!==editing.id),editing]).has(editing.id))throw Error('Mükerrer görünen fişi arşive al veya belge bilgilerini düzelt.');editing=await api('record/'+editing.id,editing);dirty=false;$('editSaveState').textContent='Kaydedildi.';await refresh();warningList();}
   catch(e){$('editSaveState').textContent=e.message+' Düzenlemen bu ekranda duruyor.';}
-  finally{saving=false;$('save').disabled=false;$('editForm').inert=false;if(inlineAccounting)document.querySelector('.expense-accounting').inert=false;if(expenseRulesReady)render();if(focused?.isConnected&&document.activeElement===document.body){focused.focus({preventScroll:true});if(selection)focused.setSelectionRange(...selection);}}
+  finally{saving=false;$('save').disabled=false;$('editForm').inert=false;if(expenseRulesReady)document.querySelector('.expense-accounting').inert=false;if(expenseRulesReady)render();if(focused?.isConnected&&document.activeElement===document.body){focused.focus({preventScroll:true});if(selection)focused.setSelectionRange(...selection);}}
 }
 function scheduleAutoSave(){if(!expenseRulesReady||!editing)return;clearTimeout(saveTimer);saveTimer=setTimeout(()=>{if(!editing||!dirty)return;if(saving||busy){scheduleAutoSave();return;}saveEditor();},1200);}
 function edited(){if(expenseRulesReady&&editing)expenseSelected.delete(editing.id);dirty=true;editing.reviewed=false;editing.exported=false;$('editForm').elements.reviewed.checked=false;$('editSaveState').textContent='Otomatik kayıt bekleniyor…';collect();syncRightDescription();warningList();renderLineSummaries();scheduleAutoSave();if(expenseRulesReady)render();}
@@ -237,7 +238,29 @@ $('receipts').onclick=e=>{if(e.target.matches('[data-select]'))return;const b=e.
 $('closeEditor').onclick=closeEditor;$('editor').addEventListener('cancel',e=>{e.preventDefault();closeEditor();});
 $('editForm').onsubmit=e=>{e.preventDefault();run(saveEditor);};
 $('editForm').addEventListener('input',e=>{if(e.target.name==='reviewed'){dirty=true;if(!e.target.checked)editing.exported=false;collect();warningList();scheduleAutoSave();}else edited();});
-if(inlineAccounting){$('lines').addEventListener('input',()=>edited());$('lines').addEventListener('focusin',e=>{const row=e.target.closest('[data-index]');if(row){activeLineIndex=Number(row.dataset.index);syncRightDescription();}});document.querySelector('.expense-accounting').addEventListener('focusout',e=>{if(!e.currentTarget.contains(e.relatedTarget))setTimeout(()=>render(),0);});}
+if(expenseRulesReady){
+ $('lines').addEventListener('input',()=>{if(inlineAccounting)edited();});
+ $('lines').addEventListener('focusin',e=>{const row=e.target.closest('[data-index]');if(row){activeLineIndex=Number(row.dataset.index);syncRightDescription();}});
+ document.querySelector('.expense-accounting').addEventListener('focusout',e=>{if(inlineAccounting&&!e.currentTarget.contains(e.relatedTarget))setTimeout(()=>render(),0);});
+ desktopLayout.addEventListener('change',syncExpenseLayout);
+}
+function syncExpenseLayout(){
+ const next=expenseRulesReady&&desktopLayout.matches;
+ if(next===inlineAccounting)return;
+ // Collect using the old layout before replacing quantity/price inputs.
+ if(editing)collect();
+ const editor=$('editor'),wasOpen=editor.open,accounting=document.querySelector('.expense-accounting');
+ if(accounting.contains(document.activeElement))document.activeElement.blur();
+ if(wasOpen)editor.close();
+ inlineAccounting=next;
+ (next?document.querySelector('.expense-left'):document.querySelector('#editor .editor-body')).append(accounting);
+ if(editing)renderLines();
+ if(wasOpen){if(next)editor.show();else editor.showModal();}
+ document.querySelector('.expense-detail-empty').hidden=wasOpen;
+ // A save already in flight must keep both layouts locked until it finishes.
+ accounting.inert=saving;
+ render();
+}
 $('lines').onclick=e=>{const b=e.target.closest('button');if(!b)return;const node=b.closest('[data-index]');if(!node)return;
   if(b.hasAttribute('data-plan')){accountTarget=node.querySelector('[data-field=expenseCode]');$('accountSearch').value='';renderAccountResults();$('accountPicker').showModal();$('accountSearch').focus();return;}
   if(b.hasAttribute('data-setup')){const category=editing.lines[Number(node.dataset.index)].category;$('openProfiles').click();const target=[...$('profileRows').children].find(row=>row.dataset.profile===category);if(target){target.open=true;target.scrollIntoView({block:'nearest'});}return;}

@@ -114,3 +114,15 @@ yeniden karşılaştırılır. Örnek uçak bileti bölme işleminde iki satır 
 `Logo satır açıklaması` alanındaki metin kullanıcının düzenlediği biçimiyle XML
 `DESCRIPTION` alanına yazılır. OCR taslağında fiş numarası ve satıcı önerilir;
 sonraki kullanıcı düzenlemesine otomatik önek eklenmez.
+
+## Ekran boyutu geçişi — 19 Kasım 2026
+
+Pusula fiş düzenleyicisi ekran genişliği değiştiğinde muhasebe satırlarını masaüstü
+listesi ile telefon/tablet penceresi arasında taşır. Açık düzenlemedeki açıklama,
+miktar ve tutar korunur; devam eden kaydetme bitene kadar alanlar kilitli kalır.
+Dar ekranlarda filtre, seçim ve fiş satırları alt alta yerleşir. Dar masaüstünde
+belge bilgileri görselin altına geçer; geniş muhasebe satırları yatay kaydırılır.
+
+Sentetik fişle 320×740, 844×390, 768×1024, 1100×800 ve 1440×1000 tarayıcı
+görünümleri, ekran geçişleri ve otomatik kayıt kontrol edildi. Gerçek fişler test
+verisi olarak kullanılmadı. Build, check ve 220 otomatik test başarılı.
