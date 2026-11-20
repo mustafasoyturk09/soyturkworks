@@ -243,7 +243,7 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "092535eefeaebc08f5ad6eebd88a4d738a5033fd86359ae8b243f39c97d36403"
+      "sha256": "70f799d3367266c86094ab1cd6e92c2dff6318fcb47d620496bbb9913e5ede01"
     },
     {
       "file": "expenses/crop.mjs",
@@ -255,7 +255,7 @@
     },
     {
       "file": "expenses/index.html",
-      "sha256": "ef09ca4b294058dfd67093a6460d6c8f9218535b3257d0ee81e43ba71390639f"
+      "sha256": "58c6cb93048f095ec4a3ac55860c136c54debaddb032a108a1b71e94557d5fe2"
     },
     {
       "file": "expenses/model.mjs",
@@ -271,7 +271,7 @@
     },
     {
       "file": "expenses/style.css",
-      "sha256": "9a1cc0cdb027ea7a6d2e31bda6b22d562c511b7609ac4139e148b3e079d3e241"
+      "sha256": "bbb5e7794ec6dbf68367fdcb20d19379ecc04a49ba26633252d57b55dc89759c"
     },
     {
       "file": "expenses/tur.traineddata",
