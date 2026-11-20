@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,splitFlight,lineAmounts,memoryKey} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 import {receiptCropFromTSV,receiptPaperFromPixels} from '../src/expenses/crop.mjs';
 
@@ -15,6 +15,16 @@ test('Fotoğrafta belirgin kâğıt alanı bulunur, belirsiz görüntü kesilmez
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
 const receipt=()=>({...parseReceipt(sample,92),id:'one',reviewed:true});
+test('Fişteki şahıs adı unvandan sonra gelir, açıklamada tekrarlanmaz',()=>{
+  const raw=sample.replace('ÖRNEK LOKANTA','ÖRNEK LOKANTA\nDENİZ ÖRNEK');
+  const r=parseReceipt(raw,92);assert.equal(r.seller,'ÖRNEK LOKANTA - DENİZ ÖRNEK');
+  assert(r.lines[0].description.startsWith('FİŞ NO:0072 ÖRNEK LOKANTA - DENİZ ÖRNEK'));
+  assert.deepEqual(completeReceiptSeller(r),r);
+  const old={...r,seller:'ÖRNEK LOKANTA'};
+  assert.equal(completeReceiptSeller(old).lines[0].description,r.lines[0].description);
+  const manual={...old,seller:'Düzeltilmiş unvan'};assert.deepEqual(completeReceiptSeller(manual),manual);
+  for(const next of ['ÖRNEK MAHALLESİ','ÇİÇEK CAD','MERKEZ ŞUBESİ','TEŞEKKÜR EDERİZ','KASİYER DENİZ','KREDİ KARTI','TİCARET LİMİTED ŞİRKETİ'])assert.equal(parseReceipt(sample.replace('ÖRNEK LOKANTA','ÖRNEK LOKANTA\n'+next)).seller,'ÖRNEK LOKANTA',next);
+});
 test('Satırı olmayan fiş düzenlenebilir taslak açar ve belirsiz KDV uydurmaz',()=>{
   const r={...receipt(),lines:[]},draft=draftMissingLines(r);assert.equal(draft.length,1);assert.equal(draft[0].gross,r.total);assert.equal(draft[0].vatRate,10);assert.equal(r.lines.length,0);
   const uncertain=draftMissingLines({...r,rawText:'okunamadı',total:25000});assert.equal(uncertain[0].gross,25000);assert.equal(uncertain[0].vatRate,null);
@@ -28,6 +38,17 @@ class Storage{
 }
 const jpg=Buffer.concat([Buffer.from([255,216,255]),Buffer.alloc(200000,42)]),id=createHash('sha256').update(jpg).digest('hex');
 const call=(store,path,body,raw=false)=>store.handle(new Request('https://expense-store.internal/'+path,{method:body===undefined?'GET':'POST',body:body===undefined?undefined:raw?body:JSON.stringify(body)}));
+test('Eski kaydın şahıs adı listede, detayda, kayıtta ve XML açıklamasında korunur',async()=>{
+  const storage=new Storage(),store=new ExpenseStore(storage,'PUSULA');
+  const created=(await(await call(store,'image/'+id,jpg,true)).json()).receipt;
+  const legacy={...created,...receipt(),id:created.id,rawText:sample.replace('ÖRNEK LOKANTA','ÖRNEK LOKANTA\nDENİZ ÖRNEK'),paymentCard:'309.07'};
+  await storage.put('receipt:'+id,legacy);
+  const listed=(await(await call(store,'list')).json()).receipts[0];assert.equal(listed.seller,'ÖRNEK LOKANTA - DENİZ ÖRNEK');assert(!('rawText' in listed));
+  const detail=await(await call(store,'record/'+id)).json();assert.equal(detail.seller,listed.seller);assert.equal((await storage.get('receipt:'+id)).seller,'ÖRNEK LOKANTA');
+  const saved=await(await call(store,'record/'+id,legacy)).json();assert.equal(saved.seller,listed.seller);
+  assert(buildPurchaseXML([saved],{},'PUSULA').includes('ÖRNEK LOKANTA - DENİZ ÖRNEK'));
+  assert.equal(saved.total,legacy.total);assert.equal(saved.vat,legacy.vat);assert.equal(saved.revision,legacy.revision+1);
+});
 
 test('Hesap planı Pusula ile sınırlıdır ve eşzamanlı değişikliklerin üzerine yazmaz',async()=>{
   const storage=new Storage(),pusula=new ExpenseStore(storage,'PUSULA'),other=new ExpenseStore(new Storage(),'KIB');

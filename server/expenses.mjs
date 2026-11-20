@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {categories,issues,validExpenseCode,validQuantity} from '../src/expenses/model.mjs';
+import {categories,issues,validExpenseCode,validQuantity,completeReceiptSeller} from '../src/expenses/model.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const MAX_FILE=8*1024*1024,CHUNK=96*1024;
@@ -22,7 +22,7 @@ function cleanReceipt(input){
   out.reviewed=input.reviewed===true;out.archived=input.archived===true;out.ocrDone=input.ocrDone===true;out.exported=input.exported===true;
   if(out.reviewed&&issues(out).length)fail('Eksik veya tutarsız alanlar varken fiş onaylanamaz.');
   if(out.exported&&!out.reviewed)fail('Kontrol edilmemiş fiş aktarılmış olarak işaretlenemez.');
-  return out;
+  return completeReceiptSeller(out);
 }
 export class ExpenseStore{
   constructor(storage,company){this.storage=storage;this.company=company;}
@@ -39,7 +39,7 @@ export class ExpenseStore{
       }
     }
     if(action==='list'&&request.method==='GET'){
-      const records=[...(await this.storage.list({prefix:'receipt:'})).values()].map(({rawText,...r})=>r);
+      const records=[...(await this.storage.list({prefix:'receipt:'})).values()].map(completeReceiptSeller).map(({rawText,...r})=>r);
       return json({company:this.company,receipts:records.sort((a,b)=>b.created-a.created),profiles:await this.storage.get('profiles')||{revision:0,categories:{}}});
     }
     if(action==='profiles'&&request.method==='POST'){
@@ -72,7 +72,7 @@ export class ExpenseStore{
     if(action==='image'&&request.method==='GET'){
       let i=0;const storage=this.storage;return new Response(new ReadableStream({async pull(controller){if(i===record.source.chunks){controller.close();return;}const chunk=await storage.get('image:'+id+':'+i++);if(!chunk){controller.error(Error('Görsel parçası bulunamadı.'));return;}controller.enqueue(chunk);}}),{headers:{'Content-Type':record.source.type,'Content-Disposition':'inline','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
     }
-    if(action==='record'&&request.method==='GET')return json(record);
+    if(action==='record'&&request.method==='GET')return json(completeReceiptSeller(record));
     if(action==='record'&&request.method==='POST'){
       const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,64000))),clean=cleanReceipt(body);
       return this.storage.transaction(async tx=>{const current=await tx.get('receipt:'+id);if(current.revision!==body.revision)fail('Bu fiş başka cihazda değişti. Düzenlemeni yedekle, sonra yeniden aç.',409);if(body.exported===undefined&&clean.reviewed)clean.exported=current.exported===true;const value={...current,...clean,revision:current.revision+1,updated:Date.now()};await tx.put('receipt:'+id,value);return json(value);});

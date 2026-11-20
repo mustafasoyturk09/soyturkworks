@@ -48,6 +48,27 @@ export function guessCategory(text){
   return matches.length===1?matches[0][0]:'other';
 }
 const trailingMoney=line=>{const m=String(line).match(/(\d[\d.,]*[.,]\d{2})\s*(?:TL|TRY|₺)?\s*$/i);return m?cents(m[1]):null;};
+// Keep the proprietor printed directly below the business title. Never infer
+// a name from an address, payment section, passenger or cashier information.
+export function completeReceiptSeller(receipt){
+  const seller=String(receipt.seller||'').trim(),header=String(receipt.rawText||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const index=header.findIndex(s=>normalize(s)===normalize(seller));
+  if(!seller||index<0||index>2)return receipt;
+  const person=(header[index+1]||'').replace(/^(?:ADI?\s*SOYADI?|AD\s*SOYAD|İŞLETME\s*SAHİBİ)\s*:\s*/iu,'').trim();
+  if(!/^[\p{L}]+(?:[ '\u2019-][\p{L}]+){1,3}$/u.test(person))return receipt;
+  const nonName=/\b(mah|mahalle|mahallesi|cad|cadde|caddesi|sok|sokak|sokagi|bulvar|bulvari|apt|apartmani|adres|merkez|sube|subesi|san|sanayi|tic|ticaret|ltd|limited|sti|sirketi|anonim|hizmetleri|hizmet|vergi|dairesi|tel|telefon|fis|fatura|tarih|saat|kasiyer|kasiyeriniz|personel|yolcu|musteri|sayin|nakit|kredi|banka|bankasi|toplam|kdv|bilgi|belgesi|tesekkur|ederiz|hosgeldiniz|lokanta|restoran|restaurant|kafe|cafe|firin|pastane|mamulleri|temizleme|kurutemizleme|yikama|akaryakit|otopark|hava|yollari|airlines)\b/;
+  if(nonName.test(normalize(person))||normalize(seller).includes(normalize(person)))return receipt;
+  const full=seller+' - '+person.toLocaleUpperCase('tr');
+  if(full.length>200)return receipt;
+  const prefix='FİŞ NO:'+(receipt.number||'')+' '+seller;
+  const lines=(receipt.lines||[]).map(line=>{
+    const description=String(line.description||'');
+    if(!description.startsWith(prefix))return line;
+    const rest=description.slice(prefix.length),already=normalize(rest).replace(/^[\s·:–-]+/,'').startsWith(normalize(person));
+    return already?line:{...line,description:(prefix+' - '+person.toLocaleUpperCase('tr')+rest).slice(0,200)};
+  });
+  return {...receipt,seller:full,lines};
+}
 export function parseReceipt(rawText,confidence=null){
   const text=String(rawText||'').slice(0,18000),lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),notes=[];
   const dates=[...new Set([...text.matchAll(/\b(\d{2})[./-](\d{2})[./-](20\d{2})\b/g)].map(m=>m[3]+'-'+m[2]+'-'+m[1]).filter(d=>{try{return validDate(d);}catch{return false;}}))];
@@ -85,7 +106,7 @@ export function parseReceipt(rawText,confidence=null){
     if(result.lines.length===1&&result.lines[0].vatRate===null)result.lines[0]={description:'Uçak bileti',category:'flight',gross:result.total,vatRate:null,vatIncluded:true};
   }
   for(const line of result.lines){if(result.number&&result.seller)line.description=('FİŞ NO:'+result.number+' '+result.seller+(line.description?' · '+line.description:'')).slice(0,200);}
-  return result;
+  return completeReceiptSeller(result);
 }
 // A missing line must remain editable; only use OCR item amounts when they
 // reconcile exactly with the stored document total. The source stays intact.

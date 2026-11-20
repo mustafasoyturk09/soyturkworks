@@ -104,17 +104,47 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
  .pusula-expenses .source #preview{overflow:hidden;max-height:65vh}
  .pusula-expenses .source #preview img{width:100%;height:auto;max-height:65vh;object-fit:contain}
 }
-@media(min-width:1100px){
-.pusula-expenses .expense-inline-grid{grid-template-columns:minmax(120px,1fr) 50px 75px 76px 91px 74px minmax(135px,1.35fr) 25px;align-items:start}
-.pusula-expenses .expense-inline-grid>label,.pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.vat-choice,.pusula-expenses .expense-inline-grid>.expense-line-vat{height:65px;padding:3px 5px;display:flex;flex-direction:column;justify-content:flex-start;gap:4px}
-.pusula-expenses .expense-inline-grid .expense-code label{gap:4px}
-.pusula-expenses .expense-inline-grid .expense-code-actions [data-plan]{top:19px;right:7px}
-.pusula-expenses .expense-inline-grid .expense-code-actions [data-forget]{position:absolute;top:53px;left:5px;min-height:20px;padding:1px 5px}
-.pusula-expenses .expense-inline-grid .vat-choice>span,.pusula-expenses .expense-line-vat>span{height:15px;font-size:10px;white-space:nowrap}
-.pusula-expenses .expense-inline-grid .vat-choice>div{display:flex;gap:3px}
-.pusula-expenses .expense-inline-grid select{padding-right:18px;font-size:12px}
-.pusula-expenses .expense-inline-grid .vat-choice button{min-height:36px;font-size:10px}
-.pusula-expenses .expense-inline-grid .expense-line-vat strong{display:flex;align-items:center;min-height:36px;white-space:nowrap}
-.pusula-expenses #expenseDescriptionMirror{width:100%;resize:vertical;min-height:50px;padding:8px;border:1px solid #466482;border-radius:7px;background:#172a40;color:#eaf4ff;font:inherit}
+/* One account-plan chevron; actions never overlap the input or categories. */
+.expense-account-picker{display:flex;align-items:stretch;min-width:0;position:relative}
+.expense-account-picker input{min-width:0;flex:1;padding-right:48px!important}
+.expense-account-picker [data-plan]{position:absolute;right:1px;bottom:1px;min-width:42px;min-height:42px;padding:0;border:0;background:transparent;color:#bcebe4;font-size:24px}
+.pusula-expenses #expenseDescriptionMirror{width:100%;resize:vertical;min-height:64px;padding:10px;border:1px solid #466482;border-radius:7px;background:#172a40;color:#eaf4ff;font:inherit}
+.pusula-expenses .expense-code-actions{gap:8px;flex-wrap:wrap}
+.pusula-expenses .expense-code-actions button{min-height:40px;padding:8px 12px;font-size:13px}
+.pusula-expenses .expense-accounting{min-width:0}
+.pusula-expenses .line-grid textarea,.pusula-expenses .expense-line-description textarea{width:100%;min-height:64px;resize:vertical;padding:10px;border:1px solid #466482;border-radius:7px;background:#101b2b;color:#eaf4ff;font-family:inherit;font-size:14px;line-height:1.5}
+.pusula-expenses.expense-light .line-grid textarea,.pusula-expenses.expense-light .expense-line-description textarea{background:#fff;color:#14243c}
 .pusula-expenses.expense-light #expenseDescriptionMirror{background:#fff;color:#14243c}
+@media(max-width:1099px){
+ .pusula-expenses .line-grid label,.pusula-expenses .expense-code label{font-size:12px}
+ .pusula-expenses .line-grid input,.pusula-expenses .line-grid textarea,.pusula-expenses .expense-account-picker input{font-size:16px;min-height:44px}
+}
+@media(min-width:1100px){
+ .pusula-expenses .expense-accounting{container-type:inline-size;overflow:visible}
+ .pusula-expenses .expense-inline-line{padding:14px}
+ .pusula-expenses .expense-inline-grid{grid-template-columns:repeat(8,minmax(0,1fr));align-items:start;gap:12px}
+ .pusula-expenses .expense-inline-grid>label,.pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.vat-choice,.pusula-expenses .expense-inline-grid>.expense-line-vat{height:auto;padding:0;border:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+ .pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.vat-choice{grid-column:span 2}
+ .pusula-expenses .expense-inline-grid label,.pusula-expenses .expense-inline-grid .vat-choice>span,.pusula-expenses .expense-line-vat>span{font-size:12px;line-height:18px;color:#c7d9ee;margin:0;white-space:nowrap}
+ .pusula-expenses .expense-inline-grid input,.pusula-expenses .expense-inline-grid select{width:100%;height:44px;min-height:44px;padding:8px;font-size:14px}
+ .pusula-expenses .expense-inline-grid select{padding-right:26px}
+ .pusula-expenses .expense-inline-grid .vat-choice>div{display:flex;gap:6px}
+ .pusula-expenses .expense-inline-grid .vat-choice button{flex:1;min-height:44px;padding:6px;font-size:13px}
+ .pusula-expenses .expense-inline-grid .expense-line-vat strong{display:flex;align-items:center;min-height:44px;white-space:nowrap;font-size:14px}
+ .pusula-expenses .expense-line-description{display:flex;flex-direction:column;gap:6px;margin-top:12px;color:#c7d9ee;font-size:12px}
+ .pusula-expenses .expense-inline-line .categories{gap:6px;margin:12px 0}
+ .pusula-expenses .expense-inline-line .categories button{min-height:36px;padding:7px 10px;font-size:12px}
+ .pusula-expenses .expense-line-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 0;border-top:1px solid #38516b}
+ .pusula-expenses .expense-line-actions button{min-height:36px;padding:7px 12px;font-size:12px}
+ .pusula-expenses .expense-line-actions [data-memory-status]{font-size:12px;color:#adc3dd}
+ .pusula-expenses .expense-line-actions [data-remove]{margin-left:auto}
+ .pusula-expenses .expense-inline-line .line-summary{font-size:13px;line-height:1.6;padding:10px}
+ .pusula-expenses .expense-row-lines{overflow:visible}
+ .pusula-expenses .expense-row-line{min-width:0;grid-template-columns:minmax(100px,1.4fr) repeat(5,minmax(0,1fr));font-size:12px;overflow-wrap:anywhere}
+ .pusula-expenses .expense-row-line span:last-child{grid-column:1/-1;white-space:normal;overflow:visible;text-overflow:clip}
+ @container(max-width:760px){
+  .pusula-expenses .expense-inline-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.vat-choice{grid-column:auto}
+ }
+ @container(max-width:440px){.pusula-expenses .expense-inline-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 }
