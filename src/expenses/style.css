@@ -186,7 +186,6 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 
 .expense-viewer-tools{display:none}
 @media(min-width:1100px){
- .pusula-expenses .editor[open]{top:12px;height:calc(100dvh - 24px);max-height:calc(100dvh - 24px)}
  .pusula-expenses .source .actions #rotate,.pusula-expenses .source .actions #expenseZoomIn,.pusula-expenses .source .actions #expenseZoomOut{display:none}
  .pusula-expenses .expense-viewer-tools{display:flex;justify-content:center;gap:8px;margin:8px 0 0}
  .pusula-expenses .expense-viewer-tools button{display:grid;place-items:center;width:40px;height:40px;min-height:40px;padding:8px;border:1px solid #456987;border-radius:7px;background:#142b42;color:#d9edf7}
