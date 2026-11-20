@@ -183,36 +183,3 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
  .pusula-expenses .editor .editor-body{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
  .pusula-expenses .editor .source #preview,.pusula-expenses .editor .source img{max-height:55dvh}
 }
-
-@media(min-width:1100px){
- body.pusula-expenses{height:100dvh;overflow:hidden;background:#031326}
- .pusula-expenses main{height:calc(100dvh - 62px);padding:12px 18px;overflow:hidden}
- .pusula-expenses .expense-work-grid{height:100%;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:stretch}
- .pusula-expenses .expense-left{overflow:auto;overscroll-behavior:contain;padding:16px;background:linear-gradient(145deg,#0a243b,#061628);border-color:#27485e}
- .pusula-expenses .editor[open]{position:relative;inset:auto;width:100%;height:100%;max-height:100%;min-height:0;grid-column:2;grid-row:1;background:#071a2c;border-color:#36566b}
- .pusula-expenses .editor .editor-body{display:grid;grid-template-columns:minmax(170px,.72fr) minmax(220px,1.28fr);gap:12px;padding:14px}
- .pusula-expenses .editor-body .source{grid-column:1;grid-row:1;position:static;border:1px solid #466076;border-radius:10px;padding:8px;display:flex;flex-direction:column}
- .pusula-expenses .editor-body .fields{grid-column:2;grid-row:1;border:1px solid #466076;border-radius:10px;padding:12px;background:linear-gradient(135deg,#193249,#0b1d30)}
- .pusula-expenses .source .actions{order:2;justify-content:center;margin-top:6px}
- .pusula-expenses .source #preview{height:275px;max-height:275px;margin:0;overflow:auto}
- .pusula-expenses .source #preview img{height:100%;max-height:none;width:100%;object-fit:contain}
- .pusula-expenses .expense-accounting{grid-column:1/-1;margin:0;padding:12px;background:linear-gradient(135deg,#142d42,#071a2c)}
- .pusula-expenses .expense-inline-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
- .pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.vat-choice{grid-column:auto}
- .pusula-expenses .expense-account-name input{font-size:12px}
- .pusula-expenses .editor .dialog-foot{display:flex;position:static;flex-shrink:0;padding:12px;gap:8px}
- .pusula-expenses .editor .dialog-foot button{flex:1;font-size:13px;padding:9px}
- .pusula-expenses #desktopArchive{background:#5d1724;border-color:#d24d68;color:#fff}
- .pusula-expenses main>.export,.pusula-expenses main>footer{display:none}
- .pusula-expenses .stats>div{border-radius:10px;min-height:90px;box-shadow:inset 0 0 25px #ffffff08}
- .pusula-expenses .stats>div:nth-child(1){background:linear-gradient(135deg,#10435b,#071d30)}
- .pusula-expenses .stats>div:nth-child(2){background:linear-gradient(135deg,#5d461b,#201d16)}
- .pusula-expenses .stats>div:nth-child(3){background:linear-gradient(135deg,#105038,#092c27)}
- .pusula-expenses .stats>div:nth-child(4){background:linear-gradient(135deg,#512c6b,#201b38)}
- .pusula-expenses .expense-row-lines{display:none}
- .pusula-expenses .expense-row{min-height:66px;border-radius:0;background:#091e30}
- .pusula-expenses .expense-thumb{height:50px}
- .pusula-expenses .expense-row .badge{border-radius:20px;font-size:11px;padding:5px 8px}
- .pusula-expenses #preview:fullscreen{height:100dvh;max-height:none;background:#04101d;display:grid;place-items:center}
- .pusula-expenses #preview:fullscreen img{width:auto;max-width:100%;height:100%;object-fit:contain}
-}

@@ -85,9 +85,6 @@ await mkdir(join(dist,'automation'),{recursive:true});
 for(const name of ['index.html','style.css','app.js'])await copyFile(join(root,'src/automation',name),join(dist,'automation',name));
 await mkdir(join(dist,'expenses'),{recursive:true});
 for(const name of expenseFiles.filter(name=>!['ocr-core.js','tur.traineddata','eng.traineddata'].includes(name)))await copyFile(join(root,'src/expenses',name),join(dist,'expenses',name));
-// Version the expense module graph so a deployment cannot reuse stale UI assets.
-const expenseVersion=createHash('sha256').update((await Promise.all(['app.mjs','model.mjs','crop.mjs','style.css'].map(name=>readFile(join(dist,'expenses',name))))).map(b=>b.toString()).join('')).digest('hex').slice(0,16);
-for(const name of ['index.html','app.mjs']){const path=join(dist,'expenses',name);let text=await readFile(path,'utf8');text=text.replace(/(expenses\/(?:app\.mjs|style\.css)|\.\/(?:model|crop)\.mjs)(["'])/g,'$1?v='+expenseVersion+'$2');await writeFile(path,text);}
 // Reuse the existing pinned OCR engine and dictionaries; never fetch a remote model.
 const ocrSource=await readFile(join(root,'src/app.html'),'utf8');
 for(const [id,file] of [['sfOcrCoreData','ocr-core.js'],['sfOcrLangData','tur.traineddata'],['sfOcrLangDataEng','eng.traineddata']]){
