@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters} from '../src/expenses/model.mjs';
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 import {receiptCropFromTSV,receiptPaperFromPixels} from '../src/expenses/crop.mjs';
 
@@ -94,10 +94,35 @@ test('Logo XML Türkçe karakterleri ISO-8859-9 baytlarıyla korur',()=>{
   const text='<?xml version="1.0" encoding="UTF-8"?><DESCRIPTION>FİŞ NO:002 ÇĞİÖŞÜ çğıöşü 😀</DESCRIPTION>';
   const decoded=new TextDecoder('iso-8859-9').decode(encodeLogoXML(text));assert(decoded.startsWith('<?xml version="1.0" encoding="ISO-8859-9"?>'));assert(decoded.includes('FİŞ NO:002 ÇĞİÖŞÜ çğıöşü &#128512;'));
 });
-test('Paylaşılan Pusula XML örneğindeki tek hesap eşleşmesi yalnızca %20 için geçerlidir',()=>{
+test('Pusula hizmet ve masraf merkezi KDV oranından bağımsızdır, KDV hesapları ayrı doğrulanır',()=>{
   const r=receipt();r.paymentCard='309.07';r.lines[0]={...r.lines[0],category:'other',expenseCode:'770.15.006',vatRate:20,gross:12000};r.total=12000;r.vat=2000;
   const xml=buildPurchaseXML([r],{},'PUSULA');assert(xml.includes('<MASTER_CODE>770.15.006</MASTER_CODE>'));assert(xml.includes('<GL_CODE1>770.15.006</GL_CODE1>'));assert(xml.includes('<GL_CODE2>191.01.004</GL_CODE2>'));assert(xml.includes('<OHP_CODE1>DB.01</OHP_CODE1>'));
+  for(const rate of [0,1,10,18]){
+    r.lines[0].vatRate=rate;r.vat=lineAmounts(r.lines[0]).vat;
+    const p=lineProfile(r.lines[0],{},'PUSULA');assert.equal(p.serviceCode,'770.15.006');assert.equal(p.costCenter,'DB.01');
+    const status=exportReadiness([r],{},'PUSULA');assert(!status.reasons.some(s=>/hizmet\/stok|masraf merkezi/.test(s)));
+    if(rate===0){assert.equal(status.ready,true);assert(!buildPurchaseXML([r],{},'PUSULA').includes('<GL_CODE2>'));}
+    else {assert.equal(status.ready,false);assert(status.reasons.some(s=>s.includes('%'+rate+' KDV')));assert.throws(()=>buildPurchaseXML([r],{},'PUSULA'),/KDV/);}
+  }
+  r.lines[0].vatRate=10;r.vat=lineAmounts(r.lines[0]).vat;
+  const configured={categories:{other:{vatCode10:'191.TEST10'}}},configuredXML=buildPurchaseXML([r],configured,'PUSULA');
+  assert(configuredXML.includes('<GL_CODE2>191.TEST10</GL_CODE2>'));assert(configuredXML.includes('<MASTER_CODE>770.15.006</MASTER_CODE>'));
+  assert.equal(lineProfile(r.lines[0],{categories:{other:{serviceCode:'CUSTOM',costCenter:'CENTER'}}},'PUSULA').serviceCode,'CUSTOM');
+  r.vat=2000;assert.throws(()=>buildPurchaseXML([r],configured,'PUSULA'),/kontrol/);
   r.lines[0].expenseCode='770.99.987';assert.equal(exportReadiness([r],{},'PUSULA').ready,false);assert.equal(exportReadiness([r],{},'KIB').ready,false);
+});
+
+test('Fiş tarihi sınırları dahil süzülür; okundu, bekliyor ve hata birbirinden ayrılır',()=>{
+  const rows=[{date:'2026-11-01',ocrDone:true},{date:'2026-11-10',ocrDone:false},{date:'2026-11-20',ocrDone:false,error:'Okunamadı'},{date:'',ocrDone:true}];
+  assert.equal(rows.filter(r=>matchesReceiptFilters(r)).length,4);
+  assert.deepEqual(rows.filter(r=>matchesReceiptFilters(r,{from:'2026-11-01',to:'2026-11-10'})),rows.slice(0,2));
+  assert.deepEqual(rows.filter(r=>matchesReceiptFilters(r,{to:'2026-11-10'})),rows.slice(0,2));
+  assert.deepEqual(rows.filter(r=>matchesReceiptFilters(r,{from:'2026-11-20'})),[rows[2]]);
+  assert.equal(rows.filter(r=>matchesReceiptFilters(r,{from:'2026-11-20',to:'2026-11-01'})).length,0);
+  assert.deepEqual(rows.filter(r=>matchesReceiptFilters(r,{ocr:'pending'})),[rows[1]]);
+  assert.deepEqual(rows.filter(r=>matchesReceiptFilters(r,{ocr:'error'})),[rows[2]]);
+  assert.deepEqual(rows.filter(r=>matchesReceiptFilters(r,{ocr:'done'})),[rows[0],rows[3]]);
+  assert.equal(matchesReceiptFilters({ocrDone:true,error:'Okuma hatası'},{ocr:'done'}),false);
 });
 test('Fiş kırpma kredi sınırı güvenle bulunursa uygulanır',()=>{
   const word=(y,text)=>`5\t1\t1\t1\t1\t1\t100\t${y}\t120\t20\t95\t${text}`;

@@ -148,3 +148,38 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
  }
  @container(max-width:440px){.pusula-expenses .expense-inline-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 }
+
+/* Filters describe their scope and wrap without squeezing date/select controls. */
+.pusula-expenses .expense-extra-filters{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin:12px 0 6px}
+.pusula-expenses .expense-extra-filters>label{display:flex;flex:1 1 140px;flex-direction:column;gap:5px;min-width:0;font-size:12px;line-height:1.4}
+.pusula-expenses .expense-extra-filters>.expense-search-label{flex:2 1 180px}
+.pusula-expenses .expense-extra-filters input,.pusula-expenses .expense-extra-filters select{width:100%;min-width:0;min-height:42px;height:42px;font-size:13px;padding:8px}
+.pusula-expenses .expense-extra-filters #expenseClearFilters{flex:0 0 auto;min-height:42px;font-size:13px;padding:8px 12px}
+.pusula-expenses .expense-filter-help{margin:0 0 12px;font-size:12px;line-height:1.5}
+.pusula-expenses .expense-inline-setup{max-width:100%;white-space:normal;text-align:left;margin-top:6px;min-height:40px;padding:8px 10px;background:#512b16;color:#ffe0a3;border:1px solid #ffad55;font-size:12px}
+.pusula-expenses #expenseDetailStatus.needs-review{background:#64451a;color:#ffe0a3}
+
+/* Pin the detail shell to the viewport; only its contents scroll. The width
+   follows the existing 228px sidebar, 25px margins and 55/45 workspace split. */
+.pusula-expenses .editor[open]{overflow:hidden;overscroll-behavior:contain}
+.pusula-expenses .editor #editForm{display:flex;flex-direction:column;min-height:0;height:100%;max-height:100%}
+.pusula-expenses .editor .dialog-head{position:relative;top:auto;flex-shrink:0}
+.pusula-expenses .editor .editor-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable;align-content:start}
+.pusula-expenses .editor .dialog-foot{display:none}
+@media(min-width:1100px){
+ .pusula-expenses .editor[open]{position:fixed;inset:82px 25px auto auto;width:calc((100% - 290px)*.45);height:calc(100dvh - 102px);min-height:0;max-height:calc(100dvh - 102px);margin:0;z-index:5}
+ .pusula-expenses main>.export,.pusula-expenses main>footer{width:calc((100% - 12px)*.55)}
+ .pusula-expenses main>.export{flex-wrap:wrap;gap:14px}
+}
+@media(max-width:1099px){
+ body.pusula-expenses:has(#editor[open]){overflow:hidden}
+ .pusula-expenses .editor[open]{position:fixed;inset:0;margin:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;min-height:0;border-radius:0}
+ .pusula-expenses .editor .source{position:static;min-width:0}
+ .pusula-expenses .editor .editor-body{grid-template-columns:minmax(0,1fr)}
+ .pusula-expenses .editor .source #preview,.pusula-expenses .editor .source img{max-height:35dvh}
+ .pusula-expenses .expense-extra-filters input,.pusula-expenses .expense-extra-filters select{font-size:16px;min-height:44px;height:44px}
+}
+@media(max-width:1099px) and (max-height:500px) and (orientation:landscape){
+ .pusula-expenses .editor .editor-body{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
+ .pusula-expenses .editor .source #preview,.pusula-expenses .editor .source img{max-height:55dvh}
+}

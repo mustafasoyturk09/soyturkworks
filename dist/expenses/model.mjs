@@ -165,9 +165,15 @@ export function categoryProfile(category,profiles={},company=''){
 }
 export function lineProfile(line,profiles={},company=''){
   const p=categoryProfile(line.category,profiles,company);
-  // The user's supplied Pusula Logo XML confirms this exact code and 20% case.
-  if(company==='PUSULA'&&line.category==='other'&&line.expenseCode==='770.15.006'&&line.vatRate===20)return {...p,serviceCode:p.serviceCode||'770.15.006',costCenter:p.costCenter||'DB.01',vatCode20:p.vatCode20||'191.01.004'};
+  // Service and cost centre belong to this expense account, not its VAT rate.
+  // Only the confirmed 20% VAT mapping is supplied; other rates need their own.
+  if(company==='PUSULA'&&line.category==='other'&&line.expenseCode==='770.15.006')return {...p,serviceCode:p.serviceCode||'770.15.006',costCenter:p.costCenter||'DB.01',vatCode20:p.vatCode20||'191.01.004'};
   return p;
+}
+export function matchesReceiptFilters(receipt,{from='',to='',ocr=''}={}){
+  if((from||to)&&(!receipt.date||(from&&receipt.date<from)||(to&&receipt.date>to)))return false;
+  const state=receipt.error?'error':receipt.ocrDone?'done':'pending';
+  return !ocr||ocr===state;
 }
 export function exportReadiness(receipts,profiles={},company=''){
   if(company&&company!=='PUSULA')return {ready:false,reasons:['Bu firma için Logo gider ve ödeme kartı kuralları henüz tanımlanmadı.']};
