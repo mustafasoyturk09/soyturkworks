@@ -202,3 +202,8 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 @media(min-width:1100px){
  body.pusula-expenses > .editor[open]{position:absolute;top:82px;right:25px;bottom:auto;left:auto;margin:0;z-index:100}
 }
+
+@media(min-width:1100px){
+ .pusula-expenses .expense-account-picker [data-plan]{display:grid;place-items:center;top:50%;bottom:auto;right:1px;transform:translateY(-50%);width:42px;height:42px;min-height:0;color:#bcebe4}
+ .pusula-expenses .expense-account-picker [data-plan] svg{display:block;width:17px;height:17px}
+}

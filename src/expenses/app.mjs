@@ -182,7 +182,7 @@ function renderLines(){
   }
   if(expenseRulesReady)$('lines').querySelectorAll('[data-field=expenseCode]').forEach(input=>{
     const picker=document.createElement('div');picker.className='expense-account-picker';input.replaceWith(picker);picker.append(input);
-    const button=document.createElement('button');button.type='button';button.textContent='⌄';button.setAttribute('aria-label','Hesap planını aç');button.setAttribute('aria-haspopup','dialog');button.dataset.plan='';picker.append(button);
+    const button=document.createElement('button');button.type='button';if(inlineAccounting)button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 4.5 4.5"/></svg>';else button.textContent='⌄';button.setAttribute('aria-label','Hesap planını aç');button.setAttribute('aria-haspopup','dialog');button.dataset.plan='';picker.append(button);
     input.addEventListener('keydown',event=>{if(event.key==='ArrowDown'){event.preventDefault();button.click();}});
     if(inlineAccounting)input.addEventListener('change',()=>rememberCodeAutomatically(input));
   });
