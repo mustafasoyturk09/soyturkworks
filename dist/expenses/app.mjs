@@ -45,7 +45,7 @@ if(!expenseRulesReady){
   if(cardLabel.previousElementSibling)cardLabel.previousElementSibling.style.display='none';
 }
 const base='/api/expenses/'+company.id+'/',escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let receipts=[],profiles={revision:0,categories:{}},filter='all',busy=false,stop=false,editing=null,dirty=false,saving=false,previewURL=null,previewSourceBlob=null,cropManual=false,cropEditToken=0,rotation=0,worker=null,cropWorker=null,refreshing=false,pdfModule=null,opening=false,expenseZoom=100,saveTimer=null,activeLineIndex=0;
+let receipts=[],profiles={revision:0,categories:{}},filter='all',busy=false,stop=false,editing=null,dirty=false,saving=false,previewURL=null,previewSourceBlob=null,cropManual=false,cropEditToken=0,rotation=0,viewerX=0,viewerY=0,viewerDrag=null,worker=null,cropWorker=null,refreshing=false,pdfModule=null,opening=false,expenseZoom=100,saveTimer=null,activeLineIndex=0;
 const expenseSelected=new Set();let expenseVisible=[];
 const money=(value,currency='TRY')=>Number.isSafeInteger(value)?new Intl.NumberFormat('tr-TR',{style:'currency',currency}).format(value/100):'Tutar okunmadı';
 const imageURL=id=>base+'image/'+id;
@@ -220,7 +220,7 @@ function warningList(){
   $('editWarnings').innerHTML=(editing.error?'<p>'+escape(editing.error)+'</p>':'')+(problems.length?'<ul>'+problems.map(p=>'<li>'+escape(p)+'</li>').join('')+'</ul>':'<strong>Temel alanlar tutarlı. Belgeyle karşılaştırıp onayla.</strong>')+(!editing.reviewed?'<p>Aktarım için aşağıdaki “Fotoğrafla karşılaştırdım” kutusunu işaretleyip Kaydet’e basın.</p>':'')+(editing.notes||[]).map(n=>'<p class="note">'+escape(n)+'</p>').join('');
 }
 async function displayPreview(record){
-  if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}$('preview').replaceChildren();$('original').href=imageURL(record.id);$('rotate').hidden=record.source.type==='application/pdf';rotation=0;expenseZoom=100;
+  if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}$('preview').replaceChildren();$('original').href=imageURL(record.id);$('rotate').hidden=record.source.type==='application/pdf';rotation=0;expenseZoom=100;viewerX=0;viewerY=0;
   const blob=await getBlob(record.id);if(editing?.id!==record.id||!$('editor').open)return;previewSourceBlob=blob;cropEditToken++;
   if(record.source.type==='application/pdf'){
     const lib=await pdf(),doc=await lib.getDocument({data:new Uint8Array(await blob.arrayBuffer()),isEvalSupported:false}).promise;
@@ -273,7 +273,10 @@ if(expenseRulesReady){
  for(const [id,value] of [['count','all'],['pending','pending'],['checked','reviewed'],['total','checked']]){const card=$(id).parentElement;card.setAttribute('role','button');card.tabIndex=0;card.onclick=()=>setExpenseFilter(value);card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpenseFilter(value);}};}
  $('fixExportMapping').onclick=()=>{const category=$('fixExportMapping').dataset.category;$('openProfiles').click();const row=[...$('profileRows').children].find(node=>node.dataset.profile===category);if(row){row.open=true;row.scrollIntoView({block:'nearest'});}};
  for(const [id,delta] of [['expensePrev',-1],['expenseNext',1]])$(id).onclick=()=>{const index=expenseVisible.findIndex(r=>r.id===editing?.id),target=expenseVisible[index+delta];if(target)run(()=>openEditor(target.id));};
- for(const [id,delta] of [['expenseZoomOut',-25],['expenseZoomIn',25]])$(id).onclick=()=>{expenseZoom=Math.max(50,Math.min(300,expenseZoom+delta));$('preview').querySelectorAll('img,canvas').forEach(node=>{node.style.maxWidth='none';node.style.width=expenseZoom+'%';});};
+ for(const [id,delta] of [['expenseZoomOut',-25],['expenseZoomIn',25]])$(id).onclick=()=>{expenseZoom=Math.max(50,Math.min(300,expenseZoom+delta));const img=$('preview').querySelector('img');if(inlineAccounting&&img){updateViewerTransform();return;}$('preview').querySelectorAll('img,canvas').forEach(node=>{node.style.maxWidth='none';node.style.width=expenseZoom+'%';});};
+ const preview=$('preview');preview.addEventListener('pointerdown',e=>{if(!inlineAccounting||e.button!==0||!e.target.matches('img'))return;e.preventDefault();viewerDrag={x:e.clientX,y:e.clientY,originX:viewerX,originY:viewerY};preview.setPointerCapture(e.pointerId);preview.classList.add('dragging');});
+ preview.addEventListener('pointermove',e=>{if(!viewerDrag)return;viewerX=viewerDrag.originX+e.clientX-viewerDrag.x;viewerY=viewerDrag.originY+e.clientY-viewerDrag.y;updateViewerTransform();});
+ const endDrag=()=>{viewerDrag=null;preview.classList.remove('dragging');};preview.addEventListener('pointerup',endDrag);preview.addEventListener('pointercancel',endDrag);preview.addEventListener('lostpointercapture',endDrag);
  for(const id of ['expenseDateFrom','expenseDateTo','expenseOcrFilter'])$(id).addEventListener('change',render);
  $('expenseClearFilters').onclick=()=>{for(const id of ['search','expenseDateFrom','expenseDateTo','expenseOcrFilter'])$(id).value='';render();};
  $('expenseSelectAll').onchange=e=>{for(const r of expenseVisible)e.target.checked?expenseSelected.add(r.id):expenseSelected.delete(r.id);render();};
@@ -313,7 +316,8 @@ $('lines').onclick=e=>{const b=e.target.closest('button');if(!b)return;const nod
   if(b.hasAttribute('data-remember')||b.hasAttribute('data-forget')){run(async()=>{try{collect();const line=editing.lines[+node.dataset.index],key=memoryKey(editing,line);if(!key)throw Error('Önce satıcıyı ve masraf kategorisini doldur.');const code=b.hasAttribute('data-forget')?'':line.expenseCode;if(code&&!validExpenseCode(code))throw Error('Gider kodu harf, rakam, nokta, tire veya alt çizgi içermeli.');if(!code&&b.hasAttribute('data-remember'))throw Error('Önce gider kodunu yaz.');await memoryQueue;profiles=await api('profiles',{revision:profiles.revision,memory:{key,code}});if(!code)line.expenseCode='';renderLines();edited();$('editSaveState').textContent=code?'Kod bu firmada hafızaya kaydedildi.':'Kod hafızadan kaldırıldı.';}catch(error){$('editSaveState').textContent=error.message;}});return;}
   collect();if(b.dataset.category)editing.lines[+node.dataset.index].category=b.dataset.category;else if(b.dataset.vatIncluded!==undefined)editing.lines[+node.dataset.index].vatIncluded=b.dataset.vatIncluded==='true';else if(b.dataset.remove!==undefined)editing.lines.splice(+b.dataset.remove,1);renderLines();edited();};
 $('addLine').onclick=()=>{if(editing.lines.length>=40){$('editSaveState').textContent='En fazla 40 satır eklenebilir.';return;}collect();editing.lines.push({description:(editing.number&&editing.seller?'FİŞ NO:'+editing.number+' '+editing.seller:'').slice(0,200),category:'other',expenseCode:'',gross:null,vatRate:null,vatIncluded:true,descriptionReady:true});renderLines();edited();};
-$('rotate').onclick=()=>{rotation=(rotation+90)%360;const img=$('preview').querySelector('img');if(img)img.style.transform='rotate('+rotation+'deg)';};
+function updateViewerTransform(){const img=$('preview').querySelector('img');if(img)img.style.transform='translate('+viewerX+'px, '+viewerY+'px) rotate('+rotation+'deg) scale('+(expenseZoom/100)+')';}
+$('rotate').onclick=()=>{rotation=(rotation+90)%360;updateViewerTransform();};
 $('archive').onclick=async()=>{if(saving)return;collect();editing.archived=!editing.archived;editing.reviewed=false;editing.exported=false;$('editForm').elements.reviewed.checked=false;dirty=true;await saveEditor();$('archive').textContent=editing.archived?'Arşivden geri getir':'Arşive al';};
 $('retry').onclick=()=>run(async()=>{
   if(busy||saving)return;if(!confirm('Mevcut alanlar yeni okuma sonucu ile değiştirilecek. Kaynak belge korunur. Devam edilsin mi?'))return;

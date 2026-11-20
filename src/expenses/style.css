@@ -193,3 +193,9 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
  .pusula-expenses .expense-viewer-tools button:hover{background:#1d4858;border-color:#42d9c5}
  .pusula-expenses .expense-viewer-tools svg{width:21px;height:21px}
 }
+
+@media(min-width:1100px){
+ .pusula-expenses .editor .source #preview{overflow:hidden;touch-action:none}
+ .pusula-expenses .editor .source #preview img{cursor:grab;user-select:none;-webkit-user-drag:none;transform-origin:center center}
+ .pusula-expenses .editor .source #preview.dragging img{cursor:grabbing}
+}
