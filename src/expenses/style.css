@@ -200,5 +200,5 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 }
 
 @media(min-width:1100px){
- body.pusula-expenses > .editor[open]{position:fixed;top:var(--expense-detail-top,82px);right:25px;bottom:auto;left:auto;margin:0;z-index:100}
+ body.pusula-expenses > .editor[open]{position:absolute;top:82px;right:25px;bottom:auto;left:auto;margin:0;z-index:100}
 }
