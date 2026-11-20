@@ -33,11 +33,27 @@ class Storage{
   data=new Map();queue=Promise.resolve();
   async get(k){return structuredClone(this.data.get(k));}
   async put(k,v){this.data.set(k,structuredClone(v));}
+  async delete(k){return this.data.delete(k);}
   async list({prefix}){return new Map([...this.data].filter(([k])=>k.startsWith(prefix)).map(([k,v])=>[k,structuredClone(v)]));}
   transaction(fn){const next=this.queue.then(async()=>{const before=structuredClone(this.data);try{return await fn(this);}catch(e){this.data=before;throw e;}});this.queue=next.catch(()=>{});return next;}
 }
 const jpg=Buffer.concat([Buffer.from([255,216,255]),Buffer.alloc(200000,42)]),id=createHash('sha256').update(jpg).digest('hex');
 const call=(store,path,body,raw=false)=>store.handle(new Request('https://expense-store.internal/'+path,{method:body===undefined?'GET':'POST',body:body===undefined?undefined:raw?body:JSON.stringify(body)}));
+test('Temizle aktif fiş ve görseli siler, arşivi korur; arşivden yalnızca seçilen silinir',async()=>{
+  const storage=new Storage(),store=new ExpenseStore(storage,'PUSULA');
+  const initial=(await(await call(store,'image/'+id,jpg,true)).json()).receipt;
+  const archivedId='b'.repeat(64),archived={...initial,id:archivedId,archived:true,revision:3};
+  await storage.put('receipt:'+archivedId,archived);await storage.put('image:'+archivedId+':0',new Uint8Array([1]));await storage.put('count',2);await storage.put('bytes',initial.source.size*2);
+  await storage.put('profiles',{revision:2,categories:{other:{serviceCode:'TEST'}},memories:{'test|other|*':'123'}});
+  await assert.rejects(()=>call(store,'clear-active',{receipts:[{id,revision:0}],profileRevision:2}),e=>e.status===409);
+  assert(await storage.get('receipt:'+id));
+  assert.equal((await(await call(store,'clear-active',{receipts:[{id,revision:initial.revision}],profileRevision:2})).json()).deleted,1);
+  assert.equal(await storage.get('receipt:'+id),undefined);assert.equal(await storage.get('image:'+id+':0'),undefined);assert(await storage.get('receipt:'+archivedId));assert.deepEqual((await storage.get('profiles')).memories,{});
+  await assert.rejects(()=>call(store,'delete-archived',{receipts:[{id:archivedId,revision:2}]}),e=>e.status===409);
+  assert(await storage.get('receipt:'+archivedId));
+  assert.equal((await(await call(store,'delete-archived',{receipts:[{id:archivedId,revision:3}]})).json()).deleted,1);
+  assert.equal(await storage.get('receipt:'+archivedId),undefined);assert.equal(await storage.get('image:'+archivedId+':0'),undefined);assert.equal(await storage.get('count'),0);
+});
 test('Eski kaydın şahıs adı listede, detayda, kayıtta ve XML açıklamasında korunur',async()=>{
   const storage=new Storage(),store=new ExpenseStore(storage,'PUSULA');
   const created=(await(await call(store,'image/'+id,jpg,true)).json()).receipt;

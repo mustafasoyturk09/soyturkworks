@@ -42,6 +42,34 @@ export class ExpenseStore{
       const records=[...(await this.storage.list({prefix:'receipt:'})).values()].map(completeReceiptSeller).map(({rawText,...r})=>r);
       return json({company:this.company,receipts:records.sort((a,b)=>b.created-a.created),profiles:await this.storage.get('profiles')||{revision:0,categories:{}}});
     }
+    if(action==='clear-active'&&request.method==='POST'){
+      if(this.company!=='PUSULA')fail('Bu işlem yalnızca Pusula firmasında kullanılabilir.',403);
+      const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,50000)));
+      if(!Array.isArray(body.receipts)||body.receipts.length>500||!body.receipts.every(r=>/^[a-f0-9]{64}$/.test(r.id)&&Number.isSafeInteger(r.revision)))fail('Fiş listesi geçersiz.');
+      return this.storage.transaction(async tx=>{
+        const all=[...(await tx.list({prefix:'receipt:'})).values()],active=all.filter(r=>!r.archived),expected=new Map(body.receipts.map(r=>[r.id,r.revision]));
+        if(expected.size!==body.receipts.length||active.length!==expected.size||active.some(r=>expected.get(r.id)!==r.revision))fail('Fişler başka bir cihazda değişti. Listeyi yenileyip tekrar deneyin.',409);
+        const profiles=await tx.get('profiles')||{revision:0,categories:{}};
+        if(body.profileRevision!==profiles.revision)fail('Gider kodu hafızası değişti. Listeyi yenileyip tekrar deneyin.',409);
+        for(const r of active){await tx.delete('receipt:'+r.id);for(let i=0;i<r.source.chunks;i++)await tx.delete('image:'+r.id+':'+i);}
+        await tx.put('count',all.length-active.length);await tx.put('bytes',all.filter(r=>r.archived).reduce((n,r)=>n+r.source.size,0));
+        await tx.put('profiles',{...profiles,revision:profiles.revision+1,memories:{}});
+        return json({deleted:active.length});
+      });
+    }
+    if(action==='delete-archived'&&request.method==='POST'){
+      if(this.company!=='PUSULA')fail('Bu işlem yalnızca Pusula firmasında kullanılabilir.',403);
+      const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,50000)));
+      if(!Array.isArray(body.receipts)||!body.receipts.length||body.receipts.length>500||!body.receipts.every(r=>/^[a-f0-9]{64}$/.test(r.id)&&Number.isSafeInteger(r.revision))||new Set(body.receipts.map(r=>r.id)).size!==body.receipts.length)fail('Fiş listesi geçersiz.');
+      return this.storage.transaction(async tx=>{
+        const records=await Promise.all(body.receipts.map(r=>tx.get('receipt:'+r.id)));
+        if(records.some((r,i)=>!r||!r.archived||r.revision!==body.receipts[i].revision))fail('Arşiv başka cihazda değişti. Listeyi yenileyip tekrar deneyin.',409);
+        for(const r of records){await tx.delete('receipt:'+r.id);for(let i=0;i<r.source.chunks;i++)await tx.delete('image:'+r.id+':'+i);}
+        await tx.put('count',Math.max(0,(await tx.get('count')||0)-records.length));
+        await tx.put('bytes',Math.max(0,(await tx.get('bytes')||0)-records.reduce((n,r)=>n+r.source.size,0)));
+        return json({deleted:records.length});
+      });
+    }
     if(action==='profiles'&&request.method==='POST'){
       const body=JSON.parse(new TextDecoder().decode(await limitedBytes(request,16000))),map={};
       if(body.memory){

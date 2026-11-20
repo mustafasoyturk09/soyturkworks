@@ -54,7 +54,7 @@ export default {
     let response;
     try {
       if(url.pathname.startsWith('/api/expenses/')) {
-        const route=url.pathname.match(/^\/api\/expenses\/([A-Z_]+)\/(list|profiles|record|image|account-plan)(?:\/([a-f0-9]{64}))?$/);
+        const route=url.pathname.match(/^\/api\/expenses\/([A-Z_]+)\/(list|profiles|record|image|account-plan|clear-active|delete-archived)(?:\/([a-f0-9]{64}))?$/);
         if(!route)return json({error:'İşlem bulunamadı.'},404);
         if(!['GET','POST'].includes(request.method))return json({error:'Yöntem desteklenmiyor.'},405);
         if(request.method==='POST'&&(request.headers.get('Origin')!==origin||(route[2]!=='image'&&request.headers.get('Content-Type')?.split(';')[0]!=='application/json')))return json({error:'Geçersiz istek kaynağı.'},403);
