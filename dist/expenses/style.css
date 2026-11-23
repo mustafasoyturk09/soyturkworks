@@ -272,3 +272,21 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 .pusula-expenses .expense-calendar-panel p,.pusula-expenses.expense-light .expense-calendar-panel p{margin:7px 2px 0;color:#444;font-size:10px}
 @media(min-width:1100px){.pusula-expenses .expense-inline-grid{grid-template-columns:repeat(10,minmax(0,1fr))}.pusula-expenses .expense-inline-grid>.expense-unit-price{grid-column:span 2}@container(max-width:760px){.pusula-expenses .expense-inline-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.pusula-expenses .expense-inline-grid>.expense-unit-price{grid-column:auto}}@container(max-width:440px){.pusula-expenses .expense-inline-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}}
 @media(max-width:600px){.pusula-expenses .expense-calendar-days button{height:32px;min-height:32px}}
+
+/* Satır kontrolleri: KDV seçimi ve diğer değerler tam görünür. */
+.pusula-expenses .expense-head-actions{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}
+.pusula-expenses .expense-head-actions #addLine{min-height:32px;padding:4px 8px;white-space:nowrap}
+.pusula-expenses .expense-head-actions #expenseArchiveAction{min-height:30px;padding:4px 9px;font-size:11px;white-space:nowrap}
+.pusula-expenses #lines [data-field="expenseCode"],.pusula-expenses #lines [data-field="quantity"],.pusula-expenses #lines [data-field="gross"],.pusula-expenses #lines [data-field="currency"],.pusula-expenses #lines [data-field="vatRate"]{text-align:center}
+.pusula-expenses #lines select[data-field="currency"],.pusula-expenses #lines select[data-field="vatRate"]{text-align-last:center;padding-left:22px;padding-right:22px}
+.pusula-expenses #lines .expense-account-picker [data-field="expenseCode"]{padding-left:30px!important;padding-right:30px!important}
+.pusula-expenses #lines .expense-account-picker [data-plan]{width:30px;min-width:30px}
+.pusula-expenses #lines .vat-choice button{display:inline-flex;align-items:center;justify-content:center}
+.pusula-expenses #lines .expense-line-vat strong{justify-content:center;text-align:center}
+@media(min-width:1100px){
+ .pusula-expenses .expense-inline-grid{grid-template-columns:minmax(140px,1.5fr) minmax(54px,.65fr) minmax(110px,1.2fr) minmax(84px,.8fr) minmax(88px,.85fr) minmax(116px,1.1fr) minmax(76px,.8fr);gap:10px}
+ .pusula-expenses .expense-inline-grid>.expense-code,.pusula-expenses .expense-inline-grid>.expense-unit-price,.pusula-expenses .expense-inline-grid>.vat-choice{grid-column:auto}
+ @container(max-width:760px){.pusula-expenses .expense-inline-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+ @container(max-width:440px){.pusula-expenses .expense-inline-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+}
+@media(max-width:600px){.pusula-expenses .expense-head-actions #expenseArchiveAction{min-height:40px}.pusula-expenses #lines .expense-account-picker [data-plan]{width:38px;min-width:38px}}
