@@ -243,7 +243,7 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "474b2a44edd67b44ef33abd5690b4492d5379c41946bfd557c35134e52498d75"
+      "sha256": "ac7dfc23b62a7d7b5746a919e0bec95fd3c0345817472b34b47b59d01eb5ddcb"
     },
     {
       "file": "expenses/crop.mjs",
@@ -259,7 +259,7 @@
     },
     {
       "file": "expenses/model.mjs",
-      "sha256": "b032c3cebefb4204d16dc7bae2529df3cb5eedfc25ef92b62c84c52a1c6c8c89"
+      "sha256": "928c1035aa026268f111d454aa48f49b0fa77fdbd6b915db52e04f6efe2f842c"
     },
     {
       "file": "expenses/ocr-core.js",

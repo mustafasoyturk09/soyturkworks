@@ -2,7 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters} from '../src/expenses/model.mjs';
+import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters,rememberedProfile,mergeReceiptReadings} from '../src/expenses/model.mjs';
+
+test('Satır eşleştirmeleri farklı giderleri ayırır ve benzer gideri tanır',async()=>{
+  const store=new ExpenseStore(new Storage(),'PUSULA'),r={seller:'ÖRNEK',taxId:'',lines:[]},line={category:'other',description:'ÖRNEK · KIRTASİYE'};
+  const key=memoryKey(r,line),saved=await(await call(store,'profiles',{revision:0,categories:{other:{serviceCode:'HIZ.001',accountCode:'770.15.001'}},lineProfile:{key,category:'other',accountCode:'770.15.001'}})).json();
+  assert.equal(rememberedProfile(r,line,saved).serviceCode,'HIZ.001');
+  assert.equal(rememberedProfile({seller:'BAŞKA'}, {...line,description:'BAŞKA · KIRTASİYE'},saved).accountCode,'770.15.001');
+  assert.equal(lineProfile({...line,description:'ÖRNEK · TEMİZLİK'},saved,'PUSULA',r).serviceCode,undefined);
+});
+test('Seçilen eksik fiş XML üretir, bilinmeyen tutarlar uydurulmaz',()=>{
+  const r={seller:'ÖRNEK',date:'',number:'',currency:'TRY',total:null,vat:null,lines:[{category:'other',description:'ÖRNEK',gross:null,vatRate:null}],paymentCard:''};
+  const xml=buildPurchaseXML([r],{},'PUSULA',{selected:true});
+  assert.match(xml,/<TOTAL_NET><\/TOTAL_NET>/);assert(!/NaN|undefined/.test(xml));
+});
+test('İki OCR denemesi belirsiz olmayan eksik alanları tamamlar',()=>{
+  const a=parseReceipt('CEM KOPYALAMA\nVE TANITIM TIC SAN LTD STI\nKIRTASİYE %20 1.100,00');
+  const b=parseReceipt('CEM KOPYALAMA\nFIŞ NO: 41\nTOPKDV 183,33\nTOPLAM 1.100,00');
+  const merged=mergeReceiptReadings(a,[a,b]);assert.equal(merged.number,'41');assert.equal(merged.vat,18333);assert.match(a.seller,/VE TANITIM TIC SAN LTD STI/);
+});
 
 test('Fiş numarası okunmasa da satır açıklamasında satıcı bulunur ve eksikler gösterilir',()=>{
   const r=parseReceipt('CEM KOPYALAMA\nKIRTASİYE %20 1.100,00\nTOPLAM 1.100,00');
@@ -58,7 +76,7 @@ test('Temizle aktif fiş ve görseli siler, arşivi korur; arşivden yalnızca s
   await assert.rejects(()=>call(store,'clear-active',{receipts:[{id,revision:0}],profileRevision:2}),e=>e.status===409);
   assert(await storage.get('receipt:'+id));
   assert.equal((await(await call(store,'clear-active',{receipts:[{id,revision:initial.revision}],profileRevision:2})).json()).deleted,1);
-  assert.equal(await storage.get('receipt:'+id),undefined);assert.equal(await storage.get('image:'+id+':0'),undefined);assert(await storage.get('receipt:'+archivedId));assert.deepEqual((await storage.get('profiles')).memories,{});
+  assert.equal(await storage.get('receipt:'+id),undefined);assert.equal(await storage.get('image:'+id+':0'),undefined);assert(await storage.get('receipt:'+archivedId));assert.deepEqual((await storage.get('profiles')).memories,{'test|other|*':'123'});
   await assert.rejects(()=>call(store,'delete-archived',{receipts:[{id:archivedId,revision:2}]}),e=>e.status===409);
   assert(await storage.get('receipt:'+archivedId));
   assert.equal((await(await call(store,'delete-archived',{receipts:[{id:archivedId,revision:3}]})).json()).deleted,1);

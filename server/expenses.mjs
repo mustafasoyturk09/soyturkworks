@@ -53,7 +53,7 @@ export class ExpenseStore{
         if(body.profileRevision!==profiles.revision)fail('Gider kodu hafızası değişti. Listeyi yenileyip tekrar deneyin.',409);
         for(const r of active){await tx.delete('receipt:'+r.id);for(let i=0;i<r.source.chunks;i++)await tx.delete('image:'+r.id+':'+i);}
         await tx.put('count',all.length-active.length);await tx.put('bytes',all.filter(r=>r.archived).reduce((n,r)=>n+r.source.size,0));
-        await tx.put('profiles',{...profiles,revision:profiles.revision+1,memories:{}});
+        await tx.put('profiles',{...profiles,revision:profiles.revision+1});
         return json({deleted:active.length});
       });
     }
@@ -78,7 +78,8 @@ export class ExpenseStore{
         return this.storage.transaction(async tx=>{const previous=await tx.get('profiles')||{revision:0,categories:{}},memories={...previous.memories};if(body.revision!==previous.revision)fail('Kod hafızası başka cihazda değişti. Yenileyip tekrar dene.',409);if(code)memories[key]=code;else delete memories[key];if(Object.keys(memories).length>500)fail('Kod hafızası sınırına ulaşıldı.',409);const value={...previous,revision:previous.revision+1,memories};await tx.put('profiles',value);return json(value);});
       }
       for(const key of Object.keys(categories)){const p=body.categories?.[key]||{};map[key]={};for(const field of ['serviceCode','accountCode','costCenter','vatCode1','vatCode10','vatCode20','kkegCode','kkegVatCode'])map[key][field]=String(p[field]||'').trim().slice(0,60);}
-      return this.storage.transaction(async tx=>{const previous=await tx.get('profiles')||{revision:0};if(body.revision!==previous.revision)fail('Eşleştirmeler başka cihazda değişti. Yenileyip tekrar dene.',409);const value={...previous,revision:previous.revision+1,categories:map,verified:false};await tx.put('profiles',value);return json(value);});
+      if(body.lineProfile&&(!/^(?:.{1,120})\|(?:meal|wash|fuel|parking|flight|transport|other)\|.{1,120}$/.test(body.lineProfile.key||'')||!Object.hasOwn(categories,body.lineProfile.category)||body.lineProfile.key.split('|')[1]!==body.lineProfile.category||!validExpenseCode(body.lineProfile.accountCode||'')))fail('Satır eşleştirmesi için geçerli gider hesap kodu gerekli.');
+      return this.storage.transaction(async tx=>{const previous=await tx.get('profiles')||{revision:0};if(body.revision!==previous.revision)fail('Eşleştirmeler başka cihazda değişti. Yenileyip tekrar dene.',409);const lineProfiles={...previous.lineProfiles};if(body.lineProfile){lineProfiles[body.lineProfile.key]={...map[body.lineProfile.category],accountCode:body.lineProfile.accountCode};if(Object.keys(lineProfiles).length>500)fail('Satır eşleştirme hafızası sınırına ulaşıldı.',409);}const value={...previous,revision:previous.revision+1,categories:map,lineProfiles,verified:false};await tx.put('profiles',value);return json(value);});
     }
     if(!/^[a-f0-9]{64}$/.test(id||''))fail('Fiş kimliği geçersiz.');
     if(action==='image'&&request.method==='POST'){
