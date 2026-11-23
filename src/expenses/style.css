@@ -221,3 +221,38 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 .pusula-expenses .expense-filter-actions #copyLink:hover{background:#00a982;box-shadow:0 0 22px #00e5a6a3}
 .pusula-expenses .expense-filter-actions #expenseClearFilters{width:100%;min-height:42px;font-size:13px;padding:8px 12px}
 @media(max-width:600px){.pusula-expenses .expense-extra-filters>.expense-filter-actions{flex:0 0 auto;margin-left:auto}}
+
+/* Üst araçlar ve yerinde tarih seçimi */
+.pusula-expenses .topbar{position:relative;z-index:200}
+.pusula-expenses .expense-top-tools{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-left:auto}
+.pusula-expenses .expense-top-tools>a{margin:0 0 0 4px;font-size:12px;white-space:nowrap;text-decoration:none;color:#b8cce3}
+.pusula-expenses .expense-top-tools>a:hover{color:#7cebd2}
+.pusula-expenses .expense-top-tools .expense-top-icon{position:relative;display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:9px;border:1px solid #395d7e;border-radius:12px;background:linear-gradient(145deg,#19334d,#101f36);color:#bce4f1;box-shadow:inset 0 1px #ffffff0e,0 5px 14px #0003}
+.pusula-expenses .expense-top-tools .expense-top-icon:hover,.pusula-expenses .expense-calendar-button[aria-expanded=true]{border-color:#42dcc4;color:#8fffe4;background:linear-gradient(145deg,#1d5060,#123b46);box-shadow:0 0 15px #21d7bc40}
+.pusula-expenses .expense-top-icon svg{width:21px;height:21px;display:block}
+.pusula-expenses .expense-notification-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;background:#ffbd49;border:1px solid #14243a;border-radius:50%;box-shadow:0 0 7px #ffbc4b99}
+.pusula-expenses .expense-calendar-wrap{position:relative}
+.pusula-expenses .expense-calendar-panel{position:absolute;z-index:250;top:calc(100% + 10px);right:0;width:min(304px,calc(100vw - 24px));padding:14px;border:1px solid #416584;border-radius:16px;background:linear-gradient(155deg,#19344d,#0e1d32 75%);box-shadow:0 18px 45px #0009,0 0 0 1px #ffffff0a;color:#e3f1ff}
+.pusula-expenses .expense-calendar-panel[hidden]{display:none}
+.pusula-expenses .expense-calendar-head{display:grid;grid-template-columns:36px 1fr 36px;gap:8px;align-items:center;text-align:center}
+.pusula-expenses .expense-calendar-head strong{text-transform:capitalize;font-size:15px;letter-spacing:.2px}
+.pusula-expenses .expense-calendar-head button{min-height:34px;height:34px;padding:0;border:1px solid #466983;border-radius:9px;background:#263e57;color:#def5ff;font-size:21px}
+.pusula-expenses .expense-calendar-week,.pusula-expenses .expense-calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.pusula-expenses .expense-calendar-week{margin:12px 0 5px;color:#87adc1;font-size:11px;font-weight:700}
+.pusula-expenses .expense-calendar-days button{min-width:0;min-height:34px;height:34px;padding:0;border:1px solid transparent;border-radius:9px;background:#294159;color:#e8f5ff;font-size:12px;font-weight:600}
+.pusula-expenses .expense-calendar-days button.outside{background:#17283d;color:#6e89a0}
+.pusula-expenses .expense-calendar-days button.today{border-color:#f1b75b;color:#ffe0a0}
+.pusula-expenses .expense-calendar-days button.selected{background:#008f78;border-color:#5ef0ce;color:#fff;box-shadow:0 0 12px #23e3b75c}
+.pusula-expenses .expense-calendar-days button:hover{border-color:#58dfd0}
+.pusula-expenses .expense-calendar-panel p{margin:10px 2px 0;color:#96b4c6;font-size:11px}
+.pusula-expenses.expense-light .expense-top-tools .expense-top-icon{background:linear-gradient(145deg,#f8fcff,#dcebf5);border-color:#9bb8c8;color:#24526a}
+.pusula-expenses.expense-light .expense-top-tools>a{color:#24526a}
+.pusula-expenses.expense-light .expense-calendar-panel{background:linear-gradient(155deg,#f7fcff,#e5f1f6);border-color:#a6c5d1;color:#173a51;box-shadow:0 18px 45px #24485a45}
+.pusula-expenses.expense-light .expense-calendar-head button{background:#d7eaf0;color:#204a5e;border-color:#b3d0db}
+.pusula-expenses.expense-light .expense-calendar-days button{background:#e2f0f5;color:#1c4256}
+.pusula-expenses.expense-light .expense-calendar-days button.outside{background:#f4f7f9;color:#91a5af}
+.pusula-expenses.expense-light .expense-calendar-days button.selected{background:#008f78;color:#fff}
+.pusula-expenses.expense-light .expense-calendar-panel p{color:#456d80}
+.vat-choice button[data-vat-included="false"]{border-color:#a7622b;background:#49301f;color:#ffd2a2}
+.vat-choice button[data-vat-included="false"][aria-pressed="true"]{border-color:#ffae50;background:#9c4f13;color:#fff4e5;box-shadow:0 0 12px #ff9a374d}
+@media(max-width:600px){.pusula-expenses .topbar{gap:8px}.pusula-expenses .expense-top-tools{gap:6px}.pusula-expenses .expense-top-tools .expense-top-icon{width:38px;height:38px;min-height:38px;padding:8px}.pusula-expenses .expense-top-tools>a{font-size:11px}.pusula-expenses .expense-calendar-panel{right:-43px}}

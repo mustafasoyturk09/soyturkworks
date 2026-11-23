@@ -2,7 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters,rememberedProfile,mergeReceiptReadings} from '../src/expenses/model.mjs';
+import {runInNewContext} from 'node:vm';
+import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters,rememberedProfile,mergeReceiptReadings,calendarDays} from '../src/expenses/model.mjs';
+
+test('Takvim günleri pazartesiden başlar ve artık yıl ile komşu ayları doğru ayırır',()=>{
+  const days=calendarDays(2024,1);assert.equal(days.length,42);assert.equal(days[0].iso,'2024-01-29');assert.equal(days[0].outside,true);
+  assert.equal(days.find(day=>day.iso==='2024-02-29').outside,false);assert.equal(days.find(day=>day.iso==='2024-03-01').outside,true);
+});
+test('OCR hazırlığı dosya yüklenirken başlatılabilir ve motor tekrar kullanılır',async()=>{
+  const source=await readFile(new URL('../src/expenses/ocr-worker.js',import.meta.url),'utf8'),messages=[],files=[],requests=[];let initializations=0;
+  const self={postMessage:value=>messages.push(value)};
+  class Engine{Init(){initializations++;return 0;}}
+  const context={self,Uint8Array,importScripts:()=>{},TesseractCore:async()=>({TessBaseAPI:Engine,FS:{writeFile:name=>files.push(name)}}),fetch:async url=>{requests.push(url);return {ok:true,arrayBuffer:async()=>new Uint8Array([1]).buffer};}};
+  runInNewContext(source,context);await self.onmessage({data:{prepare:true}});await self.onmessage({data:{prepare:true}});
+  assert.equal(initializations,1);assert.deepEqual(files,['tur.traineddata','eng.traineddata']);assert.equal(requests.length,2);assert.equal(messages.filter(m=>m.ready).length,2);
+});
 
 test('Satır eşleştirmeleri farklı giderleri ayırır ve benzer gideri tanır',async()=>{
   const store=new ExpenseStore(new Storage(),'PUSULA'),r={seller:'ÖRNEK',taxId:'',lines:[]},line={category:'other',description:'ÖRNEK · KIRTASİYE'};

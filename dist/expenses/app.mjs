@@ -1,4 +1,4 @@
-import {categories,normalize,cents,amount,parseReceipt,draftMissingLines,issues,duplicateIds,exportReadiness,categoryProfile,lineProfile,buildPurchaseXML,encodeLogoXML,splitFlight,lineAmounts,memoryKey,validExpenseCode,validQuantity,matchesReceiptFilters,receiptDescription,rememberedProfile,mergeReceiptReadings} from './model.mjs?v=ocr5';
+import {categories,normalize,cents,amount,parseReceipt,draftMissingLines,issues,duplicateIds,exportReadiness,categoryProfile,lineProfile,buildPurchaseXML,encodeLogoXML,splitFlight,lineAmounts,memoryKey,validExpenseCode,validQuantity,matchesReceiptFilters,receiptDescription,rememberedProfile,mergeReceiptReadings,calendarDays} from './model.mjs?v=ocr6';
 import {receiptPaperFromPixels} from './crop.mjs?v=ocr5';
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
@@ -24,7 +24,13 @@ if(expenseRulesReady){
  const searchInput=document.getElementById('search'),searchLabel=document.createElement('label');searchLabel.className='expense-search-label';searchLabel.textContent='Fiş numarası';searchInput.replaceWith(searchLabel);searchLabel.append(searchInput);
  extra.insertAdjacentHTML('afterend','<p id="expenseFilterHelp" class="hint expense-filter-help">Tarih ve okuma durumu fiş listesini süzer. “Okundu”, belge kontrolünün tamamlandığı anlamına gelmez.</p>');
  const columnHead=document.createElement('div');columnHead.className='expense-table-head';columnHead.innerHTML='<span></span><span>Fiş</span><span>Tarih</span><span>Firma / İşletme</span><span>Tutar</span><span>OCR</span><span>Durum</span><span></span>';list.insertBefore(columnHead,document.getElementById('receipts'));
- const top=document.querySelector('.topbar'),calendar=document.createElement('button'),notifications=document.createElement('button');calendar.type='button';calendar.className='secondary expense-top-icon';calendar.textContent='▦';calendar.setAttribute('aria-label','Tarih filtresi');calendar.onclick=()=>document.getElementById('expenseDateFrom').focus();notifications.type='button';notifications.className='secondary expense-top-icon';notifications.textContent='🔔';notifications.setAttribute('aria-label','Fiş bildirimleri');notifications.onclick=()=>{const n=document.getElementById('pending').textContent;notice(n+' fiş inceleme bekliyor.');};top.insertBefore(calendar,document.getElementById('expenseTheme'));top.insertBefore(notifications,calendar);
+ const top=document.querySelector('.topbar'),theme=document.getElementById('expenseTheme'),companyLink=top.querySelector('a[href="/companies"]'),tools=document.createElement('div'),calendar=document.createElement('button'),notifications=document.createElement('button'),calendarWrap=document.createElement('div'),calendarPanel=document.createElement('div');
+ tools.className='expense-top-tools';calendarWrap.className='expense-calendar-wrap';calendarPanel.className='expense-calendar-panel';calendarPanel.id='expenseCalendar';calendarPanel.hidden=true;calendarPanel.setAttribute('role','dialog');calendarPanel.setAttribute('aria-label','Fiş tarihi seç');
+ const svg=body=>'<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+body+'</svg>';
+ notifications.type='button';notifications.id='expenseNotification';notifications.className='secondary expense-top-icon expense-notification';notifications.innerHTML=svg('<path d="M18 8a6 6 0 0 0-12 0c0 6-2 6-2 8h16c0-2-2-2-2-8M10 19a2 2 0 0 0 4 0"/>')+'<span class="expense-notification-dot" aria-hidden="true" hidden></span>';notifications.setAttribute('aria-label','Fiş bildirimleri');notifications.title='Fiş bildirimleri';notifications.onclick=()=>{const n=document.getElementById('pending').textContent;notice(n+' fiş inceleme bekliyor.');};
+ calendar.type='button';calendar.className='secondary expense-top-icon expense-calendar-button';calendar.innerHTML=svg('<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M7.5 3v4M16.5 3v4M3.5 9h17M8 13h2M14 13h2M8 17h2"/>');calendar.setAttribute('aria-label','Fiş tarihi seç');calendar.setAttribute('aria-haspopup','dialog');calendar.setAttribute('aria-controls','expenseCalendar');calendar.setAttribute('aria-expanded','false');calendar.title='Fiş tarihi';calendar.onclick=()=>toggleExpenseCalendar();
+ theme.classList.add('expense-top-icon','expense-theme-icon');theme.innerHTML=svg('<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>');theme.title='Açık veya koyu görünüm';
+ calendarWrap.append(calendar,calendarPanel);tools.append(notifications,calendarWrap,theme,companyLink);top.append(tools);
  document.querySelector('#count + span').textContent='Taranan Fiş';document.querySelector('#pending + span').textContent='İnceleme Bekleyen';document.querySelector('#checked + span').textContent='Düzeltilen';document.querySelector('#total + span').textContent='Logo’ya Aktarıma Hazır';document.getElementById('camera').textContent='＋ Fiş Yükle / Tara';document.getElementById('pick').textContent='▧ Dosya Seç';
  const editorHead=document.querySelector('#editor .dialog-head'),nav=document.createElement('div');nav.className='expense-detail-nav';nav.innerHTML='<span id="expenseDetailStatus" class="badge">İncelemede</span><button type="button" id="expensePrev" class="secondary" aria-label="Önceki fiş">‹</button><span id="expenseDetailPosition"></span><button type="button" id="expenseNext" class="secondary" aria-label="Sonraki fiş">›</button>';editorHead.insertBefore(nav,document.getElementById('closeEditor'));const controls=document.querySelector('#editor .source .actions');controls.insertAdjacentHTML('beforeend','<button type="button" id="expenseZoomOut" class="text-button" aria-label="Küçült">⊖</button><button type="button" id="expenseZoomIn" class="text-button" aria-label="Büyüt">⊕</button>');
  const viewerTools=document.createElement('div');viewerTools.className='expense-viewer-tools';viewerTools.setAttribute('role','group');viewerTools.setAttribute('aria-label','Fiş görseli kontrolleri');
@@ -52,6 +58,22 @@ if(!expenseRulesReady){
 const base='/api/expenses/'+company.id+'/',escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let receipts=[],profiles={revision:0,categories:{}},filter='all',busy=false,stop=false,editing=null,dirty=false,saving=false,previewURL=null,previewSourceBlob=null,cropManual=false,cropEditToken=0,rotation=0,viewerX=0,viewerY=0,viewerDrag=null,worker=null,refreshing=false,pdfModule=null,openRequest=0,expenseZoom=100,saveTimer=null,activeLineIndex=0;
 const expenseSelected=new Set();let expenseVisible=[];
+let expenseCalendarMonth=null;
+const localISO=date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+function drawExpenseCalendar(){
+  const panel=$('expenseCalendar');if(!panel)return;const current=expenseCalendarMonth||new Date(),year=current.getFullYear(),month=current.getMonth(),first=new Date(year,month,1),selected=$('expenseDateFrom').value,today=localISO(new Date()),title=new Intl.DateTimeFormat('tr-TR',{month:'long',year:'numeric'}).format(first);
+  const headings=['Pt','Sa','Ça','Pe','Cu','Ct','Pz'].map(day=>'<span>'+day+'</span>').join(''),days=[];
+  for(const {date,iso,outside} of calendarDays(year,month))days.push('<button type="button" data-expense-day="'+iso+'" class="'+(outside?'outside ':'')+(iso===today?'today ':'')+(iso===selected?'selected':'')+'" aria-label="'+escape(new Intl.DateTimeFormat('tr-TR',{day:'numeric',month:'long',year:'numeric'}).format(date))+'" aria-pressed="'+(iso===selected)+'">'+date.getDate()+'</button>');
+  panel.innerHTML='<div class="expense-calendar-head"><button type="button" data-calendar-prev aria-label="Önceki ay">‹</button><strong>'+escape(title)+'</strong><button type="button" data-calendar-next aria-label="Sonraki ay">›</button></div><div class="expense-calendar-week">'+headings+'</div><div class="expense-calendar-days">'+days.join('')+'</div><p>Başlangıç tarihini seçin</p>';
+}
+function toggleExpenseCalendar(force){
+  const panel=$('expenseCalendar'),button=document.querySelector('.expense-calendar-button');if(!panel||!button)return;const open=force===undefined?panel.hidden:force;panel.hidden=!open;button.setAttribute('aria-expanded',String(open));if(open){const value=$('expenseDateFrom').value,parts=value.split('-').map(Number);expenseCalendarMonth=value?new Date(parts[0],parts[1]-1,1):new Date(new Date().getFullYear(),new Date().getMonth(),1);drawExpenseCalendar();}
+}
+if(expenseRulesReady){
+  $('expenseCalendar').addEventListener('click',event=>{const target=event.target.closest('button');if(!target)return;if(target.hasAttribute('data-calendar-prev')||target.hasAttribute('data-calendar-next')){const change=target.hasAttribute('data-calendar-prev')?-1:1;expenseCalendarMonth=new Date(expenseCalendarMonth.getFullYear(),expenseCalendarMonth.getMonth()+change,1);drawExpenseCalendar();return;}const day=target.dataset.expenseDay;if(day){$('expenseDateFrom').value=day;if($('expenseDateTo').value&&$('expenseDateTo').value<day)$('expenseDateTo').value='';toggleExpenseCalendar(false);render();}});
+  document.addEventListener('click',event=>{if(!$('expenseCalendar').hidden&&!event.target.closest('.expense-calendar-wrap'))toggleExpenseCalendar(false);});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('expenseCalendar').hidden){event.preventDefault();toggleExpenseCalendar(false);document.querySelector('.expense-calendar-button').focus();}});
+}
 const money=(value,currency='TRY')=>Number.isSafeInteger(value)?new Intl.NumberFormat('tr-TR',{style:'currency',currency}).format(value/100):'Tutar okunmadı';
 const imageURL=id=>base+'image/'+id;
 const normalizeLine=(line,receipt)=>{const oldFlight=line.category==='flight'&&line.vatIncluded===undefined&&Number.isSafeInteger(line.gross)&&Number.isFinite(line.vatRate);const prefix=receiptDescription(receipt);return {...line,category:line.category==='bakery'?'meal':line.category,gross:oldFlight?Math.round(line.gross*100/(100+line.vatRate)):line.gross,vatIncluded:oldFlight?false:line.vatIncluded!==false,description:!line.description?.trim()?prefix:!line.descriptionReady&&prefix&&!line.description.startsWith('FİŞ NO:')?(prefix+' · '+line.description).slice(0,200):line.description,descriptionReady:true};};
@@ -70,6 +92,7 @@ function render(){
   if(inlineAccounting&&document.querySelector('.expense-accounting')?.contains(document.activeElement)){if(dirty)$('xml').disabled=true;return;}
   const active=receipts.filter(r=>!r.archived),duplicates=duplicateIds(receipts),reviewed=r=>r.reviewed&&!issues(r).length&&!duplicates.has(r.id);
   $('count').textContent=active.length;$('checked').textContent=active.filter(reviewed).length;$('pending').textContent=active.filter(r=>!reviewed(r)).length;
+  if(expenseRulesReady){const pending=Number($('pending').textContent),button=$('expenseNotification');button.querySelector('.expense-notification-dot').hidden=!pending;button.setAttribute('aria-label',pending+' fiş inceleme bekliyor');}
   $('total').textContent=expenseRulesReady?active.filter(r=>!r.exported&&!duplicates.has(r.id)&&exportReadiness([r],profiles,company.id).ready).length:money(active.filter(r=>r.currency==='TRY').reduce((sum,r)=>sum+(r.total||0),0));
   const queryText=normalize($('search').value),query=expenseRulesReady?queryText.trim().replace(/^fis\s*(?:no|numarasi)?\s*[:#-]?\s*/,''):queryText;const from=$('expenseDateFrom')?.value||'',to=$('expenseDateTo')?.value||'',ocr=$('expenseOcrFilter')?.value||'';
   const list=receipts.filter(r=>(filter==='archived'?r.archived:!r.archived)&&(filter!=='pending'||!reviewed(r))&&(filter!=='reviewed'||reviewed(r))&&(filter!=='checked'||(!r.exported&&!duplicates.has(r.id)&&exportReadiness([r],profiles,company.id).ready))&&(filter!=='exported'||r.exported)&&matchesReceiptFilters(r,{from,to,ocr})&&normalize(expenseRulesReady?r.number:r.seller+' '+r.number+' '+r.lines.map(l=>l.description).join(' ')).includes(query));expenseVisible=list;
@@ -89,7 +112,12 @@ function render(){
   if(expenseRulesReady){const missing=active.filter(r=>!r.exported).flatMap(r=>r.lines||[]).find(line=>{const p=lineProfile(line,profiles,company.id);return !p.serviceCode||!(line.expenseCode||p.accountCode);});const fix=$('fixExportMapping');fix.hidden=!missing;fix.dataset.category=missing?.category||'';fix.textContent=missing?(categories[missing.category]||'Masraf')+' için eksik Logo alanlarını aç':'';}
 }
 function downloadJSON(value,name){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
-async function getBlob(id){const r=await fetch(imageURL(id),{cache:'no-store'});if(!r.ok)throw Error('Kaynak belge açılamadı. Oturumunu kontrol et.');return r.blob();}
+const imageBlobCache=new Map(),imageCacheLimit=24*1024*1024;
+function trimImageCache(){let bytes=[...imageBlobCache.values()].reduce((n,item)=>n+item.size,0);while(imageBlobCache.size>8||bytes>imageCacheLimit){const [id,item]=imageBlobCache.entries().next().value;imageBlobCache.delete(id);bytes-=item.size;}}
+function getBlob(id){
+  const cached=imageBlobCache.get(id);if(cached){imageBlobCache.delete(id);imageBlobCache.set(id,cached);return cached.promise;}
+  const item={size:0,promise:null};imageBlobCache.set(id,item);item.promise=(async()=>{const r=await fetch(imageURL(id),{cache:'no-store'});if(!r.ok)throw Error('Kaynak belge açılamadı. Oturumunu kontrol et.');const blob=await r.blob();if(imageBlobCache.get(id)===item){item.size=blob.size;trimImageCache();}return blob;})().catch(error=>{if(imageBlobCache.get(id)===item)imageBlobCache.delete(id);throw error;});trimImageCache();return item.promise;
+}
 async function croppedBlob(blob,crop,maxSize){if(!crop||blob.type==='application/pdf')return blob;let bitmap;try{bitmap=await createImageBitmap(blob);const x=Math.floor(crop.x*bitmap.width),y=Math.floor(crop.y*bitmap.height),w=Math.max(1,Math.min(bitmap.width-x,Math.ceil(crop.width*bitmap.width))),h=Math.max(1,Math.min(bitmap.height-y,Math.ceil(crop.height*bitmap.height))),scale=Math.min(1,maxSize/Math.max(w,h));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));canvas.getContext('2d').drawImage(bitmap,x,y,w,h,0,0,canvas.width,canvas.height);return await new Promise(resolve=>canvas.toBlob(result=>resolve(result||blob),'image/jpeg',.9));}catch{return blob;}finally{bitmap?.close();}}
 const paperCache=new Map();
 async function detectedPaper(record,blob){
@@ -97,6 +125,7 @@ async function detectedPaper(record,blob){
   const detected=await paperCache.get(record.id),old=record.crop;if(!detected)return old||null;const paper={...detected};if(old?.v===2){const bottom=old.y+old.height;if(bottom>paper.y+paper.height*.5&&bottom<paper.y+paper.height)paper.height=bottom-paper.y;}return paper;
 }
 const thumbCache=new Map();
+function clearImageCache(){imageBlobCache.clear();paperCache.clear();for(const promise of thumbCache.values())promise.then(url=>URL.revokeObjectURL(url)).catch(()=>{});thumbCache.clear();}
 function loadCroppedThumbnail(record){const key=record.id+JSON.stringify(record.crop);if(!thumbCache.has(key)){if(thumbCache.size>=100){const [old,promise]=thumbCache.entries().next().value;thumbCache.delete(old);promise.then(url=>URL.revokeObjectURL(url)).catch(()=>{});}thumbCache.set(key,getBlob(record.id).then(async blob=>croppedBlob(blob,await detectedPaper(record,blob),400)).then(blob=>URL.createObjectURL(blob)).catch(error=>{thumbCache.delete(key);throw error;}));}thumbCache.get(key).then(url=>{const image=document.querySelector('[data-crop-thumb="'+record.id+'"]');if(image)image.src=url;}).catch(()=>{});}
 let thumbnailObserver=null;
 function observeThumbnails(list){
@@ -106,10 +135,23 @@ function observeThumbnails(list){
   const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){observer.unobserve(entry.target);const record=records.get(entry.target.dataset.cropThumb);if(record)loadCroppedThumbnail(record);}},{rootMargin:'200px'});thumbnailObserver=observer;
   for(const image of $('receipts').querySelectorAll('[data-crop-thumb]'))thumbnailObserver.observe(image);
 }
-function recognize(blob){
+let workerPreparation=null,cancelWorkerPreparation=null;
+function prepareOcr(){
+  if(workerPreparation)return workerPreparation;
+  worker??=new Worker('/expenses/ocr-worker.js?v=ocr6');const active=worker;
+  workerPreparation=new Promise((resolve,reject)=>{
+    const finish=terminate=>{clearTimeout(timer);active.onmessage=null;active.onerror=null;cancelWorkerPreparation=null;if(terminate){active.terminate();if(worker===active)worker=null;}};
+    const timer=setTimeout(()=>{finish(true);reject(Error('Okuma motoru zamanında hazırlanamadı.'));},180000);
+    cancelWorkerPreparation=()=>{finish(true);reject(Error('Okuma hazırlığı durduruldu.'));};
+    active.onmessage=({data})=>{if(data.progress)return;if(data.error){finish(true);reject(Error(data.error));return;}if(data.ready){finish(false);resolve();}};
+    active.onerror=()=>{finish(true);reject(Error('Okuma motoru başlatılamadı.'));};active.postMessage({prepare:true});
+  }).catch(error=>{workerPreparation=null;throw error;});return workerPreparation;
+}
+async function recognize(blob){
+  await prepareOcr();
   return new Promise((resolve,reject)=>{
-    worker??=new Worker('/expenses/ocr-worker.js?v=ocr5');const active=worker;
-    const end=(terminate=false)=>{clearTimeout(timer);active.onmessage=null;active.onerror=null;if(terminate){active.terminate();if(worker===active)worker=null;}};
+    const active=worker;
+    const end=(terminate=false)=>{clearTimeout(timer);active.onmessage=null;active.onerror=null;if(terminate){active.terminate();if(worker===active){worker=null;workerPreparation=null;}}};
     const timer=setTimeout(()=>{end(true);reject(Error('Okuma 3 dakika içinde tamamlanamadı. Daha küçük ve net bir fotoğrafla yeniden dene.'));},180000);
     active.onmessage=({data})=>{if(data.progress){$('progressText').textContent=data.progress;return;}end(!!data.error);if(data.error)reject(Error(data.error));else resolve(data.result);};
     active.onerror=()=>{end(true);reject(Error('Okuma motoru çalıştırılamadı. Belge kaydedildi; daha sonra yeniden okuyabilir veya elle tamamlayabilirsin.'));};
@@ -151,6 +193,7 @@ async function processReceipt(record,blob){
 async function runQueue(files=null){
   if(busy)return;if(files&&files.length>50)throw Error('Bir seferde en fazla 50 fiş seçin; dosyalar yüklenmedi.');busy=true;stop=false;notice('');render();$('progressPanel').hidden=false;
   const tasks=files?[...files]:receipts.filter(r=>!r.archived&&!r.ocrDone);$('progress').max=tasks.length||1;$('progress').value=0;
+  if(tasks.some(task=>files?task.type.startsWith('image/'):task.source?.type!=='application/pdf'))try{prepareOcr().catch(()=>{});}catch{}
   const errors=[];let duplicateCount=0;
   try{
     for(const [index,task] of tasks.entries()){
@@ -166,7 +209,7 @@ async function runQueue(files=null){
       }catch(e){errors.push((files?task.name:'Fiş')+': '+e.message);}
       finally{$('progress').value=index+1;if((index+1)%5===0||index+1===tasks.length)await refresh().catch(()=>{});}
     }
-  }finally{worker?.terminate();worker=null;busy=false;await refresh().catch(()=>{});render();$('progressPanel').hidden=true;notice([stop?'İşlem durduruldu. Kaydedilmiş fişler korundu.':tasks.length?'İşlem tamamlandı. Okunan taslakları kontrol et.':'Bekleyen belge yok.',duplicateCount?duplicateCount+' dosya zaten kayıtlı; yeniden eklenmedi.':'',...errors].filter(Boolean).join('\n'));}
+  }finally{cancelWorkerPreparation?.();worker?.terminate();worker=null;workerPreparation=null;busy=false;await refresh().catch(()=>{});render();$('progressPanel').hidden=true;notice([stop?'İşlem durduruldu. Kaydedilmiş fişler korundu.':tasks.length?'İşlem tamamlandı. Okunan taslakları kontrol et.':'Bekleyen belge yok.',duplicateCount?duplicateCount+' dosya zaten kayıtlı; yeniden eklenmedi.':'',...errors].filter(Boolean).join('\n'));}
 }
 function lineHTML(line,index){return '<div class="line" data-index="'+index+'"><div class="line-head"><strong>MASRAF SATIRI '+(index+1)+'</strong><button type="button" class="text-button" data-remove="'+index+'" aria-label="'+(index+1)+'. satırı kaldır">Kaldır</button></div><div class="line-grid"><label class="full">Logo satır açıklaması<textarea data-field="description" rows="2" maxlength="200">'+escape(line.description)+'</textarea></label></div><div class="categories" role="group" aria-label="'+(index+1)+'. satır kategorisi">'+Object.entries(categories).map(([key,label])=>'<button type="button" data-category="'+key+'" aria-pressed="'+(line.category===key)+'">'+label+'</button>').join('')+'</div><div class="expense-code"><label>Gider hesabı kodu (Logo GL_CODE1)<input data-field="expenseCode" value="'+escape(line.expenseCode||'')+'" maxlength="60" placeholder="Örn. 770.11.004" autocomplete="off"></label><div class="expense-code-actions"><button type="button" data-remember>Hafızaya kaydet</button><button type="button" data-forget>Geri al</button><span data-memory-status></span></div></div><div class="line-grid"><label>Satır tutarı ('+(line.vatIncluded===false?'KDV hariç':'KDV dahil')+')<input data-field="gross" inputmode="decimal" value="'+amount(line.gross)+'"></label><label>KDV oranı (%)<input data-field="vatRate" inputmode="decimal" value="'+escape(line.vatRate??'')+'" placeholder="Okunmadı"></label></div><div class="vat-choice" role="group" aria-label="'+(index+1)+'. satır KDV tutar biçimi"><span>KDV</span><button type="button" data-vat-included="true" aria-pressed="'+(line.vatIncluded!==false)+'">Dahil</button><button type="button" data-vat-included="false" aria-pressed="'+(line.vatIncluded===false)+'">Hariç</button></div><div class="line-summary" data-line-summary aria-live="polite"></div></div>';}
 function inlineLineHTML(line,index){
@@ -234,11 +277,12 @@ function warningList(){
 async function displayPreview(record,preloaded){
   const token=++cropEditToken,isCurrent=()=>token===cropEditToken&&editing?.id===record.id&&$('editor').open;
   if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}$('preview').replaceChildren();$('original').href=imageURL(record.id);$('rotate').hidden=record.source.type==='application/pdf';rotation=0;expenseZoom=100;viewerX=0;viewerY=0;
+  let img=null;if(record.source.type!=='application/pdf'){img=new Image();img.alt='Kaynak masraf fişi';const thumbnail=thumbCache.get(record.id+JSON.stringify(record.crop));thumbnail?.then(url=>{if(isCurrent()&&!previewURL&&img.isConnected)img.src=url;}).catch(()=>{});if(expenseRulesReady){const surface=document.createElement('div');surface.className='expense-image-surface';surface.append(img);$('preview').append(surface);}else $('preview').append(img);}
   const loaded=preloaded?await preloaded:{blob:await getBlob(record.id)};if(!isCurrent())return;if(loaded.error)throw loaded.error;const blob=loaded.blob;previewSourceBlob=blob;
   if(record.source.type==='application/pdf'){
     const lib=await pdf(),doc=await lib.getDocument({data:new Uint8Array(await blob.arrayBuffer()),isEvalSupported:false}).promise;
     try{for(let i=1;i<=Math.min(doc.numPages,8);i++){const page=await doc.getPage(i),v=page.getViewport({scale:1.5}),canvas=document.createElement('canvas');canvas.width=v.width;canvas.height=v.height;await page.render({canvasContext:canvas.getContext('2d'),viewport:v}).promise;if(!isCurrent())return;if(expenseRulesReady){const surface=document.createElement('div');surface.className='expense-image-surface expense-pdf-surface';surface.append(canvas);$('preview').append(surface);}else $('preview').append(canvas);}}finally{await doc.destroy();}
-  }else{previewURL=URL.createObjectURL(blob);const img=new Image();img.alt='Kaynak masraf fişi';img.src=previewURL;if(expenseRulesReady){const surface=document.createElement('div');surface.className='expense-image-surface';surface.append(img);$('preview').append(surface);}else $('preview').append(img);const crop=expenseRulesReady?await detectedPaper(record,blob):record.crop;if(!crop||!isCurrent())return;const shown=await croppedBlob(blob,crop,2000);if(!isCurrent())return;const oldURL=previewURL;previewURL=URL.createObjectURL(shown);img.src=previewURL;img.alt='Kırpılmış fiş görünümü';URL.revokeObjectURL(oldURL);}
+  }else{previewURL=URL.createObjectURL(blob);img.src=previewURL;const crop=expenseRulesReady?await detectedPaper(record,blob):record.crop;if(!crop||!isCurrent())return;const shown=await croppedBlob(blob,crop,2000);if(!isCurrent())return;const oldURL=previewURL;previewURL=URL.createObjectURL(shown);img.src=previewURL;img.alt='Kırpılmış fiş görünümü';URL.revokeObjectURL(oldURL);}
 }
 async function openEditor(id){
   if(busy){notice('Okuma bittikten sonra fişi düzenleyebilirsin.');return;}
@@ -264,8 +308,10 @@ function edited(){dirty=true;editing.reviewed=false;editing.exported=false;$('ed
 const run=fn=>Promise.resolve().then(fn).catch(e=>notice(e.message));
 let memoryQueue=Promise.resolve();
 function rememberCodeAutomatically(input){if(!editing||!input)return;collect();const node=input.closest('[data-index]'),line=node&&editing.lines[Number(node.dataset.index)],key=line&&memoryKey(editing,line),code=line?.expenseCode;if(!key||!code||!validExpenseCode(code)||profiles.memories?.[key]===code)return;memoryQueue=memoryQueue.catch(()=>{}).then(async()=>{try{try{profiles=await api('profiles',{revision:profiles.revision,memory:{key,code}});}catch(error){if(error.status!==409)throw error;await refresh();profiles=await api('profiles',{revision:profiles.revision,memory:{key,code}});}if(editing&&$('editor').open)renderLineSummaries();}catch(error){$('editSaveState').textContent='Fiş kaydı ayrı tutuldu; kod hafızası kaydedilemedi: '+error.message;}});}
-$('expenseTheme').onclick=()=>{document.body.classList.toggle('expense-light');try{localStorage.setItem('sw:expenses:theme',document.body.classList.contains('expense-light')?'light':'dark');}catch{}};
+function syncExpenseThemeIcon(){if(!expenseRulesReady)return;const light=document.body.classList.contains('expense-light'),button=$('expenseTheme');button.setAttribute('aria-label',light?'Koyu görünüme geç':'Açık görünüme geç');button.title=light?'Koyu görünüme geç':'Açık görünüme geç';button.setAttribute('aria-pressed',String(light));button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(light?'<path d="M20 15.5A8 8 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/>':'<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>')+'</svg>';}
+$('expenseTheme').onclick=()=>{document.body.classList.toggle('expense-light');syncExpenseThemeIcon();try{localStorage.setItem('sw:expenses:theme',document.body.classList.contains('expense-light')?'light':'dark');}catch{}};
 try{if(localStorage.getItem('sw:expenses:theme')==='light')document.body.classList.add('expense-light');}catch{}
+syncExpenseThemeIcon();
 function showAccountPlan(){ $('accountCodes').replaceChildren(...accountPlan.accounts.map(a=>{const option=document.createElement('option');option.value=a.code;option.label=a.name;return option;})); }
 let accountTarget=null;
 function renderAccountResults(){const query=normalize($('accountSearch').value).trim(),found=accountPlan.accounts.filter(a=>!query||normalize(a.code+' '+a.name).includes(query));$('accountResults').innerHTML=found.slice(0,100).map(a=>'<button type="button" data-account="'+escape(a.code)+'"><strong>'+escape(a.code)+'</strong><span>'+escape(a.name)+'</span></button>').join('')+(found.length>100?'<p>İlk 100 sonuç gösteriliyor; aramayı daraltın.</p>':'')+(!found.length?'<p>Hesap bulunamadı. Önce hesap planı Excel dosyasını yükleyin veya aramayı değiştirin.</p>':'');}
@@ -295,14 +341,14 @@ if(expenseRulesReady){
    if(!confirm('Tüm aktif fişler ve görselleri kalıcı olarak silinecek; arşivdekiler korunacak. Devam edilsin mi?'))return;
    if(editing)await closeEditor();if(editing)return;await memoryQueue;await refresh();
    const active=receipts.filter(r=>!r.archived).map(r=>({id:r.id,revision:r.revision}));
-   await api('clear-active',{receipts:active,profileRevision:profiles.revision});expenseSelected.clear();for(const id of ['search','expenseDateFrom','expenseDateTo','expenseOcrFilter'])$(id).value='';setExpenseFilter('all');await refresh();notice('Aktif fişler ve gider kodu hafızası temizlendi. Arşiv korundu.');
+   await api('clear-active',{receipts:active,profileRevision:profiles.revision});clearImageCache();expenseSelected.clear();for(const id of ['search','expenseDateFrom','expenseDateTo','expenseOcrFilter'])$(id).value='';setExpenseFilter('all');await refresh();notice('Aktif fişler temizlendi. Arşiv ve gider kodu hafızası korundu.');
  });
  $('expenseDeleteArchived').onclick=()=>run(async()=>{
    if(busy||saving)throw Error('Devam eden işlem tamamlanınca tekrar deneyin.');
    const chosen=receipts.filter(r=>r.archived&&expenseSelected.has(r.id));if(!chosen.length)throw Error('Arşivden silinecek fişleri seçin.');
    if(!confirm(chosen.length+' arşiv fişi ve görseli kalıcı olarak silinecek. Devam edilsin mi?'))return;
    if(editing&&chosen.some(r=>r.id===editing.id)){await closeEditor();if(editing)return;}
-   await api('delete-archived',{receipts:chosen.map(r=>({id:r.id,revision:r.revision}))});for(const r of chosen)expenseSelected.delete(r.id);await refresh();notice(chosen.length+' arşiv fişi silindi.');
+   await api('delete-archived',{receipts:chosen.map(r=>({id:r.id,revision:r.revision}))});clearImageCache();for(const r of chosen)expenseSelected.delete(r.id);await refresh();notice(chosen.length+' arşiv fişi silindi.');
  });
  $('expenseSelectAll').onchange=e=>{for(const r of expenseVisible)e.target.checked?expenseSelected.add(r.id):expenseSelected.delete(r.id);render();};
  $('receipts').addEventListener('change',e=>{if(!e.target.matches('[data-select]'))return;const id=e.target.dataset.select;if(e.target.checked)expenseSelected.add(id);else expenseSelected.delete(id);render();});
@@ -351,7 +397,7 @@ $('retry').onclick=()=>run(async()=>{
   const record=editing;busy=true;$('editor').close();$('progressPanel').hidden=false;render();
   try{await processReceipt(record,await getBlob(record.id));dirty=false;editing=null;await refresh();}
   catch(e){if(expenseRulesReady&&matchMedia('(min-width:1100px)').matches)$('editor').show();else $('editor').showModal();$('editSaveState').textContent=e.message+' Önceki düzenleme bu ekranda korunuyor.';return;}
-  finally{worker?.terminate();worker=null;busy=false;$('progressPanel').hidden=true;render();}
+  finally{cancelWorkerPreparation?.();worker?.terminate();worker=null;workerPreparation=null;busy=false;$('progressPanel').hidden=true;render();}
   await openEditor(record.id);
 });
 $('draftBackup').onclick=()=>{collect();downloadJSON({format:'soyturk-expense-draft-v1',company:company.id,receipt:editing},'masraf-duzenleme-'+company.id+'.json');};

@@ -2,6 +2,10 @@ export const categories=Object.freeze({meal:'Yemek',wash:'Araç yıkama',fuel:'Y
 export const normalize=value=>String(value??'').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i');
 export const validExpenseCode=code=>typeof code==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,59}$/.test(code);
 export const validQuantity=value=>typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=100000&&Math.abs(value*1000-Math.round(value*1000))<1e-7;
+export function calendarDays(year,month){
+  const first=new Date(year,month,1),offset=(first.getDay()+6)%7;
+  return Array.from({length:42},(_,i)=>{const date=new Date(year,month,1-offset+i),iso=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');return {date,iso,outside:date.getMonth()!==month};});
+}
 export const receiptDescription=receipt=>[receipt.number?'FİŞ NO:'+receipt.number:'',String(receipt.seller||'').trim()].filter(Boolean).join(' ').slice(0,200);
 // Logo'nun sağlanan XML örneği ISO-8859-9 kullanır. Bu kodlamada olmayan
 // karakterler XML sayısal karakter başvurusu olarak saklanır; kayıp oluşmaz.

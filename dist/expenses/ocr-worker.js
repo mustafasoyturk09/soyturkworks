@@ -4,15 +4,14 @@ async function initialize(){
   if(engine)return engine;
   importScripts('/expenses/ocr-core.js');
   const mod=await TesseractCore();
-  for(const lang of ['tur','eng']){
-    const r=await fetch('/expenses/'+lang+'.traineddata');if(!r.ok)throw Error('Okuma bileşeni yüklenemedi. Oturumunu ve bağlantını kontrol et.');
-    mod.FS.writeFile(lang+'.traineddata',new Uint8Array(await r.arrayBuffer()));
-  }
+  const languages=await Promise.all(['tur','eng'].map(async lang=>{const r=await fetch('/expenses/'+lang+'.traineddata');if(!r.ok)throw Error('Okuma bileşeni yüklenemedi. Oturumunu ve bağlantını kontrol et.');return [lang,new Uint8Array(await r.arrayBuffer())];}));
+  for(const [lang,bytes] of languages)mod.FS.writeFile(lang+'.traineddata',bytes);
   const api=new mod.TessBaseAPI();if(api.Init(null,'tur+eng',1)<0)throw Error('Türkçe okuma motoru başlatılamadı.');
   engine={mod,api};return engine;
 }
 self.onmessage=async({data})=>{
   try{
+    if(data.prepare){await initialize();self.postMessage({ready:true});return;}
     if(typeof OffscreenCanvas==='undefined'||typeof createImageBitmap==='undefined')throw Error('Bu tarayıcı fotoğraf okumayı desteklemiyor. Güncel tarayıcı kullan veya alanları elle tamamla.');
     self.postMessage({progress:'Türkçe okuma motoru hazırlanıyor…'});
     const {mod,api}=await initialize(),bitmap=await createImageBitmap(data.blob),scale=Math.min(1.5,2400/Math.max(bitmap.width,bitmap.height));
