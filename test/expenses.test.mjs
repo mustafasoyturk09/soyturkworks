@@ -41,6 +41,11 @@ test('Şirket unvanı devam satırlarıyla tamamlanır ve adres eklenmez',()=>{
   const old=completeReceiptSeller({seller:'CEM KOPYALAMA SİSTEMLERİ BASIM',number:'41',rawText:raw,lines:[{description:'FİŞ NO:41 CEM KOPYALAMA SİSTEMLERİ BASIM'}]});
   assert.equal(old.seller,title);assert.match(old.lines[0].description,/LTD ŞTİ/);
 });
+test('Fiş numarası sonraki satırdaki ürün adıyla karışmaz ve unvandaki OCR virgülleri temizlenir',()=>{
+  const r=parseReceipt('CEM KOPYALAMA SİSTEMLERİ BASIM\nVE TANITIM TİC, SAN, LTD, ŞTİ\n20.11.2026 FİŞ NO:\nKIRTASİYE %20 1.100,00\nTOPLAM 1.100,00');
+  assert.equal(r.number,'');assert.equal(r.seller,'CEM KOPYALAMA SİSTEMLERİ BASIM VE TANITIM TİC SAN LTD ŞTİ');
+  assert.equal(parseReceipt('ÖRNEK\n20.11.2026 FİŞ NO: 41\nKIRTASİYE %20 1.100,00').number,'41');
+});
 test('OCR metin konumları fiş satırlarına ayrılır ve sınır dışı veriler atılır',()=>{
   const tsv='level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n5\t1\t1\t1\t1\t1\t10\t10\t20\t10\t90\tCEM\n5\t1\t1\t1\t1\t2\t35\t10\t40\t10\t90\tKOPYALAMA\n5\t1\t1\t1\t2\t1\t10\t30\t20\t10\t90\tLTD\n5\t1\t1\t1\t3\t1\t99\t10\t20\t10\t90\tHATALI';
   const lines=receiptTextLinesFromTSV(tsv,100,100);assert.deepEqual(lines.map(x=>x.text),['CEM KOPYALAMA','LTD']);assert.equal(lines[0].x,.1);assert.equal(lines[0].width,.65);

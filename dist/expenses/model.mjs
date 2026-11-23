@@ -70,7 +70,7 @@ function sellerFromHeader(lines){
     seller+=' '+next;
     if(/\b(?:sti|sirketi|anonim)\b/.test(n))break;
   }
-  return seller.slice(0,200);
+  return seller.replace(/[,;:]+/g,' ').replace(/\s+/g,' ').trim().slice(0,200);
 }
 // Keep the proprietor printed directly below the business title. Never infer
 // a name from an address, payment section, passenger or cashier information.
@@ -97,7 +97,7 @@ export function completeReceiptSeller(receipt){
 export function parseReceipt(rawText,confidence=null){
   const text=String(rawText||'').slice(0,18000),lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),notes=[];
   const dates=[...new Set([...text.matchAll(/\b(\d{2})[./-](\d{2})[./-](20\d{2})\b/g)].map(m=>m[3]+'-'+m[2]+'-'+m[1]).filter(d=>{try{return validDate(d);}catch{return false;}}))];
-  const nums=[...new Set([...text.matchAll(/(?:F[İI][ŞS]|FATURA|BELGE|B[İI]LET)\s*(?:NO|NUMARASI)\.?\s*[:#]?\s*([A-Z0-9/-]{1,30})/gi)].map(m=>m[1]))];
+  const nums=[...new Set([...text.matchAll(/(?:F[İI][ŞS]|FATURA|BELGE|B[İI]LET)[ \t]*(?:NO|NUMARASI)\.?[ \t]*[:#]?[ \t]*([A-Z0-9/-]{1,30})/gi)].map(m=>m[1]).filter(n=>/\d/.test(n)))];
   const totalLines=lines.filter(l=>/^(?:GENEL\s+TOPLAM|TOPLAM|TOP|[ÖO]DENECEK(?:\s+TUTAR)?)\b/i.test(l)&&!/KDV/i.test(l));
   const totals=[...new Set(totalLines.map(trailingMoney).filter(v=>v!==null))];
   const taxes=[...new Set(lines.filter(l=>/^(?:TOP\s*KDV|TOPLAM\s+KDV|KDV\s+TOPLAM|KDV\s*(?:[:*]|(?=\d)))/i.test(l)).map(trailingMoney).filter(v=>v!==null))];
