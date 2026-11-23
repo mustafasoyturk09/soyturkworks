@@ -75,7 +75,13 @@ function sellerFromHeader(lines){
 // Keep the proprietor printed directly below the business title. Never infer
 // a name from an address, payment section, passenger or cashier information.
 export function completeReceiptSeller(receipt){
-  let seller=String(receipt.seller||'').trim();const header=String(receipt.rawText||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean),full=sellerFromHeader(header);
+  let seller=String(receipt.seller||'').trim();
+  // The user corrected this specific OCR pattern; preserve all other names.
+  if(/\bco\s+tanlt\s+im\b/i.test(seller)&&/t[iİ]c[.,\s]*san[.,\s]*ltd[.,\s]*[şs]t[iİ]/i.test(seller)){
+    const old=seller;let fixed=seller.replace(/\bco\s+tanlt\s+im\b/i,'VE TANITIM');fixed=fixed.replace(/t[iİ]c[.,\s]*san[.,\s]*ltd[.,\s]*[şs]t[iİ]\.?/i,'TİC.SAN.LTD.ŞTİ.');
+    seller=fixed;receipt={...receipt,seller,lines:(receipt.lines||[]).map(line=>{const text=String(line.description||''),at=text.indexOf(old);return at>=0&&(at===0||text.startsWith('FİŞ NO:'))?{...line,description:(text.slice(0,at)+fixed+text.slice(at+old.length)).slice(0,200)}:line;})};
+  }
+  const header=String(receipt.rawText||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean),full=sellerFromHeader(header);
   if(seller&&full.length>seller.length&&normalize(full).startsWith(normalize(seller))){const old=seller;seller=full;receipt={...receipt,seller,lines:(receipt.lines||[]).map(line=>{const text=String(line.description||''),at=text.indexOf(old);return at>=0&&(at===0||text.startsWith('FİŞ NO:'))?{...line,description:(text.slice(0,at)+seller+text.slice(at+old.length)).slice(0,200)}:line;})};}
   const index=header.findIndex(s=>normalize(s)===normalize(seller));
   if(!seller||index<0||index>2)return receipt;

@@ -1,6 +1,7 @@
 # Soyturk Works çalışma kuralları
 
 - Kullanıcıyla Türkçe ve sade bir dille çalış.
+- Bütün modüllerde hızlı açılmayı ve akıcı kullanımı önceliklendir; çok sayıda kayıtla gereksiz ağ, görüntü işleme ve tekrar çizimlerini önle. Performans iyileştirmelerinde veri güvenliğini ve doğruluğu koru.
 - Ana uygulama kaynağı `src/app.html`; üretilen web uygulaması `dist/` içindedir.
 - Her değişiklik telefon, tablet ve masaüstü için uyarlanmalı; dar ekran ve yatay telefon görünümü ayrıca kontrol edilmelidir. Kullanıcının bunu her seferinde tekrar söylemesi gerekmez. Mobil düzen dosyaları `src/mobile.css` ve `src/mobile.js` içindedir.
 - SW ambleminin özgün metalik renklerini, halka biçimini ve dış şeffaflığını koru. Kullanıcı açıkça istemedikçe kare/dikdörtgen zemin ekleme veya amblemi yeniden tasarlama.

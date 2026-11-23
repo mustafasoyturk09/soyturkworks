@@ -22,11 +22,18 @@ test('İki OCR denemesi belirsiz olmayan eksik alanları tamamlar',()=>{
   const merged=mergeReceiptReadings(a,[a,b]);assert.equal(merged.number,'41');assert.equal(merged.vat,18333);assert.match(a.seller,/VE TANITIM TIC SAN LTD STI/);
 });
 test('OCR unvandaki belirgin paraziti ancak tutarlı ikinci okumayla değiştirir',()=>{
-  const first=parseReceipt('CEM KOPYALAMA SİSTEMLERİ BASIM co TANLT IM TİC SAN LTD ŞTİ');
-  const second=parseReceipt('CEM KOPYALAMA SİSTEMLERİ BASIM VE TANITIM TİC SAN LTD ŞTİ');
+  const first=parseReceipt('ÖRNEK KOPYALAMA SİSTEMLERİ BASIM co TANLITIM TİC SAN LTD ŞTİ');
+  const second=parseReceipt('ÖRNEK KOPYALAMA SİSTEMLERİ BASIM VE TANITIM TİC SAN LTD ŞTİ');
   assert.equal(mergeReceiptReadings(first,[first,second]).seller,second.seller);
-  const conflict=parseReceipt('CEM KOPYALAMA SİSTEMLERİ BASIM VE YAYIN TİC SAN LTD ŞTİ');
+  const conflict=parseReceipt('ÖRNEK KOPYALAMA SİSTEMLERİ BASIM VE YAYIN TİC SAN LTD ŞTİ');
   assert.equal(mergeReceiptReadings(first,[first,second,conflict]).seller,first.seller);
+});
+test('Belirli OCR hatası ve şirket son eki kayıtlı satırda düzeltilir',()=>{
+  const bad='ÖRNEK KOPYALAMA co TANLT IM TİC, SAN, LTD. ŞTİ';
+  const corrected='ÖRNEK KOPYALAMA VE TANITIM TİC.SAN.LTD.ŞTİ.';
+  const result=completeReceiptSeller({seller:bad,rawText:'',lines:[{description:bad}]});
+  assert.equal(result.seller,corrected);assert.equal(result.lines[0].description,corrected);
+  const untouched='ÖRNEK KOPYALAMA LTD ŞTİ';assert.equal(completeReceiptSeller({seller:untouched,rawText:'',lines:[]}).seller,untouched);
 });
 
 test('Fiş numarası okunmasa da satır açıklamasında satıcı bulunur ve eksikler gösterilir',()=>{

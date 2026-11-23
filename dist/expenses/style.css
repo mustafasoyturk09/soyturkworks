@@ -220,5 +220,4 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 .pusula-expenses .expense-filter-actions #copyLink{background:#008f70;color:#effff9;border:1px solid #39f2bd;box-shadow:0 0 16px #00e5a675;font-weight:700;padding:9px 12px;min-height:42px;white-space:nowrap}
 .pusula-expenses .expense-filter-actions #copyLink:hover{background:#00a982;box-shadow:0 0 22px #00e5a6a3}
 .pusula-expenses .expense-filter-actions #expenseClearFilters{width:100%;min-height:42px;font-size:13px;padding:8px 12px}
-.pusula-expenses #expenseDescriptionMirror{font:500 15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:0}
-@media(max-width:600px){.pusula-expenses .expense-extra-filters>.expense-filter-actions{flex:0 0 auto;margin-left:auto}.pusula-expenses #expenseDescriptionMirror{font-size:16px}}
+@media(max-width:600px){.pusula-expenses .expense-extra-filters>.expense-filter-actions{flex:0 0 auto;margin-left:auto}}
