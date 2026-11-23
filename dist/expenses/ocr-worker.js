@@ -20,7 +20,7 @@ self.onmessage=async({data})=>{
     ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
     let paper=null;try{const {receiptPaperFromPixels}=await import('/expenses/crop.mjs');const ratio=Math.min(1,600/Math.max(canvas.width,canvas.height)),small=new OffscreenCanvas(Math.max(1,Math.round(canvas.width*ratio)),Math.max(1,Math.round(canvas.height*ratio))),context=small.getContext('2d',{willReadFrequently:true});context.drawImage(canvas,0,0,small.width,small.height);paper=receiptPaperFromPixels(context.getImageData(0,0,small.width,small.height).data,small.width,small.height);}catch{}
     let originalPaper=null;
-    if(paper&&!data.includeLayout){
+    if(paper){
       try{const original=await createImageBitmap(data.blob),x=Math.floor(paper.x*original.width),y=Math.floor(paper.y*original.height),w=Math.min(original.width-x,Math.ceil(paper.width*original.width)),h=Math.min(original.height-y,Math.ceil(paper.height*original.height)),factor=Math.min(2,2600/Math.max(w,h)),cropped=new OffscreenCanvas(Math.max(1,Math.round(w*factor)),Math.max(1,Math.round(h*factor))),context=cropped.getContext('2d',{willReadFrequently:true});context.fillStyle='white';context.fillRect(0,0,cropped.width,cropped.height);context.drawImage(original,x,y,w,h,0,0,cropped.width,cropped.height);original.close();canvas=cropped;ctx=context;originalPaper=paper;paper=null;}catch{}
     }
     const results=[];
@@ -30,14 +30,15 @@ self.onmessage=async({data})=>{
       const bytes=new Uint8Array(await(await canvas.convertToBlob({type:'image/png'})).arrayBuffer());
       mod.FS.writeFile('/input',bytes);api.SetPageSegMode(psm);if(api.SetImageFile(1,0)===1)continue;api.Recognize(null);
       const tsv=api.GetTSVText(0);let crop=null;try{const {receiptCropFromTSV}=await import('/expenses/crop.mjs');crop=receiptCropFromTSV(tsv,canvas.width,canvas.height);}catch{}
-      const text=api.GetUTF8Text(),confidence=api.MeanTextConf();results.push({text,confidence,crop,...(data.includeLayout?{tsv,width:canvas.width,height:canvas.height}:{})});
+      const text=api.GetUTF8Text(),confidence=api.MeanTextConf();results.push({text,confidence,crop});
       const complete=/\b\d{2}[.\/-]\d{2}[.\/-]20\d{2}\b/.test(text)&&/\b(?:TOPLAM|ÖDENECEK)\b/i.test(text)&&/(?:F[İI][ŞS]|FATURA|BELGE)[ \t]*(?:NO|NUMARASI)[ \t.:#-]*\d/i.test(text);
-      if(data.includeLayout||(confidence>=75&&complete))break;
+      const header=text.split(/\r?\n/).slice(0,3).join(' '),suspicious=/[A-ZÇĞİÖŞÜ]{3}/.test(header)&&/(?:^|\s)[a-zçğıöşü]{1,2}(?=\s|$)/.test(header);
+      if(confidence>=75&&complete&&!suspicious)break;
     }
     if(!results.length)throw Error('Fotoğraf okunamadı. Daha net ve düz bir çekim dene.');
     let headerText='';
     const top=(results[0].text||'').split(/\r?\n/).slice(0,5).join(' ');
-    if(!data.includeLayout&&/\b(?:T[İI]C|SAN|LTD)\b/i.test(top)&&!/\b(?:ŞT[İI]|ST[İI]|Ş[İI]RKET[İI])\b/i.test(top)){
+    if(/\b(?:T[İI]C|SAN|LTD)\b/i.test(top)&&!/\b(?:ŞT[İI]|ST[İI]|Ş[İI]RKET[İI])\b/i.test(top)){
       try{
         self.postMessage({progress:'Firma unvanı ayrıca okunuyor…'});
         const x=paper?Math.floor(paper.x*canvas.width):0,y=paper?Math.floor(paper.y*canvas.height):0,w=paper?Math.ceil(paper.width*canvas.width):canvas.width,h=paper?Math.ceil(paper.height*canvas.height*.38):Math.ceil(canvas.height*.38),factor=Math.min(2,2800/Math.max(w,h));

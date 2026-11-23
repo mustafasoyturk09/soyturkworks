@@ -1,14 +1,4 @@
 // The crop is only a display suggestion; the original document is never altered.
-export function receiptTextLinesFromTSV(tsv,width,height){
-  if(typeof tsv!=='string'||!(width>0&&height>0))return [];
-  const lines=new Map();
-  for(const row of tsv.split(/\r?\n/).slice(1)){
-    const a=row.split('\t'),text=(a.slice(11).join(' ')||'').trim();if(a.length<12||a[0]!=='5'||!text)continue;
-    const [x,y,w,h]=a.slice(6,10).map(Number);if(![x,y,w,h].every(Number.isFinite)||w<=0||h<=0||x<0||y<0||x+w>width+1||y+h>height+1)continue;
-    const key=a.slice(1,5).join(':');if(!lines.has(key))lines.set(key,[]);lines.get(key).push({x,y,w,h,text});
-  }
-  return [...lines.values()].map(words=>{words.sort((a,b)=>a.x-b.x);const x=Math.min(...words.map(w=>w.x)),y=Math.min(...words.map(w=>w.y)),right=Math.max(...words.map(w=>w.x+w.w)),bottom=Math.max(...words.map(w=>w.y+w.h));return {x:x/width,y:y/height,width:(right-x)/width,height:(bottom-y)/height,text:words.map(w=>w.text).join(' ')};}).sort((a,b)=>a.y-b.y||a.x-b.x);
-}
 export function receiptCropFromTSV(tsv,width,height){
   if(!width||!height||typeof tsv!=='string')return null;
   const words=[];for(const row of tsv.split(/\r?\n/).slice(1)){const a=row.split('\t');if(a.length<12)continue;const x=Number(a[6]),y=Number(a[7]),w=Number(a[8]),h=Number(a[9]),confidence=Number(a[10]),text=(a.slice(11).join(' ')||'').trim();if(text&&confidence>=25&&[x,y,w,h].every(Number.isFinite)&&w>0&&h>0)words.push({x,y,w,h,confidence,text:text.toLocaleUpperCase('tr-TR').replace(/İ/g,'I').replace(/^[^A-Z]+|[^A-Z]+$/g,'')});}

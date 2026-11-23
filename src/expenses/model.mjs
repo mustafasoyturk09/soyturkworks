@@ -135,6 +135,11 @@ export function parseReceipt(rawText,confidence=null){
 }
 export function mergeReceiptReadings(primary,alternatives){
   const result={...primary};
+  const noisy=s=>/[A-ZÇĞİÖŞÜ]{3}/.test(s)&&/(?:^|\s)[a-zçğıöşü]{1,2}(?=\s|$)/.test(s),prefix=normalize(result.seller).split(/\s+/).slice(0,3).join(' ');
+  if(prefix.split(' ').length===3&&noisy(result.seller||'')){
+    const matches=alternatives.map(r=>r.seller||'').filter(s=>normalize(s).startsWith(prefix+' ')&&!noisy(s)&&/\b(?:ltd|limited|sti|sirketi)\b/.test(normalize(s)));
+    if(matches.length&&new Set(matches.map(normalize)).size===1){const old=result.seller,replacement=matches[0];result.seller=replacement;result.lines=(result.lines||[]).map(line=>{const text=String(line.description||''),at=text.indexOf(old);return at>=0?{...line,description:(text.slice(0,at)+replacement+text.slice(at+old.length)).slice(0,200)}:line;});}
+  }
   const candidates=alternatives.map(r=>r.seller).filter(s=>s&&result.seller&&normalize(s).startsWith(normalize(result.seller))&&s.length>result.seller.length);
   if(candidates.length){const longest=candidates.sort((a,b)=>b.length-a.length)[0];if(candidates.every(s=>normalize(longest).startsWith(normalize(s)))){const old=result.seller;result.seller=longest;result.lines=(result.lines||[]).map(line=>{const text=String(line.description||''),at=text.indexOf(old);return at>=0?{...line,description:(text.slice(0,at)+longest+text.slice(at+old.length)).slice(0,200)}:line;});}}
   for(const field of ['taxId','date','number','total','vat']){

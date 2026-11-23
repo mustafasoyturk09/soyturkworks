@@ -21,6 +21,13 @@ test('İki OCR denemesi belirsiz olmayan eksik alanları tamamlar',()=>{
   const b=parseReceipt('CEM KOPYALAMA\nFIŞ NO: 41\nTOPKDV 183,33\nTOPLAM 1.100,00');
   const merged=mergeReceiptReadings(a,[a,b]);assert.equal(merged.number,'41');assert.equal(merged.vat,18333);assert.match(a.seller,/VE TANITIM TIC SAN LTD STI/);
 });
+test('OCR unvandaki belirgin paraziti ancak tutarlı ikinci okumayla değiştirir',()=>{
+  const first=parseReceipt('CEM KOPYALAMA SİSTEMLERİ BASIM co TANLT IM TİC SAN LTD ŞTİ');
+  const second=parseReceipt('CEM KOPYALAMA SİSTEMLERİ BASIM VE TANITIM TİC SAN LTD ŞTİ');
+  assert.equal(mergeReceiptReadings(first,[first,second]).seller,second.seller);
+  const conflict=parseReceipt('CEM KOPYALAMA SİSTEMLERİ BASIM VE YAYIN TİC SAN LTD ŞTİ');
+  assert.equal(mergeReceiptReadings(first,[first,second,conflict]).seller,first.seller);
+});
 
 test('Fiş numarası okunmasa da satır açıklamasında satıcı bulunur ve eksikler gösterilir',()=>{
   const r=parseReceipt('CEM KOPYALAMA\nKIRTASİYE %20 1.100,00\nTOPLAM 1.100,00');
@@ -32,7 +39,7 @@ test('Fiş numarası okunmasa da satır açıklamasında satıcı bulunur ve eks
   assert(reasons.some(x=>x.includes('VKN')));
 });
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
-import {receiptCropFromTSV,receiptPaperFromPixels,receiptTextLinesFromTSV} from '../src/expenses/crop.mjs';
+import {receiptCropFromTSV,receiptPaperFromPixels} from '../src/expenses/crop.mjs';
 
 test('Şirket unvanı devam satırlarıyla tamamlanır ve adres eklenmez',()=>{
   const raw='CEM KOPYALAMA SİSTEMLERİ BASIM\nVE TANITIM\nTİC SAN LTD ŞTİ\nKOZYATAĞI MAH CAD NO: 4\nFİŞ NO: 41';
@@ -46,11 +53,12 @@ test('Fiş numarası sonraki satırdaki ürün adıyla karışmaz ve unvandaki O
   assert.equal(r.number,'');assert.equal(r.seller,'CEM KOPYALAMA SİSTEMLERİ BASIM VE TANITIM TİC SAN LTD ŞTİ');
   assert.equal(parseReceipt('ÖRNEK\n20.11.2026 FİŞ NO: 41\nKIRTASİYE %20 1.100,00').number,'41');
 });
-test('OCR metin konumları fiş satırlarına ayrılır ve sınır dışı veriler atılır',()=>{
-  const tsv='level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n5\t1\t1\t1\t1\t1\t10\t10\t20\t10\t90\tCEM\n5\t1\t1\t1\t1\t2\t35\t10\t40\t10\t90\tKOPYALAMA\n5\t1\t1\t1\t2\t1\t10\t30\t20\t10\t90\tLTD\n5\t1\t1\t1\t3\t1\t99\t10\t20\t10\t90\tHATALI';
-  const lines=receiptTextLinesFromTSV(tsv,100,100);assert.deepEqual(lines.map(x=>x.text),['CEM KOPYALAMA','LTD']);assert.equal(lines[0].x,.1);assert.equal(lines[0].width,.65);
+test('Telefon bağlantısı Türkçe adla temizleme düğmesinin üstüne yerleştirilir',async()=>{
+  const app=await readFile(new URL('../src/expenses/app.mjs',import.meta.url),'utf8');
+  assert.match(app,/textContent='Telefona Bağla'/);
+  assert.match(app,/filterActions\.append\(document\.getElementById\('copyLink'\),clearFilters\)/);
+  assert(!app.includes('Telefona Ba?la'));assert(!app.includes('expenseTextTool'));
 });
-
 test('Fotoğrafta belirgin kâğıt alanı bulunur, belirsiz görüntü kesilmez',()=>{
   const width=160,height=240,pixels=new Uint8ClampedArray(width*height*4);
   for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x>=45&&x<115&&y>=20&&y<220?230:35;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}

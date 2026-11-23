@@ -212,17 +212,13 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 .pusula-expenses .expense-viewer-tools button{display:grid;place-items:center;width:40px;height:40px;min-height:40px;padding:8px;border:1px solid #456987;border-radius:7px;background:#142b42;color:#d9edf7}
 .pusula-expenses .expense-viewer-tools button[aria-pressed=true]{background:#176756;border-color:#4de1bb}
 .pusula-expenses .expense-viewer-tools svg{width:21px;height:21px}
-.pusula-expenses .expense-selection-status{margin:6px 0;text-align:center}
-.pusula-expenses .expense-selection-status:empty{display:none}
 .pusula-expenses .editor .source .expense-image-surface{position:relative;width:fit-content;max-width:100%;margin:auto;transform-origin:center center}
 .pusula-expenses .editor .source #preview .expense-image-surface img{width:auto;max-width:100%;height:auto;display:block;object-fit:contain;transform:none}
 .pusula-expenses .editor .source #preview .expense-image-surface canvas{width:100%;height:auto;margin:0;display:block}
 .pusula-expenses .expense-pdf-surface{margin:10px auto!important}
-.pusula-expenses .expense-text-layer{position:absolute;inset:0;display:none;cursor:text;user-select:text;-webkit-user-select:text;touch-action:auto}
-.pusula-expenses #preview.selecting-text .expense-text-layer{display:block}
-.pusula-expenses .expense-text-layer span{position:absolute;display:block;white-space:pre;color:transparent;line-height:1;transform-origin:left top;user-select:text;-webkit-user-select:text}
-.pusula-expenses .expense-text-layer span::selection{background:#2785d1a8;color:transparent}
-.pusula-expenses .editor .source #preview.selecting-text{touch-action:auto}
-.heading .actions #copyLink,.pusula-expenses .heading .actions #copyLink{background:#008f70;color:#effff9;border:1px solid #39f2bd;box-shadow:0 0 16px #00e5a675;font-weight:700;padding:9px 14px;min-height:40px}
-.heading .actions #copyLink:hover{background:#00a982;box-shadow:0 0 22px #00e5a6a3}
-@media(max-width:600px){.heading .actions{width:100%;justify-content:flex-end;flex-wrap:wrap}.heading .actions #copyLink{margin-left:auto}}
+.pusula-expenses .expense-extra-filters>.expense-filter-actions{display:flex;flex:0 0 auto;flex-direction:column;align-items:stretch;gap:8px;margin-left:auto}
+.pusula-expenses .expense-filter-actions #copyLink{background:#008f70;color:#effff9;border:1px solid #39f2bd;box-shadow:0 0 16px #00e5a675;font-weight:700;padding:9px 12px;min-height:42px;white-space:nowrap}
+.pusula-expenses .expense-filter-actions #copyLink:hover{background:#00a982;box-shadow:0 0 22px #00e5a6a3}
+.pusula-expenses .expense-filter-actions #expenseClearFilters{width:100%;min-height:42px;font-size:13px;padding:8px 12px}
+.pusula-expenses #expenseDescriptionMirror{font:500 15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:0}
+@media(max-width:600px){.pusula-expenses .expense-extra-filters>.expense-filter-actions{flex:0 0 auto;margin-left:auto}.pusula-expenses #expenseDescriptionMirror{font-size:16px}}

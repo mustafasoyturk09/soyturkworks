@@ -1,5 +1,5 @@
-import {categories,normalize,cents,amount,parseReceipt,draftMissingLines,issues,duplicateIds,exportReadiness,categoryProfile,lineProfile,buildPurchaseXML,encodeLogoXML,splitFlight,lineAmounts,memoryKey,validExpenseCode,validQuantity,matchesReceiptFilters,receiptDescription,rememberedProfile,mergeReceiptReadings} from './model.mjs?v=ocr3';
-import {receiptPaperFromPixels,receiptTextLinesFromTSV} from './crop.mjs?v=ocr3';
+import {categories,normalize,cents,amount,parseReceipt,draftMissingLines,issues,duplicateIds,exportReadiness,categoryProfile,lineProfile,buildPurchaseXML,encodeLogoXML,splitFlight,lineAmounts,memoryKey,validExpenseCode,validQuantity,matchesReceiptFilters,receiptDescription,rememberedProfile,mergeReceiptReadings} from './model.mjs?v=ocr4';
+import {receiptPaperFromPixels} from './crop.mjs?v=ocr4';
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
 const expenseRulesReady=company.id==='PUSULA';
@@ -18,6 +18,7 @@ if(expenseRulesReady){
  const tabs=document.querySelector('.filters [role=group]');tabs.innerHTML='<button data-filter="all" aria-pressed="true">☷ &nbsp; Fişler (Tümü)</button><button data-filter="pending" aria-pressed="false">◷ &nbsp; İnceleme Bekleyen</button><button data-filter="checked" aria-pressed="false">⇧ &nbsp; Logo’ya Aktarılacak</button><button data-filter="exported" aria-pressed="false">✓ &nbsp; Aktarılanlar</button><button data-filter="archived" aria-pressed="false">Arşiv</button>';
  const toolbar=document.createElement('div');toolbar.className='expense-bulkbar';toolbar.innerHTML='<label><input id="expenseSelectAll" type="checkbox"> Tümünü seç</label><select id="expenseBulkAction" aria-label="Toplu işlemler"><option value="">Toplu işlemler</option><option value="backup">Seçilenleri yedekle</option><option value="exported">Logo’da aktarıldı olarak işaretle</option></select><button id="expenseBulkApply" type="button" class="secondary">Uygula</button><span id="expenseSelected">0 seçili</span>';list.insertBefore(toolbar,document.getElementById('receipts'));
  const extra=document.createElement('div');extra.className='expense-extra-filters';extra.innerHTML='<label>Fiş tarihi: başlangıç<input id="expenseDateFrom" type="date"></label><label>Fiş tarihi: bitiş<input id="expenseDateTo" type="date"></label><label>Otomatik okuma<select id="expenseOcrFilter" aria-describedby="expenseFilterHelp"><option value="">Tüm okuma durumları</option><option value="done">Okundu</option><option value="pending">Okuma bekliyor</option><option value="error">Okuma hatası</option></select></label><button type="button" id="expenseClearFilters" class="secondary">Temizle</button>';list.insertBefore(extra,toolbar);
+ const filterActions=document.createElement('div');filterActions.className='expense-filter-actions';const clearFilters=extra.querySelector('#expenseClearFilters');clearFilters.replaceWith(filterActions);filterActions.append(document.getElementById('copyLink'),clearFilters);
  const deleteArchived=document.createElement('button');deleteArchived.type='button';deleteArchived.id='expenseDeleteArchived';deleteArchived.className='secondary';deleteArchived.textContent='Seçilenleri sil';deleteArchived.hidden=true;extra.after(deleteArchived);
  const filters=document.querySelector('.filters'),capture=document.querySelector('.capture');list.insertBefore(tabs,capture);extra.prepend(document.getElementById('search'));filters.remove();list.insertBefore(toolbar,extra);
  const searchInput=document.getElementById('search'),searchLabel=document.createElement('label');searchLabel.className='expense-search-label';searchLabel.textContent='Fiş numarası';searchInput.replaceWith(searchLabel);searchLabel.append(searchInput);
@@ -29,10 +30,7 @@ if(expenseRulesReady){
  const viewerTools=document.createElement('div');viewerTools.className='expense-viewer-tools';viewerTools.setAttribute('role','group');viewerTools.setAttribute('aria-label','Fiş görseli kontrolleri');
  const viewerIcons={in:'<circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5M10 7v6M7 10h6"/>',out:'<circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5M7 10h6"/>',rotate:'<path d="M20 11a8 8 0 1 1-2.3-5.7L20 8M20 3v5h-5"/>'};
  for(const [label,id,icon] of [['Yakınlaştır','expenseZoomIn','in'],['Uzaklaştır','expenseZoomOut','out'],['Görseli döndür','rotate','rotate']]){const button=document.createElement('button');button.type='button';button.title=label;button.setAttribute('aria-label',label);button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+viewerIcons[icon]+'</svg>';button.onclick=()=>$(id).click();viewerTools.append(button);}
- const textTool=document.createElement('button');textTool.type='button';textTool.id='expenseTextTool';textTool.title='Metin seçme aracını aç';textTool.setAttribute('aria-label','Metin seçme aracını aç');textTool.setAttribute('aria-pressed','false');textTool.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v15l4-4 3 7 3-1-3-7h6z"/></svg>';textTool.onclick=()=>setViewerMode(viewerMode==='text'?'hand':'text');viewerTools.append(textTool);
- const selectionStatus=document.createElement('p');selectionStatus.id='expenseSelectionStatus';selectionStatus.className='hint expense-selection-status';selectionStatus.setAttribute('role','status');
  document.getElementById('preview').after(viewerTools);
- viewerTools.after(selectionStatus);
  const fix=document.createElement('button');fix.type='button';fix.id='fixExportMapping';fix.className='secondary';fix.textContent='Eksik Logo alanlarını aç';fix.hidden=true;document.getElementById('exportReason').after(fix);
  const accounting=document.createElement('section');accounting.className='expense-accounting';accounting.hidden=true;const lineHead=document.getElementById('addLine').closest('.list-head'),lineHint=lineHead.nextElementSibling;lineHead.querySelector('h3').textContent='Muhasebe Satırları (Logo’ya Aktarılacak)';accounting.append(lineHead,lineHint,document.getElementById('flightSplit'),document.getElementById('lines'));(inlineAccounting?left:document.querySelector('#editor .editor-body')).append(accounting);
  const sellerInput=document.querySelector('#editForm [name=seller]'),sellerLabel=sellerInput.closest('label');sellerLabel.firstChild.textContent='Satır açıklaması';const descriptionText=document.createElement('textarea');descriptionText.id='expenseDescriptionMirror';descriptionText.readOnly=false;descriptionText.maxLength=200;descriptionText.rows=2;sellerLabel.append(descriptionText);const sellerDetails=document.createElement('details');sellerDetails.className='full';sellerDetails.innerHTML='<summary>Satıcı bilgisini düzelt</summary><label>Satıcı unvanı</label>';sellerDetails.querySelector('label').append(sellerInput);sellerLabel.after(sellerDetails);
@@ -41,7 +39,7 @@ if(expenseRulesReady){
  document.querySelector('#editor .source details').hidden=true;document.getElementById('archive').hidden=true;document.getElementById('draftBackup').hidden=true;
  document.getElementById('search').placeholder='Fiş no ara…';document.getElementById('search').setAttribute('aria-label','Fiş numarası ara');
 }
-document.querySelector('.heading .actions').append($('copyLink'));$('copyLink').textContent='Telefona Ba?la';$('copyLink').title='Fi? ba?lant?s?n? kopyala; telefonda ayn? hesapla a?';
+$('copyLink').textContent='Telefona Bağla';$('copyLink').title='Fiş bağlantısını kopyala; telefonda aynı hesapla aç';
 $('company').textContent=company.name;$('workspace').href='/workspace/'+company.id+'/';document.title=company.name+' · Masraf Fişleri';
 if(!expenseRulesReady){
   $('openProfiles').style.display='none';
@@ -52,7 +50,7 @@ if(!expenseRulesReady){
   if(cardLabel.previousElementSibling)cardLabel.previousElementSibling.style.display='none';
 }
 const base='/api/expenses/'+company.id+'/',escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let receipts=[],profiles={revision:0,categories:{}},filter='all',busy=false,stop=false,editing=null,dirty=false,saving=false,previewURL=null,previewSourceBlob=null,previewShownBlob=null,cropManual=false,cropEditToken=0,rotation=0,viewerX=0,viewerY=0,viewerDrag=null,viewerMode='hand',selectionWorker=null,selectionCancel=null,selectionToken=0,worker=null,refreshing=false,pdfModule=null,opening=false,expenseZoom=100,saveTimer=null,activeLineIndex=0;
+let receipts=[],profiles={revision:0,categories:{}},filter='all',busy=false,stop=false,editing=null,dirty=false,saving=false,previewURL=null,previewSourceBlob=null,cropManual=false,cropEditToken=0,rotation=0,viewerX=0,viewerY=0,viewerDrag=null,worker=null,refreshing=false,pdfModule=null,opening=false,expenseZoom=100,saveTimer=null,activeLineIndex=0;
 const expenseSelected=new Set();let expenseVisible=[];
 const money=(value,currency='TRY')=>Number.isSafeInteger(value)?new Intl.NumberFormat('tr-TR',{style:'currency',currency}).format(value/100):'Tutar okunmadı';
 const imageURL=id=>base+'image/'+id;
@@ -102,7 +100,7 @@ const thumbCache=new Map();
 function loadCroppedThumbnail(record){const key=record.id+JSON.stringify(record.crop);if(!thumbCache.has(key)){if(thumbCache.size>=100){const [old,promise]=thumbCache.entries().next().value;thumbCache.delete(old);promise.then(url=>URL.revokeObjectURL(url)).catch(()=>{});}thumbCache.set(key,getBlob(record.id).then(async blob=>croppedBlob(blob,await detectedPaper(record,blob),400)).then(blob=>URL.createObjectURL(blob)).catch(error=>{thumbCache.delete(key);throw error;}));}thumbCache.get(key).then(url=>{const image=document.querySelector('[data-crop-thumb="'+record.id+'"]');if(image)image.src=url;}).catch(()=>{});}
 function recognize(blob){
   return new Promise((resolve,reject)=>{
-    worker??=new Worker('/expenses/ocr-worker.js?v=ocr3');const active=worker;
+    worker??=new Worker('/expenses/ocr-worker.js?v=ocr4');const active=worker;
     const end=(terminate=false)=>{clearTimeout(timer);active.onmessage=null;active.onerror=null;if(terminate){active.terminate();if(worker===active)worker=null;}};
     const timer=setTimeout(()=>{end(true);reject(Error('Okuma 3 dakika içinde tamamlanamadı. Daha küçük ve net bir fotoğrafla yeniden dene.'));},180000);
     active.onmessage=({data})=>{if(data.progress){$('progressText').textContent=data.progress;return;}end(!!data.error);if(data.error)reject(Error(data.error));else resolve(data.result);};
@@ -226,39 +224,12 @@ function warningList(){
   $('editWarnings').innerHTML=(editing.error?'<p>'+escape(editing.error)+'</p>':'')+(problems.length?'<ul>'+problems.map(p=>'<li>'+escape(p)+'</li>').join('')+'</ul>':'<strong>Temel alanlar tutarlı. Belgeyle karşılaştırıp onayla.</strong>')+(!editing.reviewed?'<p>Aktarım için aşağıdaki “Fotoğrafla karşılaştırdım” kutusunu işaretleyip Kaydet’e basın.</p>':'')+(editing.notes||[]).map(n=>'<p class="note">'+escape(n)+'</p>').join('');
 }
 async function displayPreview(record){
-  setViewerMode('hand');previewShownBlob=null;if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}$('preview').replaceChildren();$('original').href=imageURL(record.id);$('rotate').hidden=record.source.type==='application/pdf';rotation=0;expenseZoom=100;viewerX=0;viewerY=0;
+  if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}$('preview').replaceChildren();$('original').href=imageURL(record.id);$('rotate').hidden=record.source.type==='application/pdf';rotation=0;expenseZoom=100;viewerX=0;viewerY=0;
   const blob=await getBlob(record.id);if(editing?.id!==record.id||!$('editor').open)return;previewSourceBlob=blob;cropEditToken++;
   if(record.source.type==='application/pdf'){
     const lib=await pdf(),doc=await lib.getDocument({data:new Uint8Array(await blob.arrayBuffer()),isEvalSupported:false}).promise;
     try{for(let i=1;i<=Math.min(doc.numPages,8);i++){const page=await doc.getPage(i),v=page.getViewport({scale:1.5}),canvas=document.createElement('canvas');canvas.width=v.width;canvas.height=v.height;await page.render({canvasContext:canvas.getContext('2d'),viewport:v}).promise;if(editing?.id!==record.id||!$('editor').open)return;if(expenseRulesReady){const surface=document.createElement('div');surface.className='expense-image-surface expense-pdf-surface';surface.append(canvas);$('preview').append(surface);}else $('preview').append(canvas);}}finally{await doc.destroy();}
-  }else{const crop=expenseRulesReady?await detectedPaper(record,blob):record.crop;const shown=await croppedBlob(blob,crop,2000);if(editing?.id!==record.id||!$('editor').open)return;previewShownBlob=shown;previewURL=URL.createObjectURL(shown);const img=new Image();img.alt=crop?'Kırpılmış fiş görünümü':'Kaynak masraf fişi';img.src=previewURL;if(expenseRulesReady){const surface=document.createElement('div');surface.className='expense-image-surface';surface.append(img);$('preview').append(surface);}else $('preview').append(img);}
-}
-function layoutSelectableLines(surface){
-  const layer=surface.querySelector('.expense-text-layer');if(!layer)return;
-  for(const span of layer.children){const height=Number(span.dataset.height)*surface.clientHeight,width=Number(span.dataset.width)*surface.clientWidth;span.style.fontSize=Math.max(1,height*.9)+'px';span.style.transform='none';const actual=span.offsetWidth;if(actual>0)span.style.transform='scaleX('+(width/actual)+')';}
-}
-function layoutSelection(){document.querySelectorAll('#preview .expense-image-surface').forEach(layoutSelectableLines);}
-window.addEventListener('resize',layoutSelection);
-async function setViewerMode(mode){
-  selectionToken++;const token=selectionToken;if(selectionCancel)selectionCancel();viewerMode=mode;
-  const tool=$('expenseTextTool'),preview=$('preview'),status=$('expenseSelectionStatus');if(!tool||!preview)return;
-  tool.setAttribute('aria-pressed',String(mode==='text'));tool.title=mode==='text'?'El aracına dön':'Metin seçme aracını aç';tool.setAttribute('aria-label',tool.title);preview.classList.toggle('selecting-text',mode==='text');
-  if(mode==='hand'){if(status)status.textContent='';return;}
-  const surfaces=[...preview.querySelectorAll('.expense-image-surface')];if(!surfaces.length){status.textContent='Metin seçimi için fişin açılmasını bekleyin.';return;}
-  try{
-    for(const [index,surface] of surfaces.entries()){
-      if(token!==selectionToken)return;if(surface.querySelector('.expense-text-layer')){layoutSelectableLines(surface);continue;}
-      status.textContent='Seçilebilir metin hazırlanıyor'+(surfaces.length>1?' ('+(index+1)+'/'+surfaces.length+')':'')+'…';
-      const picture=surface.querySelector('img');if(picture&&!picture.complete)await picture.decode();const canvas=surface.querySelector('canvas'),blob=canvas?await new Promise(resolve=>canvas.toBlob(resolve,'image/png')):previewShownBlob;
-      if(!blob)throw Error('Fiş görseli açılamadı.');if(token!==selectionToken)return;
-      const result=await new Promise((resolve,reject)=>{const job=new Worker('/expenses/ocr-worker.js?v=ocr3');selectionWorker=job;const timer=setTimeout(()=>{job.terminate();if(selectionWorker===job)selectionWorker=null;reject(Error('Metin seçimi hazırlanamadı.'));},180000);job.onmessage=({data})=>{if(data.progress)return;clearTimeout(timer);job.terminate();if(selectionWorker===job)selectionWorker=null;data.error?reject(Error(data.error)):resolve(data.result);};job.onerror=()=>{clearTimeout(timer);job.terminate();if(selectionWorker===job)selectionWorker=null;reject(Error('Metin seçimi hazırlanamadı.'));};job.postMessage({blob,includeLayout:true});});
-      if(token!==selectionToken)return;const lines=receiptTextLinesFromTSV(result.tsv,result.width,result.height);if(!lines.length)throw Error('Seçilebilir metin okunamadı.');
-      const layer=document.createElement('div');layer.className='expense-text-layer';layer.setAttribute('aria-label','Fişten okunan seçilebilir metin');
-      for(const line of lines){const span=document.createElement('span');span.textContent=line.text;span.style.left=(line.x*100)+'%';span.style.top=(line.y*100)+'%';span.dataset.width=line.width;span.dataset.height=line.height;layer.append(span,document.createTextNode(' '));}
-      surface.append(layer);layoutSelectableLines(surface);
-    }
-    if(token===selectionToken)status.textContent='Metni fareyle seçip sağ tık veya Ctrl+C ile kopyalayabilirsiniz. Okunan metni fişle karşılaştırın.';
-  }catch(error){if(token===selectionToken)status.textContent=error.message;}
+  }else{const crop=expenseRulesReady?await detectedPaper(record,blob):record.crop;const shown=await croppedBlob(blob,crop,2000);if(editing?.id!==record.id||!$('editor').open)return;previewURL=URL.createObjectURL(shown);const img=new Image();img.alt=crop?'Kırpılmış fiş görünümü':'Kaynak masraf fişi';img.src=previewURL;if(expenseRulesReady){const surface=document.createElement('div');surface.className='expense-image-surface';surface.append(img);$('preview').append(surface);}else $('preview').append(img);}
 }
 async function openEditor(id){
   if(busy){notice('Okuma bittikten sonra fişi düzenleyebilirsin.');return;}
@@ -273,7 +244,7 @@ async function openEditor(id){
   renderLines();warningList();if(missingLines)notice('Kayıtta masraf satırı bulunamadı. Belgeden bir taslak açıldı; kod, açıklama ve KDV’yi kontrol edin.');if(expenseRulesReady){document.querySelector('.expense-accounting').hidden=false;$('editTitle').textContent='Fiş Detayı';const index=expenseVisible.findIndex(r=>r.id===id);$('expenseDetailPosition').textContent=index>=0?(index+1)+' / '+expenseVisible.length:'';$('expensePrev').disabled=index<=0;$('expenseNext').disabled=index<0||index>=expenseVisible.length-1;}if(!$('editor').open){if(expenseRulesReady&&matchMedia('(min-width:1100px)').matches){$('editor').show();document.querySelector('.expense-detail-empty').hidden=true;}else $('editor').showModal();}if(expenseRulesReady)render();await displayPreview(editing).catch(e=>{$('preview').textContent=e.message;});
   }finally{opening=false;}
 }
-async function closeEditor(){if(saving||busy)return;if(dirty){if(expenseRulesReady){await saveEditor();if(dirty)return;}else if(!confirm('Kaydedilmemiş değişiklikler var. Kaydetmeden kapatılsın mı?'))return;}setViewerMode('hand');cropEditToken++;previewSourceBlob=null;previewShownBlob=null;$('editor').close();if(expenseRulesReady){document.querySelector('.expense-detail-empty').hidden=false;document.querySelector('.expense-accounting').hidden=true;}editing=null;dirty=false;if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;$('preview').replaceChildren();if(expenseRulesReady)render();}
+async function closeEditor(){if(saving||busy)return;if(dirty){if(expenseRulesReady){await saveEditor();if(dirty)return;}else if(!confirm('Kaydedilmemiş değişiklikler var. Kaydetmeden kapatılsın mı?'))return;}cropEditToken++;previewSourceBlob=null;$('editor').close();if(expenseRulesReady){document.querySelector('.expense-detail-empty').hidden=false;document.querySelector('.expense-accounting').hidden=true;}editing=null;dirty=false;if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;$('preview').replaceChildren();if(expenseRulesReady)render();}
 async function saveEditor(){
   if(saving)return;const focused=inlineAccounting&&document.querySelector('.expense-accounting').contains(document.activeElement)?document.activeElement:null,selection=focused&&typeof focused.selectionStart==='number'?[focused.selectionStart,focused.selectionEnd]:null;clearTimeout(saveTimer);saving=true;$('save').disabled=true;$('editForm').inert=true;if(inlineAccounting)document.querySelector('.expense-accounting').inert=true;
   try{collect();if(editing.reviewed&&duplicateIds([...receipts.filter(r=>r.id!==editing.id),editing]).has(editing.id))throw Error('Mükerrer görünen fişi arşive al veya belge bilgilerini düzelt.');editing=await api('record/'+editing.id,editing);dirty=false;$('editSaveState').textContent='Kaydedildi.';await refresh();warningList();}
@@ -306,8 +277,8 @@ if(expenseRulesReady){
  for(const [id,value] of [['count','all'],['pending','pending'],['checked','reviewed'],['total','checked']]){const card=$(id).parentElement;card.setAttribute('role','button');card.tabIndex=0;card.onclick=()=>setExpenseFilter(value);card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpenseFilter(value);}};}
  $('fixExportMapping').onclick=()=>{const category=$('fixExportMapping').dataset.category;$('openProfiles').click();const row=[...$('profileRows').children].find(node=>node.dataset.profile===category);if(row){row.open=true;row.scrollIntoView({block:'nearest'});}};
  for(const [id,delta] of [['expensePrev',-1],['expenseNext',1]])$(id).onclick=()=>{const index=expenseVisible.findIndex(r=>r.id===editing?.id),target=expenseVisible[index+delta];if(target)run(()=>openEditor(target.id));};
- for(const [id,delta] of [['expenseZoomOut',-25],['expenseZoomIn',25]])$(id).onclick=()=>{expenseZoom=Math.max(50,Math.min(300,expenseZoom+delta));const img=$('preview').querySelector('img');if(inlineAccounting&&img){updateViewerTransform();return;}$('preview').querySelectorAll('.expense-image-surface').forEach(node=>{node.style.maxWidth='none';node.style.width=expenseZoom+'%';});layoutSelection();};
- const preview=$('preview');preview.addEventListener('pointerdown',e=>{if(viewerMode!=='hand'||!inlineAccounting||e.button!==0||!e.target.matches('img'))return;e.preventDefault();viewerDrag={x:e.clientX,y:e.clientY,originX:viewerX,originY:viewerY};preview.setPointerCapture(e.pointerId);preview.classList.add('dragging');});
+ for(const [id,delta] of [['expenseZoomOut',-25],['expenseZoomIn',25]])$(id).onclick=()=>{expenseZoom=Math.max(50,Math.min(300,expenseZoom+delta));const img=$('preview').querySelector('img');if(inlineAccounting&&img){updateViewerTransform();return;}$('preview').querySelectorAll('.expense-image-surface').forEach(node=>{node.style.maxWidth='none';node.style.width=expenseZoom+'%';});};
+ const preview=$('preview');preview.addEventListener('pointerdown',e=>{if(!inlineAccounting||e.button!==0||!e.target.matches('img'))return;e.preventDefault();viewerDrag={x:e.clientX,y:e.clientY,originX:viewerX,originY:viewerY};preview.setPointerCapture(e.pointerId);preview.classList.add('dragging');});
  preview.addEventListener('pointermove',e=>{if(!viewerDrag)return;viewerX=viewerDrag.originX+e.clientX-viewerDrag.x;viewerY=viewerDrag.originY+e.clientY-viewerDrag.y;updateViewerTransform();});
  const endDrag=()=>{viewerDrag=null;preview.classList.remove('dragging');};preview.addEventListener('pointerup',endDrag);preview.addEventListener('pointercancel',endDrag);preview.addEventListener('lostpointercapture',endDrag);
  for(const id of ['expenseDateFrom','expenseDateTo','expenseOcrFilter'])$(id).addEventListener('change',render);
