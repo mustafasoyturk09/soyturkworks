@@ -40,6 +40,7 @@ export function cents(value){
 }
 export const amount=value=>Number.isSafeInteger(value)?(value/100).toFixed(2).replace('.',','):'';
 export const groupedAmount=value=>Number.isSafeInteger(value)?new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(value/100):'';
+export const vatRateLabel=value=>value!==''&&value!==null&&value!==undefined&&Number.isFinite(Number(value))?'%'+String(value):'Seç';
 export function lineAmounts(line){
   const value=line.gross,rate=line.vatRate,vatIncluded=line.vatIncluded!==false;
   if(!Number.isSafeInteger(value)||value<0||!Number.isFinite(rate)||rate<0||rate>100)return {gross:null,net:null,vat:null,vatIncluded};

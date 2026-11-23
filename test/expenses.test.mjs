@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
-import {cents,groupedAmount,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters,rememberedProfile,mergeReceiptReadings,calendarDays} from '../src/expenses/model.mjs';
+import {cents,groupedAmount,vatRateLabel,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters,rememberedProfile,mergeReceiptReadings,calendarDays} from '../src/expenses/model.mjs';
+
+test('KDV seçimi oranı eksiksiz gösterir ve sıfır oranını boş saymaz',()=>{
+  assert.deepEqual([0,1,10,20,''].map(vatRateLabel),['%0','%1','%10','%20','Seç']);
+});
 
 test('Birim fiyat Türkçe binlik ayırıcıyla gösterilir ve kuruş kaybı olmadan okunur',()=>{
   for(const [value,formatted] of [[110020,'1.100,20'],[123456789,'1.234.567,89'],[5,'0,05']]){assert.equal(groupedAmount(value),formatted);assert.equal(cents(formatted),value);}
