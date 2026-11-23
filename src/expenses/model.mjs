@@ -2,6 +2,7 @@ export const categories=Object.freeze({meal:'Yemek',wash:'Araç yıkama',fuel:'Y
 export const normalize=value=>String(value??'').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i');
 export const validExpenseCode=code=>typeof code==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,59}$/.test(code);
 export const validQuantity=value=>typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=100000&&Math.abs(value*1000-Math.round(value*1000))<1e-7;
+export const receiptDescription=receipt=>[receipt.number?'FİŞ NO:'+receipt.number:'',String(receipt.seller||'').trim()].filter(Boolean).join(' ').slice(0,200);
 // Logo'nun sağlanan XML örneği ISO-8859-9 kullanır. Bu kodlamada olmayan
 // karakterler XML sayısal karakter başvurusu olarak saklanır; kayıp oluşmaz.
 export function encodeLogoXML(xml){
@@ -105,7 +106,7 @@ export function parseReceipt(rawText,confidence=null){
     result.taxId=unique(lines.filter(l=>/v\.?\s*d\.?|vergi|vkn/.test(normalize(l))&&!/tckn|tax payer/.test(normalize(l))).map(l=>l.match(/\b(\d{3}\s+\d{3}\s+\d{4}|\d{10})\b/)?.[1]?.replace(/\s/g,'')))||'';
     if(result.lines.length===1&&result.lines[0].vatRate===null)result.lines[0]={description:'Uçak bileti',category:'flight',gross:result.total,vatRate:null,vatIncluded:true};
   }
-  for(const line of result.lines){if(result.number&&result.seller)line.description=('FİŞ NO:'+result.number+' '+result.seller+(line.description?' · '+line.description:'')).slice(0,200);}
+  for(const line of result.lines){const prefix=receiptDescription(result);if(prefix)line.description=(prefix+(line.description?' · '+line.description:'')).slice(0,200);}
   return completeReceiptSeller(result);
 }
 // A missing line must remain editable; only use OCR item amounts when they
@@ -180,7 +181,7 @@ export function exportReadiness(receipts,profiles={},company=''){
   const reasons=[],active=receipts.filter(r=>!r.archived&&!r.exported),duplicates=duplicateIds(receipts.filter(r=>!r.archived));
   if(!active.length)reasons.push('Aktarılacak fiş yok.');
   for(const r of active){
-    if(issues(r).length||!r.reviewed)reasons.push('Fişlerin kontrolünü tamamla.');
+    const problems=issues(r);if(problems.length||!r.reviewed)reasons.push('Fişlerin kontrolünü tamamla.',...problems);
     if((r.lines||[]).reduce((sum,l)=>sum+(lineAmounts(l).gross||0),0)!==r.total)reasons.push('Satır toplamını belge toplamına eşitle.');
     if(duplicates.has(r.id))reasons.push('Olası mükerrer fişleri kontrol et.');
     if(!Object.hasOwn(paymentCards,r.paymentCard||''))reasons.push('Her fiş için kredi kartını seç.');

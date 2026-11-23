@@ -3,6 +3,16 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters} from '../src/expenses/model.mjs';
+
+test('Fiş numarası okunmasa da satır açıklamasında satıcı bulunur ve eksikler gösterilir',()=>{
+  const r=parseReceipt('CEM KOPYALAMA\nKIRTASİYE %20 1.100,00\nTOPLAM 1.100,00');
+  assert.equal(r.number,'');
+  assert.equal(r.lines[0].description,'CEM KOPYALAMA · KIRTASİYE');
+  r.reviewed=true;
+  const reasons=exportReadiness([r],{},'PUSULA').reasons;
+  assert(reasons.some(x=>x.includes('numarası eksik')));
+  assert(reasons.some(x=>x.includes('VKN')));
+});
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
 import {receiptCropFromTSV,receiptPaperFromPixels} from '../src/expenses/crop.mjs';
 
