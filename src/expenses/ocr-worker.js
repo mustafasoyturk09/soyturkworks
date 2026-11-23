@@ -25,12 +25,21 @@ self.onmessage=async({data})=>{
       if(index){const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),v=pixels.data;for(let i=0;i<v.length;i+=4){const g=Math.max(0,Math.min(255,(v[i]*.299+v[i+1]*.587+v[i+2]*.114-128)*1.25+128));v[i]=v[i+1]=v[i+2]=g;}ctx.putImageData(pixels,0,0);}
       const bytes=new Uint8Array(await(await canvas.convertToBlob({type:'image/png'})).arrayBuffer());
       mod.FS.writeFile('/input',bytes);api.SetPageSegMode(psm);if(api.SetImageFile(1,0)===1)continue;api.Recognize(null);
-      let crop=null;try{const {receiptCropFromTSV}=await import('/expenses/crop.mjs');crop=receiptCropFromTSV(api.GetTSVText(0),canvas.width,canvas.height);}catch{}
-      results.push({text:api.GetUTF8Text(),confidence:api.MeanTextConf(),crop});
+      const tsv=api.GetTSVText(0);let crop=null;try{const {receiptCropFromTSV}=await import('/expenses/crop.mjs');crop=receiptCropFromTSV(tsv,canvas.width,canvas.height);}catch{}
+      results.push({text:api.GetUTF8Text(),confidence:api.MeanTextConf(),crop,...(data.includeLayout?{tsv,width:canvas.width,height:canvas.height}:{})});
     }
     if(!results.length)throw Error('Fotoğraf okunamadı. Daha net ve düz bir çekim dene.');
+    let headerText='';
+    if(!data.includeLayout){
+      try{
+        self.postMessage({progress:'Firma unvanı ayrıca okunuyor…'});
+        const x=paper?Math.floor(paper.x*canvas.width):0,y=paper?Math.floor(paper.y*canvas.height):0,w=paper?Math.ceil(paper.width*canvas.width):canvas.width,h=paper?Math.ceil(paper.height*canvas.height*.38):Math.ceil(canvas.height*.38),factor=Math.min(2,2800/Math.max(w,h));
+        const header=new OffscreenCanvas(Math.max(1,Math.round(w*factor)),Math.max(1,Math.round(h*factor)));header.getContext('2d').drawImage(canvas,x,y,w,h,0,0,header.width,header.height);
+        mod.FS.writeFile('/input',new Uint8Array(await(await header.convertToBlob({type:'image/png'})).arrayBuffer()));api.SetPageSegMode(6);if(api.SetImageFile(1,0)!==1){api.Recognize(null);headerText=api.GetUTF8Text();}
+      }catch{}
+    }
     results.sort((a,b)=>b.confidence-a.confidence);const best=results[0],textCrop=results.find(r=>r.crop)?.crop;if(paper){if(textCrop&&textCrop.y+textCrop.height>paper.y+paper.height*.35&&textCrop.y+textCrop.height<paper.y+paper.height)paper.height=textCrop.y+textCrop.height-paper.y;best.crop=paper;}else if(textCrop)best.crop={...textCrop,v:2};
     // Retain disagreements rather than treating confidence as proof of accuracy.
-    self.postMessage({result:{...best,alternatives:results.map(r=>r.text)}});
+    self.postMessage({result:{...best,headerText,alternatives:results.map(r=>r.text)}});
   }catch(e){self.postMessage({error:e.message||'Fotoğraf okunamadı.'});}
 };

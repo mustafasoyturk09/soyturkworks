@@ -207,3 +207,19 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
  .pusula-expenses .expense-account-picker [data-plan]{display:grid;place-items:center;top:50%;bottom:auto;right:1px;transform:translateY(-50%);width:42px;height:42px;min-height:0;color:#bcebe4}
  .pusula-expenses .expense-account-picker [data-plan] svg{display:block;width:17px;height:17px}
 }
+.pusula-expenses .expense-viewer-tools{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+.pusula-expenses .source .actions #rotate,.pusula-expenses .source .actions #expenseZoomIn,.pusula-expenses .source .actions #expenseZoomOut{display:none}
+.pusula-expenses .expense-viewer-tools button{display:grid;place-items:center;width:40px;height:40px;min-height:40px;padding:8px;border:1px solid #456987;border-radius:7px;background:#142b42;color:#d9edf7}
+.pusula-expenses .expense-viewer-tools button[aria-pressed=true]{background:#176756;border-color:#4de1bb}
+.pusula-expenses .expense-viewer-tools svg{width:21px;height:21px}
+.pusula-expenses .expense-selection-status{margin:6px 0;text-align:center}
+.pusula-expenses .expense-selection-status:empty{display:none}
+.pusula-expenses .editor .source .expense-image-surface{position:relative;width:fit-content;max-width:100%;margin:auto;transform-origin:center center}
+.pusula-expenses .editor .source #preview .expense-image-surface img{width:auto;max-width:100%;height:auto;display:block;object-fit:contain;transform:none}
+.pusula-expenses .editor .source #preview .expense-image-surface canvas{width:100%;height:auto;margin:0;display:block}
+.pusula-expenses .expense-pdf-surface{margin:10px auto!important}
+.pusula-expenses .expense-text-layer{position:absolute;inset:0;display:none;cursor:text;user-select:text;-webkit-user-select:text;touch-action:auto}
+.pusula-expenses #preview.selecting-text .expense-text-layer{display:block}
+.pusula-expenses .expense-text-layer span{position:absolute;display:block;white-space:pre;color:transparent;line-height:1;transform-origin:left top;user-select:text;-webkit-user-select:text}
+.pusula-expenses .expense-text-layer span::selection{background:#2785d1a8;color:transparent}
+.pusula-expenses .editor .source #preview.selecting-text{touch-action:auto}

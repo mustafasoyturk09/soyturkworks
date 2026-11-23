@@ -32,7 +32,19 @@ test('Fiş numarası okunmasa da satır açıklamasında satıcı bulunur ve eks
   assert(reasons.some(x=>x.includes('VKN')));
 });
 import {ExpenseStore,limitedBytes} from '../server/expenses.mjs';
-import {receiptCropFromTSV,receiptPaperFromPixels} from '../src/expenses/crop.mjs';
+import {receiptCropFromTSV,receiptPaperFromPixels,receiptTextLinesFromTSV} from '../src/expenses/crop.mjs';
+
+test('Şirket unvanı devam satırlarıyla tamamlanır ve adres eklenmez',()=>{
+  const raw='CEM KOPYALAMA SİSTEMLERİ BASIM\nVE TANITIM\nTİC SAN LTD ŞTİ\nKOZYATAĞI MAH CAD NO: 4\nFİŞ NO: 41';
+  const title='CEM KOPYALAMA SİSTEMLERİ BASIM VE TANITIM TİC SAN LTD ŞTİ',parsed=parseReceipt(raw);
+  assert.equal(parsed.seller,title);assert.match(parsed.lines[0].description,/LTD ŞTİ/);
+  const old=completeReceiptSeller({seller:'CEM KOPYALAMA SİSTEMLERİ BASIM',number:'41',rawText:raw,lines:[{description:'FİŞ NO:41 CEM KOPYALAMA SİSTEMLERİ BASIM'}]});
+  assert.equal(old.seller,title);assert.match(old.lines[0].description,/LTD ŞTİ/);
+});
+test('OCR metin konumları fiş satırlarına ayrılır ve sınır dışı veriler atılır',()=>{
+  const tsv='level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n5\t1\t1\t1\t1\t1\t10\t10\t20\t10\t90\tCEM\n5\t1\t1\t1\t1\t2\t35\t10\t40\t10\t90\tKOPYALAMA\n5\t1\t1\t1\t2\t1\t10\t30\t20\t10\t90\tLTD\n5\t1\t1\t1\t3\t1\t99\t10\t20\t10\t90\tHATALI';
+  const lines=receiptTextLinesFromTSV(tsv,100,100);assert.deepEqual(lines.map(x=>x.text),['CEM KOPYALAMA','LTD']);assert.equal(lines[0].x,.1);assert.equal(lines[0].width,.65);
+});
 
 test('Fotoğrafta belirgin kâğıt alanı bulunur, belirsiz görüntü kesilmez',()=>{
   const width=160,height=240,pixels=new Uint8ClampedArray(width*height*4);
@@ -51,7 +63,7 @@ test('Fişteki şahıs adı unvandan sonra gelir, açıklamada tekrarlanmaz',()=
   const old={...r,seller:'ÖRNEK LOKANTA'};
   assert.equal(completeReceiptSeller(old).lines[0].description,r.lines[0].description);
   const manual={...old,seller:'Düzeltilmiş unvan'};assert.deepEqual(completeReceiptSeller(manual),manual);
-  for(const next of ['ÖRNEK MAHALLESİ','ÇİÇEK CAD','MERKEZ ŞUBESİ','TEŞEKKÜR EDERİZ','KASİYER DENİZ','KREDİ KARTI','TİCARET LİMİTED ŞİRKETİ'])assert.equal(parseReceipt(sample.replace('ÖRNEK LOKANTA','ÖRNEK LOKANTA\n'+next)).seller,'ÖRNEK LOKANTA',next);
+  for(const next of ['ÖRNEK MAHALLESİ','ÇİÇEK CAD','MERKEZ ŞUBESİ','TEŞEKKÜR EDERİZ','KASİYER DENİZ','KREDİ KARTI'])assert.equal(parseReceipt(sample.replace('ÖRNEK LOKANTA','ÖRNEK LOKANTA\n'+next)).seller,'ÖRNEK LOKANTA',next);
 });
 test('Satırı olmayan fiş düzenlenebilir taslak açar ve belirsiz KDV uydurmaz',()=>{
   const r={...receipt(),lines:[]},draft=draftMissingLines(r);assert.equal(draft.length,1);assert.equal(draft[0].gross,r.total);assert.equal(draft[0].vatRate,10);assert.equal(r.lines.length,0);

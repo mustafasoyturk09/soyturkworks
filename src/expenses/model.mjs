@@ -57,18 +57,34 @@ export function guessCategory(text){
   return matches.length===1?matches[0][0]:'other';
 }
 const trailingMoney=line=>{const m=String(line).match(/(\d[\d.,]*[.,]\d{2})\s*(?:TL|TRY|₺)?\s*$/i);return m?cents(m[1]):null;};
+function sellerFromHeader(lines){
+  const index=lines.findIndex(l=>/[A-ZÇĞİÖŞÜ]/i.test(l)&&!/^\d|^(?:F[İI][ŞS]|TAR[İI]H|SAAT|VKN|TCKN|TOPLAM)/i.test(l));
+  if(index<0)return '';
+  let seller=lines[index];
+  const legal=/\b(?:ltd|limited|sirketi|sti|anonim|ticaret|tic|sanayi|san)\b/;
+  const stop=/\b(?:mah|mahalle|cad|cadde|sok|sokak|adres|vergi|dairesi|vkn|tckn|istanbul|ankara|izmir|tel|telefon|fis|fatura|tarih|saat|kdv|toplam|nakit|kredi)\b/;
+  for(let i=index+1;i<Math.min(lines.length,index+4);i++){
+    const next=lines[i],n=normalize(next).replace(/[.,]/g,' ');
+    const following=normalize(lines[i+1]||'').replace(/[.,]/g,' ');
+    if(/\d/.test(next)||stop.test(n)||next.length>100||(!legal.test(n)&&(!/^ve\b/.test(n)||!following||stop.test(following)||!legal.test(following))))break;
+    seller+=' '+next;
+    if(/\b(?:sti|sirketi|anonim)\b/.test(n))break;
+  }
+  return seller.slice(0,200);
+}
 // Keep the proprietor printed directly below the business title. Never infer
 // a name from an address, payment section, passenger or cashier information.
 export function completeReceiptSeller(receipt){
-  const seller=String(receipt.seller||'').trim(),header=String(receipt.rawText||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  let seller=String(receipt.seller||'').trim();const header=String(receipt.rawText||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean),full=sellerFromHeader(header);
+  if(seller&&full.length>seller.length&&normalize(full).startsWith(normalize(seller))){const old=seller;seller=full;receipt={...receipt,seller,lines:(receipt.lines||[]).map(line=>{const text=String(line.description||''),at=text.indexOf(old);return at>=0&&(at===0||text.startsWith('FİŞ NO:'))?{...line,description:(text.slice(0,at)+seller+text.slice(at+old.length)).slice(0,200)}:line;})};}
   const index=header.findIndex(s=>normalize(s)===normalize(seller));
   if(!seller||index<0||index>2)return receipt;
   const person=(header[index+1]||'').replace(/^(?:ADI?\s*SOYADI?|AD\s*SOYAD|İŞLETME\s*SAHİBİ)\s*:\s*/iu,'').trim();
   if(!/^[\p{L}]+(?:[ '\u2019-][\p{L}]+){1,3}$/u.test(person))return receipt;
   const nonName=/\b(mah|mahalle|mahallesi|cad|cadde|caddesi|sok|sokak|sokagi|bulvar|bulvari|apt|apartmani|adres|merkez|sube|subesi|san|sanayi|tic|ticaret|ltd|limited|sti|sirketi|anonim|hizmetleri|hizmet|vergi|dairesi|tel|telefon|fis|fatura|tarih|saat|kasiyer|kasiyeriniz|personel|yolcu|musteri|sayin|nakit|kredi|banka|bankasi|toplam|kdv|bilgi|belgesi|tesekkur|ederiz|hosgeldiniz|lokanta|restoran|restaurant|kafe|cafe|firin|pastane|mamulleri|temizleme|kurutemizleme|yikama|akaryakit|otopark|hava|yollari|airlines)\b/;
   if(nonName.test(normalize(person))||normalize(seller).includes(normalize(person)))return receipt;
-  const full=seller+' - '+person.toLocaleUpperCase('tr');
-  if(full.length>200)return receipt;
+  const fullPerson=seller+' - '+person.toLocaleUpperCase('tr');
+  if(fullPerson.length>200)return receipt;
   const prefix='FİŞ NO:'+(receipt.number||'')+' '+seller;
   const lines=(receipt.lines||[]).map(line=>{
     const description=String(line.description||'');
@@ -76,7 +92,7 @@ export function completeReceiptSeller(receipt){
     const rest=description.slice(prefix.length),already=normalize(rest).replace(/^[\s·:–-]+/,'').startsWith(normalize(person));
     return already?line:{...line,description:(prefix+' - '+person.toLocaleUpperCase('tr')+rest).slice(0,200)};
   });
-  return {...receipt,seller:full,lines};
+  return {...receipt,seller:fullPerson,lines};
 }
 export function parseReceipt(rawText,confidence=null){
   const text=String(rawText||'').slice(0,18000),lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),notes=[];
@@ -99,9 +115,7 @@ export function parseReceipt(rawText,confidence=null){
   if(rates.length>1&&!items.length)notes.push('Birden fazla KDV oranı var; kalemleri ayrı satırlara böl.');
   if(!items.length){items.push({description:'',category:guessCategory(text),gross:totals.length===1?totals[0]:null,vatRate:rates.length===1?rates[0]:null,vatIncluded:true});notes.push('Ürün kalemleri ayrıştırılamadı; özet masraf satırını belgeyle karşılaştır.');}
   if(confidence!==null&&confidence<75)notes.push('Okuma güveni düşük; fotoğraf ve tüm alanları karşılaştır.');
-  const sellerIndex=lines.findIndex(l=>/[A-ZÇĞİÖŞÜ]/i.test(l)&&!/^\d|^(?:F[İI][ŞS]|TAR[İI]H|SAAT|VKN|TCKN|TOPLAM)/i.test(l));
-  let seller=lines[sellerIndex]||'';const continuation=lines[sellerIndex+1]||'';
-  if(seller&&/^(?:VE\s+|T[İI]C\b|SAN\b|LTD\b|L[İI]M[İI]TED\b|A\.?\s*Ş\.?\b)/i.test(continuation)&&/\b(?:T[İI]C|SAN|LTD|ŞT[İI]|S[İI]STEM|H[İI]ZMET|BASIM)\b/i.test(continuation))seller+=' '+continuation;
+  const seller=sellerFromHeader(lines);
   const result={seller:seller.slice(0,200),taxId:vkns.length===1?vkns[0]:'',date:dates.length===1?dates[0]:'',number:nums.length===1?nums[0]:'',currency:/\b(?:USD|EUR|GBP)\b/.test(text)?(text.match(/\b(?:USD|EUR|GBP)\b/)||[])[0]:'TRY',total:totals.length===1?totals[0]:null,vat:taxes.length===1?taxes[0]:null,lines:items.slice(0,40),rawText:text,confidence,notes,reviewed:false};
   if(guessCategory(text)==='flight'){
     const unique=values=>{const distinct=[...new Set(values.filter(v=>v!==null&&v!==undefined&&v!==''))];return distinct.length===1?distinct[0]:null;};
@@ -121,6 +135,8 @@ export function parseReceipt(rawText,confidence=null){
 }
 export function mergeReceiptReadings(primary,alternatives){
   const result={...primary};
+  const candidates=alternatives.map(r=>r.seller).filter(s=>s&&result.seller&&normalize(s).startsWith(normalize(result.seller))&&s.length>result.seller.length);
+  if(candidates.length){const longest=candidates.sort((a,b)=>b.length-a.length)[0];if(candidates.every(s=>normalize(longest).startsWith(normalize(s)))){const old=result.seller;result.seller=longest;result.lines=(result.lines||[]).map(line=>{const text=String(line.description||''),at=text.indexOf(old);return at>=0?{...line,description:(text.slice(0,at)+longest+text.slice(at+old.length)).slice(0,200)}:line;});}}
   for(const field of ['taxId','date','number','total','vat']){
     if(result[field]!==''&&result[field]!==null&&result[field]!==undefined)continue;
     const values=[...new Set(alternatives.map(r=>r[field]).filter(v=>v!==''&&v!==null&&v!==undefined))];
