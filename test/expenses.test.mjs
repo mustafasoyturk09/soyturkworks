@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
-import {cents,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters,rememberedProfile,mergeReceiptReadings,calendarDays} from '../src/expenses/model.mjs';
+import {cents,groupedAmount,parseReceipt,draftMissingLines,issues,guessCategory,duplicateIds,exportReadiness,buildPurchaseXML,encodeLogoXML,categoryProfile,lineProfile,splitFlight,lineAmounts,memoryKey,completeReceiptSeller,matchesReceiptFilters,rememberedProfile,mergeReceiptReadings,calendarDays} from '../src/expenses/model.mjs';
+
+test('Birim fiyat Türkçe binlik ayırıcıyla gösterilir ve kuruş kaybı olmadan okunur',()=>{
+  for(const [value,formatted] of [[110020,'1.100,20'],[123456789,'1.234.567,89'],[5,'0,05']]){assert.equal(groupedAmount(value),formatted);assert.equal(cents(formatted),value);}
+});
+test('Dövizli fiş seçilse de TL varsayılarak Logo XML üretilmez',()=>{
+  const r={seller:'ÖRNEK',date:'2026-11-20',number:'1',currency:'USD',total:10000,vat:0,lines:[{category:'other',description:'ÖRNEK',gross:10000,vatRate:0}]};
+  assert.throws(()=>buildPurchaseXML([r],{},'PUSULA',{selected:true}),/Dövizli fiş/);
+});
 
 test('Takvim günleri pazartesiden başlar ve artık yıl ile komşu ayları doğru ayırır',()=>{
   const days=calendarDays(2024,1);assert.equal(days.length,42);assert.equal(days[0].iso,'2024-01-29');assert.equal(days[0].outside,true);

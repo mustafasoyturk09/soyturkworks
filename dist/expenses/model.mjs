@@ -39,6 +39,7 @@ export function cents(value){
   const n=Math.round(Number(s)*100);return Number.isSafeInteger(n)&&n<=1e11?n:null;
 }
 export const amount=value=>Number.isSafeInteger(value)?(value/100).toFixed(2).replace('.',','):'';
+export const groupedAmount=value=>Number.isSafeInteger(value)?new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(value/100):'';
 export function lineAmounts(line){
   const value=line.gross,rate=line.vatRate,vatIncluded=line.vatIncluded!==false;
   if(!Number.isSafeInteger(value)||value<0||!Number.isFinite(rate)||rate<0||rate>100)return {gross:null,net:null,vat:null,vatIncluded};
@@ -254,6 +255,7 @@ export function exportReadiness(receipts,profiles={},company=''){
 export function buildPurchaseXML(receipts,profiles={},company='',{selected=false}={}){
   const status=exportReadiness(receipts,profiles,company);if(!selected&&!status.ready)throw Error(status.reasons.join(' '));
   if(selected&&(!receipts.length||company!=='PUSULA'))throw Error('Aktarılacak fiş bulunamadı.');
+  if(receipts.some(r=>!r.archived&&!r.exported&&r.currency!=='TRY'))throw Error('Dövizli fişlerin Logo XML aktarımı henüz desteklenmiyor.');
   const esc=v=>String(v??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const tag=(k,v)=>'<'+k+'>'+esc(v)+'</'+k+'>',money=v=>Number.isSafeInteger(v)?(v/100).toFixed(2):'';
   return '<?xml version="1.0" encoding="UTF-8"?>\n<PURCHASE_INVOICES>'+receipts.filter(r=>!r.archived&&!r.exported).map(r=>{
