@@ -64,3 +64,7 @@
 .izibiz-redesign #invoicesView .invoice-row .status-chip:not(.waiting):not(.done):not(.ret){background:#45d993;border-color:#10945a;color:#000}
 .iz-preview .iz-preview-tools{display:flex;justify-content:center;align-items:center;gap:8px;margin:8px 0}.iz-preview-tools button{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--iz-border);border-radius:8px;background:var(--iz-raised);color:var(--iz-text)}.iz-preview-tools svg{width:19px;height:19px}.iz-preview-tools span{min-width:42px;text-align:center;font-size:12px;color:var(--iz-text)}.iz-preview-tools button[aria-pressed="true"]{background:#095b6d;border-color:#00d2ff;color:#fff}.iz-preview-paper.pan-enabled{cursor:grab;user-select:none}.iz-preview-paper.pan-enabled.dragging{cursor:grabbing}.iz-preview-paper.pan-enabled canvas{pointer-events:none}
 .iz-preview .iz-preview-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}.iz-preview-footer .iz-preview-tools{flex:1;min-width:160px;margin:0;gap:5px}.iz-preview-footer>a{white-space:nowrap;font-size:11px}
+/* Yakınlaştırma yalnızca belgenin içeriğini büyütür; panel boyutunu değiştirmez. */
+.iz-invoice-layout>.iz-preview{flex:0 0 30%;width:30%;min-width:0;max-width:30%}
+.iz-preview .iz-preview-paper{width:100%;min-width:0;height:clamp(220px,60dvh,680px);min-height:0;max-height:none;overflow:auto}
+@media(max-width:900px){.iz-invoice-layout>.iz-preview{width:100%;max-width:100%;min-width:0}}
