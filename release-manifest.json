@@ -1,5 +1,5 @@
 {
-  "version": 184,
+  "version": 185,
   "files": [
     {
       "file": "404.html",
@@ -235,11 +235,11 @@
     },
     {
       "file": "automation/index.html",
-      "sha256": "4e2660d8e79b4ca64ef4b417cf1d9bea5a92bce717783e7fcc7470fe784ce53a"
+      "sha256": "2f2d7bdb22a05476cb6ac167e497a3e9f8697f65f1c23646afc379366b5467ce"
     },
     {
       "file": "automation/redesign.css",
-      "sha256": "166dcd6fd2be9bc09107cbf2b1a095e1f54e42faa2d2486b35ec09c2fb938b5c"
+      "sha256": "977759583fa7fa4db38ddc921e95963e53e102ea36054a869e475124aa0721b6"
     },
     {
       "file": "automation/style.css",
