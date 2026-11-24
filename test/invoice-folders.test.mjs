@@ -7,7 +7,7 @@ const source=readFileSync(new URL('../src/automation/app.js',import.meta.url),'u
 const functions=(from,to)=>source.slice(source.indexOf(from),source.indexOf(to));
 function fixture(api){
  const nodes=new Map();
- const context=vm.createContext({URLSearchParams,Map,Set,Intl,Date,console,api,company:'PUSULA',companyContext:{id:'PUSULA'},status:'waiting',month:'2026-10',query:'test',rows:[],offset:0,more:false,selected:new Map(),invoiceRequest:0,folderRequest:0,folderPageRequest:0,currentFolder:null,view:'folders',viewHistory:[],periodPinned:false,location:{},
+ const context=vm.createContext({URLSearchParams,Map,Set,Intl,Date,console,api,company:'PUSULA',companyContext:{id:'PUSULA'},status:'waiting',month:'2026-10',query:'test',rows:[],offset:0,more:false,selected:new Map(),invoiceRequest:0,folderRequest:0,folderPageRequest:0,currentFolder:null,view:'folders',viewHistory:[],periodPinned:false,location:{},previewAuto:false,previewId:null,openInvoicePreview(){},closeInvoicePreview(){},
   $:id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',open:false,scrollIntoView(){this.scrolled=true;},showModal(){this.open=true;},close(){this.open=false;}});return nodes.get(id);},
   apiURL:(id,action)=>'/api/automation/'+id+'/'+action,escape:s=>String(s??''),icon:()=>'<svg></svg>',info:()=>({period:{startMonth:'2026-10'}}),monthName:m=>m,calendarDate:d=>d,datetime:d=>d,collectionDates:g=>g.receivedDates.join(', '),receivedLabel:r=>r.receivedDate,localMonth:()=> '2026-11',stateLabel:()=> 'BEKLENİYOR',pdfLink:(id,uuid,download=false)=>'href="/'+uuid+(download?'?download=1':'')+'"',pdfActions:()=>'<a>PDF önizle</a><a>PDF indir</a>',
   renderSelection(){},renderFilters(){},updateButtons(){},invoiceHeader:()=>'<header>',invoiceHTML:r=>r.uuid,empty:()=>'',toast(){},changeView:async view=>{context.view=view;},
@@ -33,6 +33,13 @@ test('Late invoice page responses cannot replace a newer page',async()=>{
  const pending=[];const f=fixture(()=>new Promise(resolve=>pending.push(resolve)));
  const first=f.run('loadInvoices(100)'),second=f.run('loadInvoices(200)');pending[1]({offset:200,total:205,rows:[row(200)]});await second;pending[0]({offset:100,total:205,rows:[row(100)]});await first;
  assert.equal(f.context.offset,200);assert.equal(f.context.rows[0].uuid,'200');
+});
+
+test('Invoice page automatically opens the first available PDF and keeps the current preview on refresh',async()=>{
+ const f=fixture(async()=>({offset:0,total:2,rows:[{...row(1),pdfReady:false},{...row(2),pdfReady:true}]})),opened=[];
+ f.context.previewAuto=true;f.context.openInvoicePreview=invoice=>{opened.push(invoice.uuid);f.context.previewId=invoice.uuid;};
+ await f.run('loadInvoices()');assert.deepEqual(opened,['2']);
+ await f.run('loadInvoices()');assert.deepEqual(opened,['2']);
 });
 
 test('Folder cards show the invoice month, collection dates, accounting icon and their own delete action',async()=>{
