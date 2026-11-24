@@ -9,7 +9,7 @@ function fixture(api){
  const checkbox={setAttribute(){},checked:false,indeterminate:false,disabled:false},nodes=new Map();
  const context=vm.createContext({URLSearchParams,Map,Set,console,api,company:'PUSULA',companyContext:{id:'PUSULA'},status:'waiting',month:'2026-11',query:'test',rows:[],offset:0,more:true,selected:new Map(),invoiceRequest:0,selectingAll:false,marking:false,notices:[],
   $:id=>{if(!nodes.has(id))nodes.set(id,{querySelector:()=>checkbox,querySelectorAll:()=>[]});return nodes.get(id);},
-  apiURL:(id,action)=>'/api/automation/'+id+'/'+action,renderUndo(){},renderInvoicePagination(){},invoiceHeader:()=>'<header>',invoiceHTML:r=>r.uuid,empty:()=>'',notice(text){context.notices.push(text);}});
+  apiURL:(id,action)=>'/api/automation/'+id+'/'+action,hasAdvancedInvoiceFilters:()=>false,renderUndo(){},renderInvoicePagination(){},invoiceHeader:()=>'<header>',invoiceHTML:r=>r.uuid,empty:()=>'',notice(text){context.notices.push(text);}});
  vm.runInContext(functions('function renderSelection(){','async function mark('),context);
  return {context,checkbox,nodes,run:code=>vm.runInContext(code,context)};
 }
@@ -38,6 +38,14 @@ test('Changing filters or clearing selection while loading discards the late res
 
 test('Empty and rejected-only lists do not select invoices',async()=>{
  for(const data of [[],[{uuid:'rejected',isRet:true}]]){const f=fixture(async()=>({rows:data,total:data.length}));await f.run('selectAllInvoices(true)');assert.equal(f.context.selected.size,0);assert.equal(f.checkbox.checked,false);assert.equal(f.checkbox.disabled,true);}
+});
+
+test('Select all respects advanced filters and never selects rejected invoices',async()=>{
+ const f=fixture(async()=>{throw Error('Unexpected unfiltered request');});
+ f.context.hasAdvancedInvoiceFilters=()=>true;
+ f.context.filteredInvoices=async()=>[{uuid:'filtered',isRet:false},{uuid:'rejected',isRet:true}];
+ await f.run('selectAllInvoices(true)');
+ assert.deepEqual([...f.context.selected.keys()],['PUSULA:filtered']);assert.equal(f.context.rows.length,2);
 });
 
 test('Preview and download remain separate on Windows, Mac and mobile',()=>{

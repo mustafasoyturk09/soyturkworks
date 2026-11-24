@@ -21,7 +21,7 @@ const generatedAsset=/^(?:inline-(?:script|style)|portable-template)-[a-f0-9]{16
 for(const name of await readdir(join(dist,'app')))if(generatedAsset.test(name))await rm(join(dist,'app',name),{force:true});
 const ocrIds=['sfOcrCoreData','sfOcrLangData','sfOcrLangDataEng'];
 const brandFiles=['sw-logo.png','favicon-16.png','favicon-32.png','favicon-48.png','apple-touch-icon.png'];
-const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','automation/index.html','automation/style.css','automation/app.js','manifest.webmanifest','push-sw.js','app/workspace.js','app/workspace.css','app/izibiz.js','app/izibiz.css','app/sales-issue.js','app/sales-issue.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
+const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','automation/index.html','automation/style.css','automation/redesign.css','automation/app.js','manifest.webmanifest','push-sw.js','app/workspace.js','app/workspace.css','app/izibiz.js','app/izibiz.css','app/sales-issue.js','app/sales-issue.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
 const expenseFiles=['index.html','style.css','app.mjs','model.mjs','crop.mjs','ocr-worker.js','ocr-core.js','tur.traineddata','eng.traineddata'];
 for(const file of expenseFiles)allowed.add('expenses/'+file);
 async function rejectUnexpected(dir,prefix=''){
@@ -82,7 +82,7 @@ portalHtml=portalHtml.replace('</head>','<script type="application/json" id="wor
 await writeFile(join(dist,'portal/index.html'),portalHtml);
 await build({entryPoints:[join(root,'src/portal/passkeys-entry.js')],outfile:join(dist,'portal/passkeys.js'),bundle:true,format:'iife',globalName:'SWPasskeys',minify:true,target:'es2022',legalComments:'none'});
 await mkdir(join(dist,'automation'),{recursive:true});
-for(const name of ['index.html','style.css','app.js'])await copyFile(join(root,'src/automation',name),join(dist,'automation',name));
+for(const name of ['index.html','style.css','redesign.css','app.js'])await copyFile(join(root,'src/automation',name),join(dist,'automation',name));
 await mkdir(join(dist,'expenses'),{recursive:true});
 for(const name of expenseFiles.filter(name=>!['ocr-core.js','tur.traineddata','eng.traineddata'].includes(name)))await copyFile(join(root,'src/expenses',name),join(dist,'expenses',name));
 // Reuse the existing pinned OCR engine and dictionaries; never fetch a remote model.
@@ -111,5 +111,5 @@ const inventory=[];
 async function walk(dir,prefix=''){for(const name of (await readdir(dir)).sort()){const file=join(dir,name),rel=prefix+name;if((await stat(file)).isDirectory())await walk(file,rel+'/');else inventory.push({file:rel,sha256:createHash('sha256').update(await readFile(file)).digest('hex')});}}
 await walk(dist);
 for(const entry of inventory)if((await stat(join(dist,entry.file))).size>25*1024*1024)throw Error('Cloudflare dosya boyutu sınırı aşıldı: '+entry.file);
-await writeFile(join(root,'release-manifest.json'),JSON.stringify({version:181,files:inventory},null,2)+'\n');
-console.log('181 web dağıtımı hazır: dist/ ('+inventory.length+' dosya). Sunucuda yalnızca bu dizini, kimlik doğrulaması arkasında sunun.');
+await writeFile(join(root,'release-manifest.json'),JSON.stringify({version:182,files:inventory},null,2)+'\n');
+console.log('182 web dağıtımı hazır: dist/ ('+inventory.length+' dosya). Sunucuda yalnızca bu dizini, kimlik doğrulaması arkasında sunun.');
