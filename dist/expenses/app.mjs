@@ -2,6 +2,7 @@ import {categories,normalize,cents,amount,groupedAmount,vatRateLabel,parseReceip
 import {receiptPaperFromPixels} from './crop.mjs?v=ocr5';
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
+if(!window.SW_EMBEDDED&&window.top===window){location.replace('/workspace/'+company.id+'/?module=masraf');}else{
 const expenseRulesReady=company.id==='PUSULA';
 const desktopLayout=matchMedia('(min-width:1100px)');
 let inlineAccounting=expenseRulesReady&&desktopLayout.matches;
@@ -91,6 +92,7 @@ async function refresh(){
   try{const data=await api('list');receipts=data.receipts.map(r=>({...r,lines:r.lines.map(l=>normalizeLine(l,r))}));profiles=data.profiles;render();$('sync').textContent='Hesapla eşitlendi · '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
   finally{refreshing=false;}
 }
+let expenseHiddenAt=Date.now();window.SWSetEmbeddedActive=active=>{if(!active&&window.SW_EMBED_ACTIVE)expenseHiddenAt=Date.now();const stale=Date.now()-expenseHiddenAt>15000;window.SW_EMBED_ACTIVE=active;if(active&&stale&&!busy&&!dirty&&!saving&&!$('editor').open&&!$('profiles').open)refresh().catch(e=>{$('sync').textContent=e.message;});};
 function render(){
   if(inlineAccounting&&document.querySelector('.expense-accounting')?.contains(document.activeElement)){if(dirty)$('xml').disabled=true;return;}
   const active=receipts.filter(r=>!r.archived),duplicates=duplicateIds(receipts),reviewed=r=>r.reviewed&&!issues(r).length&&!duplicates.has(r.id);
@@ -334,7 +336,7 @@ $('camera').onclick=()=>$('cameraInput').click();$('pick').onclick=()=>$('files'
 for(const id of ['cameraInput','files'])$(id).onchange=event=>{const files=[...event.target.files];event.target.value='';if(files.length)run(()=>runQueue(files));};
 $('stopQueue').onclick=()=>{stop=true;$('progressText').textContent='Bu belge tamamlanınca durdurulacak…';};
 $('resume').onclick=()=>run(()=>runQueue());$('refresh').onclick=()=>run(refresh);
-$('copyLink').onclick=()=>run(async()=>{await navigator.clipboard.writeText(location.origin+'/workspace/'+company.id+'/masraf/');notice('Firma bağlantısı kopyalandı. Telefonda aynı hesapla açabilirsin.');});
+$('copyLink').onclick=()=>run(async()=>{await navigator.clipboard.writeText((window.SW_CONTEXT?.origin||location.origin)+'/workspace/'+company.id+'/masraf/');notice('Firma bağlantısı kopyalandı. Telefonda aynı hesapla açabilirsin.');});
 $('search').oninput=render;function setExpenseFilter(value){if(inlineAccounting&&document.querySelector('.expense-accounting')?.contains(document.activeElement))document.activeElement.blur();filter=value;document.querySelectorAll('[data-filter]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.filter===value)));render();}document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>setExpenseFilter(b.dataset.filter));
 if(expenseRulesReady){
  for(const [id,value] of [['count','all'],['pending','pending'],['checked','reviewed'],['total','checked']]){const card=$(id).parentElement;card.setAttribute('role','button');card.tabIndex=0;card.onclick=()=>setExpenseFilter(value);card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpenseFilter(value);}};}
@@ -416,9 +418,11 @@ let profileRevision=0;
 $('openProfiles').onclick=()=>{profileRevision=profiles.revision;$('profileStatus').textContent='';$('profileRows').innerHTML=Object.entries(categories).map(([key,label])=>'<details class="profile-row" data-profile="'+key+'"><summary>'+label+'</summary><div class="profile-grid">'+[['serviceCode','Logo hizmet / stok kodu'],['accountCode','Gider hesap kodu'],['costCenter','Masraf merkezi'],['vatCode1','%1 KDV hesap kodu'],['vatCode10','%10 KDV hesap kodu'],['vatCode20','%20 KDV hesap kodu'],['kkegCode','KKEG gider hesabı'],['kkegVatCode','KKEG KDV hesabı']].map(([field,title])=>'<label>'+title+'<input data-profile-field="'+field+'" value="'+escape((editing?.lines?.[activeLineIndex]?.category===key?lineProfile(editing.lines[activeLineIndex],profiles,company.id,editing):categoryProfile(key,profiles,company.id))[field]||'')+'" maxlength="60"></label>').join('')+'</div></details>').join('');$('profiles').showModal();};
 $('closeProfiles').onclick=()=>$('profiles').close();$('profileForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('[type=submit]');button.disabled=true;try{const map={};for(const row of $('profileRows').children){map[row.dataset.profile]={};for(const input of row.querySelectorAll('input'))map[row.dataset.profile][input.dataset.profileField]=input.value;}const current=editing?.lines?.[activeLineIndex],key=current&&memoryKey(editing,current),entered=current&&map[current.category]?.accountCode,code=validExpenseCode(entered||'')?entered:current?.expenseCode;profiles=await api('profiles',{revision:profileRevision,categories:map,...(key&&validExpenseCode(code||'')?{lineProfile:{key,category:current.category,accountCode:code}}:{})});if(current&&key&&validExpenseCode(code||'')){current.expenseCode=code;dirty=true;scheduleAutoSave();}profileRevision=profiles.revision;render();if(editing&&$('editor').open)renderLines();$('profileStatus').textContent='Firma ayarları kaydedildi.';}catch(e){$('profileStatus').textContent=e.message;}finally{button.disabled=false;}};
 window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue='';}});
-setInterval(()=>{if(!document.hidden&&!busy&&!$('editor').open&&!$('profiles').open)refresh().catch(e=>{$('sync').textContent=e.message;});},15000);
+setInterval(()=>{if(!document.hidden&&(!window.SW_EMBEDDED||window.SW_EMBED_ACTIVE)&&!busy&&!$('editor').open&&!$('profiles').open)refresh().catch(e=>{$('sync').textContent=e.message;});},15000);
 run(refresh);
 
 $('xml').onclick=()=>run(async()=>{if(dirty){await saveEditor();if(dirty)throw Error('Önce fişteki değişiklikler kaydedilmeli.');}await refresh();const selected=expenseRulesReady?receipts.filter(r=>!r.archived&&!r.exported&&expenseSelected.has(r.id)).map(r=>({...r,reviewed:true})):receipts;const xml=buildPurchaseXML(selected,profiles,company.id,{selected:expenseRulesReady}),url=URL.createObjectURL(new Blob([encodeLogoXML(xml)],{type:'application/xml;charset=iso-8859-9'}));const a=document.createElement('a');a.href=url;a.download='masraf-'+company.id+'.xml';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);notice('Logo XML indirildi.');});
 
 $('splitFlight').onclick=()=>{try{collect();const rate=Number($('flightRate').value);editing.lines=splitFlight(editing,rate);renderLines();edited();}catch(e){$('editSaveState').textContent=e.message;}};
+
+}

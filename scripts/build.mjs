@@ -21,7 +21,7 @@ const generatedAsset=/^(?:inline-(?:script|style)|portable-template)-[a-f0-9]{16
 for(const name of await readdir(join(dist,'app')))if(generatedAsset.test(name))await rm(join(dist,'app',name),{force:true});
 const ocrIds=['sfOcrCoreData','sfOcrLangData','sfOcrLangDataEng'];
 const brandFiles=['sw-logo.png','favicon-16.png','favicon-32.png','favicon-48.png','apple-touch-icon.png'];
-const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','automation/index.html','automation/style.css','automation/redesign.css','automation/app.js','manifest.webmanifest','push-sw.js','app/workspace.js','app/workspace.css','app/izibiz.js','app/izibiz.css','app/sales-issue.js','app/sales-issue.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
+const allowed=new Set(['index.html','robots.txt','404.html','_headers','favicon.ico','portal/index.html','portal/portal.css','portal/portal.js','portal/passkeys.js','automation/index.html','automation/style.css','automation/redesign.css','automation/app.js','manifest.webmanifest','push-sw.js','app/workspace.js','app/workspace-modules.js','app/workspace.css','app/izibiz.js','app/izibiz.css','app/sales-issue.js','app/sales-issue.css','app/runtime.js','app/pdf-loader.mjs','app/mobile.css','app/mobile.js','app/branding.css','app/calculator-ui.css','app/calculator-ui.js',...ocrIds.map(id=>'app/'+id+'.js'),...manifest.map(x=>'assets/vendor/'+x.file),...brandFiles.map(x=>'assets/brand/'+x)]);
 const expenseFiles=['index.html','style.css','app.mjs','model.mjs','crop.mjs','ocr-worker.js','ocr-core.js','tur.traineddata','eng.traineddata'];
 for(const file of expenseFiles)allowed.add('expenses/'+file);
 async function rejectUnexpected(dir,prefix=''){
@@ -73,7 +73,7 @@ html=html.replace(/<style>([\s\S]*?)<\/style>/g,(tag,content)=>{
 for(const [name,content] of generated)await writeFile(join(dist,name),content);
 await writeFile(join(dist,'index.html'),html);
 await copyFile(join(root,'src/_headers'),join(dist,'_headers'));
-for(const name of ['runtime.js','pdf-loader.mjs','mobile.css','mobile.js','branding.css','calculator-ui.css','calculator-ui.js','workspace.js','workspace.css','izibiz.js','izibiz.css','sales-issue.js','sales-issue.css'])await copyFile(join(root,'src',name),join(dist,'app',name));
+for(const name of ['runtime.js','pdf-loader.mjs','mobile.css','mobile.js','branding.css','calculator-ui.css','calculator-ui.js','workspace.js','workspace-modules.js','workspace.css','izibiz.js','izibiz.css','sales-issue.js','sales-issue.css'])await copyFile(join(root,'src',name),join(dist,'app',name));
 await mkdir(join(dist,'portal'),{recursive:true});
 for(const name of ['portal.css','portal.js'])await copyFile(join(root,'src/portal',name),join(dist,'portal',name));
 let portalHtml=await readFile(join(root,'src/portal/index.html'),'utf8');
@@ -111,5 +111,5 @@ const inventory=[];
 async function walk(dir,prefix=''){for(const name of (await readdir(dir)).sort()){const file=join(dir,name),rel=prefix+name;if((await stat(file)).isDirectory())await walk(file,rel+'/');else inventory.push({file:rel,sha256:createHash('sha256').update(await readFile(file)).digest('hex')});}}
 await walk(dist);
 for(const entry of inventory)if((await stat(join(dist,entry.file))).size>25*1024*1024)throw Error('Cloudflare dosya boyutu sınırı aşıldı: '+entry.file);
-await writeFile(join(root,'release-manifest.json'),JSON.stringify({version:186,files:inventory},null,2)+'\n');
-console.log('186 web dağıtımı hazır: dist/ ('+inventory.length+' dosya). Sunucuda yalnızca bu dizini, kimlik doğrulaması arkasında sunun.');
+await writeFile(join(root,'release-manifest.json'),JSON.stringify({version:187,files:inventory},null,2)+'\n');
+console.log('187 web dağıtımı hazır: dist/ ('+inventory.length+' dosya). Sunucuda yalnızca bu dizini, kimlik doğrulaması arkasında sunun.');

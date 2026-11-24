@@ -615,8 +615,9 @@ body:has(#page-efatura:not([style*="display:none"]):not([style*="display: none"]
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/brand/apple-touch-icon.png?v=3">
 <meta name="theme-color" content="#101a2e">
 <script defer src="./app/mobile.js"></script>
-<link rel="stylesheet" href="./app/workspace.css">
+<link rel="stylesheet" href="./app/workspace.css?v=187">
 <script src="./app/workspace.js"></script>
+<script defer src="./app/workspace-modules.js?v=187"></script>
 <link rel="stylesheet" href="./app/izibiz.css">
 <script defer src="./app/izibiz.js"></script>
 <link rel="stylesheet" href="./app/sales-issue.css?v=sales-template-5">
@@ -636,6 +637,9 @@ body:has(#page-efatura:not([style*="display:none"]):not([style*="display: none"]
   <nav>
     <div class="nav-label">Modüller</div>
     <div class="nav-item" data-page="efatura"><svg class="nav-home-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 3h12v18H6zM9 7h6M9 10h6M12 13v5m-3-3 3 3 3-3"/></svg> Gelen E-Fatura Takip</div>
+    <a id="swEarlyFollow" class="nav-item" href="/companies" hidden><svg class="nav-home-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5M20 12a8 8 0 0 1-14 5M18 3v4h-4M6 21v-4h4"/></svg> Gelen E-Fatura İzibiz</a>
+    <a id="swEarlyExpenses" class="nav-item" href="/companies" hidden><svg class="nav-home-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3ZM9 7h6M9 11h6M9 15h3"/></svg> Masraf Fişleri</a>
+    <script>if(window.SW_CONTEXT?.company?.id){const id=encodeURIComponent(window.SW_CONTEXT.company.id);for(const [node,path] of [['swEarlyFollow','takip'],['swEarlyExpenses','masraf']]){const el=document.getElementById(node);el.href='/workspace/'+id+'/'+path+'/';el.hidden=false;el.addEventListener('click',e=>{if(!window.SWModuleNavigationReady&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&!e.altKey){e.preventDefault();window.SWPendingModule=path;}});}}</script>
     <div class="nav-item" data-page="satis"><svg class="nav-home-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 7.5h7M8.5 11h7M8.5 14.5h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Satış Faturaları</div>
     <div class="nav-item" data-page="satis-kesme" data-si-pusula-nav hidden><svg class="nav-home-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6M13 3v6h6m-7 6 7-7 2 2-7 7-3 1Z"/></svg> Satış Faturası Kesme</div>
     <div class="nav-item" data-page="yevmiye"><svg class="nav-home-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c-4 4-4 10 0 14M10 3c2 2 3 5 3 7M15 14h7v8h-7zM17 17h3M17 19h3"/></svg> Yurt Dışı Yevmiye Kaydı</div>

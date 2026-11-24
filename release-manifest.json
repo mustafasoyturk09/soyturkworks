@@ -1,5 +1,5 @@
 {
-  "version": 186,
+  "version": 187,
   "files": [
     {
       "file": "404.html",
@@ -102,8 +102,12 @@
       "sha256": "717ef0e60ff3f79be9c1414b39218836cb3376b5bb1f4d870ca4023f46cf55fd"
     },
     {
+      "file": "app/workspace-modules.js",
+      "sha256": "e89e796245de28df4a3b3143a67cd3ed51ee273cc932ee3488e12da9d57e1980"
+    },
+    {
       "file": "app/workspace.css",
-      "sha256": "5f9116f74bddadbd76d46785bca98c2297261866a252df0cdfaf9f45fafc7505"
+      "sha256": "0f7b3b8945cafe283c6c773fde0f965b60d6ac42bc2717ae759218d570c7116e"
     },
     {
       "file": "app/workspace.js",
@@ -231,15 +235,15 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "eda07b021b352d6d6d833fb1be008f7c266ce8fb5e8f0e7dc95f668a72d94736"
+      "sha256": "daad4e1ba3148ff2cc625df017f9d540a1559f95edeb62886d4b5433cf53542f"
     },
     {
       "file": "automation/index.html",
-      "sha256": "0f4f3b26ea707b9ad5bdd182a2347ddedb83532fbe0e8e9bc5d03e554a7aa244"
+      "sha256": "85a8710fdf665b1bfe3b8cf023ca1f5a7346ba8183e5c8cde0744205631af475"
     },
     {
       "file": "automation/redesign.css",
-      "sha256": "e65988ec10bdfb24c84a3487f9802f72cbf36b47a53a393adde4048d027a7f90"
+      "sha256": "6f815e3f4352760d64b6d6ca7115001f01e3038b7c171c55119518c02d1573d4"
     },
     {
       "file": "automation/style.css",
@@ -247,7 +251,7 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "82c17a2be93866564a75cac2b86e3760e531414567d7c8672d3db5b00431195c"
+      "sha256": "89c1090736de9da40450c00129288a42230ae0721f8736e8310fc9a1112e5358"
     },
     {
       "file": "expenses/crop.mjs",
@@ -259,7 +263,7 @@
     },
     {
       "file": "expenses/index.html",
-      "sha256": "df079e5ac7e658ca338570abe52e8c621e6feb1de06ae27fc93db6121415c552"
+      "sha256": "8293ed371751f2e004f3af86c46305f1a7c55108da518bb7cd0e15ba4367b393"
     },
     {
       "file": "expenses/model.mjs",
@@ -287,7 +291,7 @@
     },
     {
       "file": "index.html",
-      "sha256": "ead1afe63353872192eebae3b71599997146835fed93672de441b8f6eff2f0fa"
+      "sha256": "39e3712a8bda880ff814507e8d9672ef85f9cac500df8381efefc606a27ae95b"
     },
     {
       "file": "manifest.webmanifest",
