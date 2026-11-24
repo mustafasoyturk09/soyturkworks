@@ -7,24 +7,25 @@
 <title>Gelen E-Fatura İzibiz · Soyturk Works</title>
 <link rel="icon" href="/favicon.ico?v=3"><link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=monthly-archive-7">
-<script defer src="/automation/app.js?v=monthly-archive-7"></script>
+<link rel="stylesheet" href="/assets/vendor/fonts.css"><link rel="stylesheet" href="/automation/style.css?v=overview-181">
+<script defer src="/automation/app.js?v=overview-181"></script>
 </head>
 <body>
 <aside class="rail">
 <a class="brand" href="/companies"><img src="/assets/brand/sw-logo.png" alt="Soyturk Works SW amblemi"><span>SOYTURK<br>WORKS</span></a>
-<p class="rail-label">ÇALIŞMA ALANIN</p>
+<p class="rail-subtitle">FİNANS VE MUHASEBE</p><div class="rail-company"><span>Aktif Firma</span><strong id="railCompany"></strong><a href="/companies">Firma değiştir ↗</a></div><p class="rail-label">MODÜLLER</p>
 <nav class="desktop-nav" aria-label="Fatura takip menüsü"></nav>
 <div class="rail-bottom"><span class="private-dot"></span> Sana özel arşiv<a id="workspaceBack" href="/companies">Çalışma alanına dön ↗</a><a href="/account">Hesabım ve cihazlar</a></div>
 </aside>
 <div class="shell">
-<header class="topbar"><a class="mobile-brand" href="/companies"><img src="/assets/brand/sw-logo.png" alt=""><span>SOYTURK WORKS</span></a><span class="desktop-breadcrumb" id="breadcrumb">Fatura Takibi</span><button type="button" class="icon-button" id="openNotifications" aria-label="Bildirim ayarlarını aç"></button></header>
+<header class="topbar"><a class="mobile-brand" href="/companies"><img src="/assets/brand/sw-logo.png" alt=""><span>SOYTURK WORKS</span></a><span class="desktop-breadcrumb" id="breadcrumb">Fatura Takibi</span><button type="button" class="icon-button" id="themeToggle" aria-label="Açık temaya geç">☾</button><button type="button" class="icon-button" id="openNotifications" aria-label="Bildirim ayarlarını aç"></button></header>
 <main>
 <div class="page-heading"><div><p class="eyebrow" id="todayLabel" hidden></p><div class="integration-heading"><svg class="integration-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 7h10m-4-4 4 4-4 4M17 17H7m4-4-4 4 4 4"/></svg><h1 id="systemTitle">Gelen E-Fatura İzibiz</h1></div></div><button type="button" class="refresh-button" id="refreshButton"><span aria-hidden="true">↻</span> Yenile</button></div>
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
 <button type="button" id="previousPage" class="text-button previous-page">← Önceki Sayfa</button>
 <div id="trackingStatus" class="tracking-status"></div>
+<section id="overviewView" class="view" hidden><div id="overviewContent" aria-live="polite"></div></section>
 <section id="periodPicker" class="period-picker" aria-label="Yıl ve ay seçimi">
 <div class="period-year"><button type="button" class="year-arrow" id="previousYear" aria-label="Önceki yıl">‹</button><label class="sr-only" for="yearSelect">Yıl</label><select id="yearSelect" aria-label="Yıl"></select><button type="button" class="year-arrow" id="nextYear" aria-label="Sonraki yıl">›</button><span id="periodHint"></span></div>
 <div id="monthGrid" class="month-grid" aria-label="Aylar"></div>

@@ -1,5 +1,5 @@
 {
-  "version": 180,
+  "version": 181,
   "files": [
     {
       "file": "404.html",
@@ -231,15 +231,15 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "278d8eb136a8a04783779d33ae8aef3855044de63b8259277ab94a48daae53b4"
+      "sha256": "2e6ce9b1582c0083904db0831172bc38f9112dfdf8fd4cec033ea0a1db16d6d7"
     },
     {
       "file": "automation/index.html",
-      "sha256": "b58f1e80a118834a47d3b0b66f0b5171ab453c10b92967a336d6d16b7f0aa27f"
+      "sha256": "34586b0a569862170f930d2e7c453e18b8c529d20f7ed13620dd4b51711df3d2"
     },
     {
       "file": "automation/style.css",
-      "sha256": "4d85db69dfc43bdd7bcc2948bdece4d958eaecd478fa569ba7df49c64b3521fe"
+      "sha256": "277c8443b93f9ff792463a5670410bd7883ba1e6226097e55d434b1702acfd4e"
     },
     {
       "file": "expenses/app.mjs",
