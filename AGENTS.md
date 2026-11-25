@@ -9,6 +9,7 @@
 - Kullanıcı bu uygulama için kaydetme, çalıştırma ve mevcut GitHub deposuna gönderip yayınlama iş akışını yetkilendirmiştir. Yerel çalışma veya yayınlamama talimatı varsa onu öncelikle uygula.
 - Mevcut depo `mustafasoyturk09/soyturkworks`, üretim dalı `main`, Cloudflare Worker adı `soyturkworks`, canlı adres `https://soyturkworks.com`.
 - GitHub'a gönderimden sonra ilgili Cloudflare Workers Builds kontrolünü ve canlı dosyaları doğrula. Yalnızca gönderim başarılı oldu diye yayın tamamlandı deme.
+- Komut satırından canlı dosya erişimi engellenirse doğrulamayı bırakma: kullanıcının zaten açık ve yetkili tarayıcı oturumunda değişen canlı dosyayı aç, sürümü ve ilgili değişikliği doğrula. Çerezleri, oturum bilgilerini veya anahtarları dışarı aktarma; erişim kurallarını değiştirme. Tarayıcıda da doğrulama yapılamazsa bunu açıkça bildir.
 - Yeni depo oluşturma, force push yapma veya mevcut DNS, alan adı, erişim kuralları ve tarayıcı kayıtlarını gereksiz yere değiştirme.
 - Şifreleri, anahtarları, `.env` dosyasını ve gerçek fatura/kişisel çalışma dosyalarını depoya veya sohbete koyma.
 - Cloudflare yayını yalnızca `dist/` dosyalarını sunar. Tek dosya boyutu 25 MiB sınırını aşmamalıdır. OCR dosyaları build sırasında ayrılır; taşınabilir HTML kaydetme işlevi korunmalıdır.
