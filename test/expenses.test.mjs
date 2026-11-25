@@ -37,10 +37,9 @@ test('Satır eşleştirmeleri farklı giderleri ayırır ve benzer gideri tanır
   assert.equal(rememberedProfile({seller:'BAŞKA'}, {...line,description:'BAŞKA · KIRTASİYE'},saved).accountCode,'770.15.001');
   assert.equal(lineProfile({...line,description:'ÖRNEK · TEMİZLİK'},saved,'PUSULA',r).serviceCode,undefined);
 });
-test('Seçilen eksik fiş XML üretir, bilinmeyen tutarlar uydurulmaz',()=>{
+test('Seçilen eksik fiş aktarımında eksik kimlik bilgileri belirtilir',()=>{
   const r={seller:'ÖRNEK',date:'',number:'',currency:'TRY',total:null,vat:null,lines:[{category:'other',description:'ÖRNEK',gross:null,vatRate:null}],paymentCard:''};
-  const xml=buildPurchaseXML([r],{},'PUSULA',{selected:true});
-  assert.match(xml,/<TOTAL_NET><\/TOTAL_NET>/);assert(!/NaN|undefined/.test(xml));
+  assert.throws(()=>buildPurchaseXML([r],{},'PUSULA',{selected:true}),/tarih, fiş numarası ve satıcı/);
 });
 test('İki OCR denemesi belirsiz olmayan eksik alanları tamamlar',()=>{
   const a=parseReceipt('CEM KOPYALAMA\nVE TANITIM TIC SAN LTD STI\nKIRTASİYE %20 1.100,00');
@@ -101,6 +100,15 @@ test('Fotoğrafta belirgin kâğıt alanı bulunur, belirsiz görüntü kesilmez
 
 const sample='ÖRNEK LOKANTA\nVKN: 1234567890\nTARİH: 10.11.2026\nFİŞ NO: 0072\nYEMEK %10 110,00\nTOPKDV 10,00\nTOPLAM 110,00';
 const receipt=()=>({...parseReceipt(sample,92),id:'one',reviewed:true});
+test('Seçili aynı dönem fişlerinde en yeni fiş başlık olur ve toplamlar birleşir',()=>{
+  const a={...receipt(),id:'a',date:'2026-11-05',number:'001',seller:'ESKİ İŞLETME',paymentCard:'309.07'};
+  const b={...receipt(),id:'b',date:'2026-11-25',number:'003',seller:'YENİ İŞLETME',paymentCard:'309.07'};
+  const c={...receipt(),id:'c',date:'2026-11-17',number:'002',paymentCard:'309.07'};
+  const xml=buildPurchaseXML([a,b,c],{},'PUSULA',{selected:true});
+  assert.equal((xml.match(/<INVOICE DBOP=/g)||[]).length,1);assert.match(xml,/<DATE>25\.11\.2026<\/DATE>/);assert.match(xml,/<DOC_NUMBER>003<\/DOC_NUMBER>/);assert.match(xml,/<NOTES1>FİŞ NO:003 YENİ İŞLETME<\/NOTES1>/);assert.match(xml,/<DESCRIPTION>FİŞ NO:003 YENİ İŞLETME<\/DESCRIPTION>/);assert.match(xml,/<TOTAL_NET>330\.00<\/TOTAL_NET>/);assert.equal((xml.match(/<TRANSACTION>/g)||[]).length,3);
+  assert.throws(()=>buildPurchaseXML([a,{...b,date:'2026-10-06'}],{},'PUSULA',{selected:true}),/Logo üzerinde henüz doğrulanamadı/);
+  assert.throws(()=>buildPurchaseXML([a,{...b,paymentCard:'309.08'}],{},'PUSULA',{selected:true}),/ödeme kart/);
+});
 test('Fişteki şahıs adı unvandan sonra gelir, açıklamada tekrarlanmaz',()=>{
   const raw=sample.replace('ÖRNEK LOKANTA','ÖRNEK LOKANTA\nDENİZ ÖRNEK');
   const r=parseReceipt(raw,92);assert.equal(r.seller,'ÖRNEK LOKANTA - DENİZ ÖRNEK');
