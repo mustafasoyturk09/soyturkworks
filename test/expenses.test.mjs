@@ -12,6 +12,34 @@ test('KDV seçimi oranı eksiksiz gösterir ve sıfır oranını boş saymaz',()
 test('Birim fiyat Türkçe binlik ayırıcıyla gösterilir ve kuruş kaybı olmadan okunur',()=>{
   for(const [value,formatted] of [[110020,'1.100,20'],[123456789,'1.234.567,89'],[5,'0,05']]){assert.equal(groupedAmount(value),formatted);assert.equal(cents(formatted),value);}
 });
+test('OCR boşluklu binlik ve V D biçimindeki vergi numarasını okur',()=>{
+  const r=parseReceipt('ÖRNEK İŞLETME\nMERKEZ V D: 1234567890\nTARİH: 20.11.2026\nFİŞ NO: 41\nKIRTASİYE %20 *1 100,00\nTOPKDV *183,33\nTOPLAM *1 100,00');
+  assert.equal(r.taxId,'1234567890');assert.equal(r.total,110000);assert.equal(r.vat,18333);assert.equal(r.lines[0].gross,110000);assert.equal(r.lines[0].vatRate,20);
+});
+test('OCR KDV işaretindeki eğik çizgiyi ve kuruş boşluğunu okurken tarihi KDV saymaz',()=>{
+  const r=parseReceipt('ORNEK ISLETME\nVKN: 1234567890\n20/11/2026\nFIS NO: 41\nKIRTASIYE /20 *1.100,00\nTOPKDV *183,33\nTOPLAM *1.100, 00');
+  assert.equal(r.total,110000);assert.equal(r.vat,18333);assert.equal(r.lines[0].gross,110000);assert.equal(r.lines[0].vatRate,20);
+  assert.equal(parseReceipt('20/11/2026\nTOPLAM 10,00').lines[0].vatRate,null);
+});
+test('Toplam eksikse yalnızca kalem ve ödeme eşleştiğinde tamamlanır',()=>{
+  const text='ORNEK ISLETME\nYIYECEK %10 *1.000,00\nBANKA/KREDI KARTI *1.000,00';
+  assert.equal(parseReceipt(text).total,100000);assert.equal(parseReceipt(text.replace('KARTI *1.000,00','KARTI *900,00')).total,null);
+});
+test('Alternatif okumada belge toplamı ve KDV ile uyuşan satır kullanılır',()=>{
+  const primary=parseReceipt('ORNEK ISLETME\nTOPKDV 183,33\nTOPLAM 1.100,00');
+  const alternative=parseReceipt('ORNEK ISLETME\nKIRTASIYE /20 *1.100,00\nTOPKDV 183,33\nTOPLAM 1.100,00');
+  const merged=mergeReceiptReadings(primary,[alternative]);assert.equal(merged.lines[0].gross,110000);assert.equal(merged.lines[0].vatRate,20);
+  assert.equal(mergeReceiptReadings({...primary,vat:100},[alternative]).lines[0].vatRate,null);
+});
+test('Okumalar toplam ve KDV satırında uyuşmazsa tutar uydurulmaz',()=>{
+  const primary=parseReceipt('ORNEK ISLETME\nKDV *90,91\nTOPLAM *1.000, 09');
+  const alternative=parseReceipt('ORNEK ISLETME\nYIYECEK *l10 *1.000, 00\nKDV *90,91\nTOPLAM *1.000, 09');
+  const merged=mergeReceiptReadings(primary,[alternative]);assert.equal(merged.total,null);assert.equal(merged.lines[0].gross,100000);assert.equal(merged.lines[0].vatRate,10);assert(issues(merged).some(x=>x.includes('Belge toplamı')));
+});
+test('Bir okumadaki kalem diğer okumadaki toplam ve KDV ile uyuşursa birleştirilir',()=>{
+  const primary=parseReceipt('ORNEK ISLETME');const item=parseReceipt('ORNEK ISLETME\nYIYECEK *l10 *1.000, 00\nKDV *90,91\nTOPLAM *1.000, 09');const total=parseReceipt('ORNEK ISLETME\nKDV *90,91\nTOPLAM *1.000,00');
+  const merged=mergeReceiptReadings(primary,[item,total]);assert.equal(merged.total,100000);assert.equal(merged.vat,9091);assert.equal(merged.lines[0].gross,100000);assert.equal(merged.lines[0].vatRate,10);
+});
 test('Dövizli fiş seçilse de TL varsayılarak Logo XML üretilmez',()=>{
   const r={seller:'ÖRNEK',date:'2026-11-20',number:'1',currency:'USD',total:10000,vat:0,lines:[{category:'other',description:'ÖRNEK',gross:10000,vatRate:0}]};
   assert.throws(()=>buildPurchaseXML([r],{},'PUSULA',{selected:true}),/Dövizli fiş/);

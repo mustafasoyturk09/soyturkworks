@@ -331,3 +331,8 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 .pusula-expenses.expense-light .expense-vat-value{color:#10233c}
 .pusula-expenses.expense-light .expense-vat-control:after{border-color:#29485d}
 @media(min-width:1100px){.pusula-expenses .expense-work-grid>.editor[open]{position:static;inset:auto;width:100%;height:calc(100dvh - 24px);max-height:calc(100dvh - 24px);min-width:0;margin:0;z-index:5}}
+.pusula-expenses .expense-select-all{display:flex;align-items:center;justify-content:center;gap:8px}.pusula-expenses .expense-select-all input{width:16px;height:16px;min-height:16px;margin:0;padding:0;accent-color:#00d8bb}.pusula-expenses .expense-select-all span{display:none}.pusula-expenses #exportReason{white-space:pre-line}
+.pusula-expenses .fields input[aria-invalid=true]{border-color:#ff735d;box-shadow:0 0 0 1px #ff735d}.pusula-expenses.expense-light .fields input[aria-invalid=true]{background:#fff0ed;color:#38140c}
+.pusula-expenses .expense-scan-hint{display:none}
+@media(max-width:1099px){.pusula-expenses .expense-table-head{display:flex;align-items:center;padding:8px 0}.pusula-expenses .expense-table-head>span{display:none}.pusula-expenses .expense-select-all{justify-content:flex-start;font-size:13px}.pusula-expenses .expense-select-all input{width:20px;height:20px;min-height:20px}.pusula-expenses .expense-select-all span{display:inline}}
+@media(max-width:1099px){.pusula-expenses .expense-scan-hint{display:block;margin-top:8px;font-size:12px;line-height:1.45;color:#bcd4e8}}

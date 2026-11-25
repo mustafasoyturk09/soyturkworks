@@ -1,5 +1,5 @@
 {
-  "version": 195,
+  "version": 196,
   "files": [
     {
       "file": "404.html",
@@ -259,7 +259,7 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "a9f6ca20aaaaf9731417fa78f71b3d79433dc41df7c226ee5c275d7b109dddf6"
+      "sha256": "d1a3613693c6588329776aec530e7c5fedcded560dbc991744639fa46eaf6a26"
     },
     {
       "file": "expenses/crop.mjs",
@@ -271,11 +271,11 @@
     },
     {
       "file": "expenses/index.html",
-      "sha256": "58aa32e1a4e8ef76be1a6ca27eba3380a79a8904ba644366ca3bb36a3cb72a7c"
+      "sha256": "d6f179f8e1bc0bdbd66dbbb514259336f2d70706d1ccb810313a8e1dbea49321"
     },
     {
       "file": "expenses/model.mjs",
-      "sha256": "b6af4fed41bad278709a2d2936384fe78b9af0d1a93567154fb95404fe8fad0d"
+      "sha256": "21ef37a561078d0b0407c6832b50553d72f857791fb92bb17eab4181255e1ec1"
     },
     {
       "file": "expenses/ocr-core.js",
@@ -283,11 +283,11 @@
     },
     {
       "file": "expenses/ocr-worker.js",
-      "sha256": "63781a0ba1119bce4e72863e7b6e487238aef2ad35b154f3b2c65d3eefeb2d60"
+      "sha256": "9114ed6a3e75cdb88beaac06328aa3db3e634a749be7f33e5b5dceb9fd8823d7"
     },
     {
       "file": "expenses/style.css",
-      "sha256": "e50621a26767f9264762c1ca3b0174a6da3d20c266af3696218e7e1276c9872c"
+      "sha256": "d7a3438fe6b59661cab74b0126585af65e47f2b022c552debbda91da27e67ba1"
     },
     {
       "file": "expenses/tur.traineddata",

@@ -62,7 +62,7 @@ export function guessCategory(text){
   const n=normalize(text),matches=[['fuel',/\b(motorin|benzin|akaryakit|kursunsuz|lpg)\b/],['parking',/otopark|park ucreti/],['flight',/ucak|havayol|airlines|e.bilet|ucus/],['wash',/yikama|car wash/],['meal',/unlu mam|firin|pastane|pogaca|simit|yemek|yiyecek|izgara|corba|cay|asure|su pet|restoran|restaurant|lokanta|doner|kebap|kafe|cafe/],['transport',/taksi|otobus|ulasim|tren/]].filter(([,re])=>re.test(n));
   return matches.length===1?matches[0][0]:'other';
 }
-const trailingMoney=line=>{const m=String(line).match(/(\d[\d.,]*[.,]\d{2})\s*(?:TL|TRY|₺)?\s*$/i);return m?cents(m[1]):null;};
+const trailingMoney=line=>{const cleaned=String(line).replace(/([,.])\s+(\d{2})(?=\s*(?:TL|TRY|₺)?\s*$)/i,'$1$2');const m=cleaned.match(/((?:\d{1,3}(?:[. ]\d{3})+,\d{2}|\d+[,.]\d{2}))\s*(?:TL|TRY|₺)?\s*$/i);return m?cents(m[1]):null;};
 function sellerFromHeader(lines){
   const index=lines.findIndex(l=>/[A-ZÇĞİÖŞÜ]/i.test(l)&&!/^\d|^(?:F[İI][ŞS]|TAR[İI]H|SAAT|VKN|TCKN|TOPLAM)/i.test(l));
   if(index<0)return '';
@@ -114,14 +114,16 @@ export function parseReceipt(rawText,confidence=null){
   const totals=[...new Set(totalLines.map(trailingMoney).filter(v=>v!==null))];
   const taxes=[...new Set(lines.filter(l=>/^(?:TOP\s*KDV|TOPLAM\s+KDV|KDV\s+TOPLAM|KDV\s*(?:[:*]|(?=\d)))/i.test(l)).map(trailingMoney).filter(v=>v!==null))];
   const vkns=[...new Set([...text.matchAll(/(?:VKN|TCKN|VERG[İI]\s*(?:NO|NUMARASI))\s*[:/]?\s*(\d{10,11})\b/gi)].map(m=>m[1]))];
-  if(!vkns.length){const printed=lines.flatMap(l=>/^\d{10,11}$/.test(l)?[l]:/\bV\.?D\.?|\bVD\b/i.test(l)?[...(l.matchAll(/\b\d{10,11}\b/g))].map(m=>m[0]):[]);vkns.push(...new Set(printed));}
-  const rates=[...new Set([...text.matchAll(/%\s*(\d{1,2})(?!\d)/g)].map(m=>Number(m[1])))];
+  if(!vkns.length){const printed=lines.flatMap(l=>/^\d{10,11}$/.test(l)?[l]:/\bV\s*\.?\s*D\.?\b/i.test(l)?[...(l.matchAll(/\b\d{10,11}\b/g))].map(m=>m[0]):[]);vkns.push(...new Set(printed));}
+  const ratePattern=/(?:%|(?:^|\s)(?:\/|\*[lI]))\s*(\d{1,2})(?!\d)/g;
+  const rates=[...new Set(lines.flatMap(line=>[...line.matchAll(ratePattern)].map(m=>Number(m[1]))))];
   const items=[];
   for(const line of lines){
     if(/^(?:TOP|KDV|GENEL|NAK[İI]T|KRED[İI]|PARA|[ÖO]DENECEK)/i.test(line))continue;
-    const rate=line.match(/%\s*(\d{1,2})(?!\d)/),gross=trailingMoney(line);
+    const rate=line.match(/(?:%|(?:^|\s)(?:\/|\*[lI]))\s*(\d{1,2})(?!\d)/),gross=rate?trailingMoney(line.slice(rate.index+rate[0].length)):null;
     if(rate&&gross!==null&&/[A-ZÇĞİÖŞÜ]/i.test(line.slice(0,rate.index))){items.push({description:line.slice(0,rate.index).trim().slice(0,200),category:guessCategory(line)==='other'?guessCategory(text):guessCategory(line),gross,vatRate:Number(rate[1]),vatIncluded:true});}
   }
+  if(!totals.length&&items.length){const payments=[...new Set(lines.filter(line=>/^(?:banka\s*\/\s*)?kredi\s*karti\b|^nakit\b/.test(normalize(line))).map(trailingMoney).filter(v=>v!==null))],sum=items.reduce((n,item)=>n+item.gross,0);if(payments.length===1&&payments[0]===sum)totals.push(sum);}
   if(dates.length>1)notes.push('Birden fazla tarih okundu; belge tarihini seç.');
   if(totals.length>1)notes.push('Birden fazla toplam okundu; belge toplamını kontrol et.');
   if(rates.length>1&&!items.length)notes.push('Birden fazla KDV oranı var; kalemleri ayrı satırlara böl.');
@@ -158,6 +160,19 @@ export function mergeReceiptReadings(primary,alternatives){
     if(result[field]!==''&&result[field]!==null&&result[field]!==undefined)continue;
     const values=[...new Set(alternatives.map(r=>r[field]).filter(v=>v!==''&&v!==null&&v!==undefined))];
     if(values.length===1)result[field]=values[0];
+  }
+  const reconciles=lines=>Number.isSafeInteger(result.total)&&lines?.length&&lines.every(line=>Number.isSafeInteger(line.gross)&&Number.isFinite(line.vatRate))&&Math.abs(lines.reduce((n,line)=>n+(lineAmounts(line).gross||0),0)-result.total)<=2&&(!Number.isSafeInteger(result.vat)||Math.abs(lines.reduce((n,line)=>n+(lineAmounts(line).vat||0),0)-result.vat)<=2);
+  if(!reconciles(result.lines)){
+    let choices=alternatives.filter(candidate=>reconciles(candidate.lines));
+    if(!choices.length&&Number.isSafeInteger(result.vat)){
+      const vatMatches=candidate=>candidate.lines?.length&&candidate.lines.every(line=>Number.isSafeInteger(line.gross)&&Number.isFinite(line.vatRate))&&Math.abs(candidate.lines.reduce((n,line)=>n+(lineAmounts(line).vat||0),0)-result.vat)<=2;
+      const candidates=alternatives.filter(vatMatches),amounts=new Set(candidates.map(candidate=>candidate.lines.reduce((n,line)=>n+(lineAmounts(line).gross||0),0)));
+      const explicit=candidates.filter(candidate=>!(candidate.notes||[]).some(note=>note.startsWith('Ürün kalemleri ayrıştırılamadı'))),explicitAmounts=new Set(explicit.map(candidate=>candidate.lines.reduce((n,line)=>n+(lineAmounts(line).gross||0),0)));
+      if(!Number.isSafeInteger(result.total)&&explicitAmounts.size===1){const amount=[...explicitAmounts][0];if(alternatives.some(candidate=>candidate.total===amount)){result.total=amount;choices=explicit;}}
+      if(amounts.size===1&&Number.isSafeInteger(result.total)&&Math.abs([...amounts][0]-result.total)>2){result.total=null;result.notes=[...(result.notes||[]),'Toplam ile KDV’li satır farklı okundu; belge toplamını kontrol edin.'];choices=candidates;}
+    }
+    const signatures=new Set(choices.map(candidate=>JSON.stringify(candidate.lines.map(({category,gross,vatRate,vatIncluded})=>({category,gross,vatRate,vatIncluded})))));
+    if(signatures.size===1){const candidate=choices[0],oldPrefix=receiptDescription(candidate),prefix=receiptDescription(result);result.lines=candidate.lines.map(line=>({...line,description:line.description?.startsWith(oldPrefix)?(prefix+line.description.slice(oldPrefix.length)).slice(0,200):line.description}));result.notes=(result.notes||[]).filter(note=>!note.startsWith('Ürün kalemleri ayrıştırılamadı'));}
   }
   return result;
 }

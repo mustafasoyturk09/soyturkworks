@@ -112,5 +112,5 @@ const inventory=[];
 async function walk(dir,prefix=''){for(const name of (await readdir(dir)).sort()){const file=join(dir,name),rel=prefix+name;if((await stat(file)).isDirectory())await walk(file,rel+'/');else inventory.push({file:rel,sha256:createHash('sha256').update(await readFile(file)).digest('hex')});}}
 await walk(dist);
 for(const entry of inventory)if((await stat(join(dist,entry.file))).size>25*1024*1024)throw Error('Cloudflare dosya boyutu sınırı aşıldı: '+entry.file);
-await writeFile(join(root,'release-manifest.json'),JSON.stringify({version:195,files:inventory},null,2)+'\n');
-console.log('195 web dağıtımı hazır: dist/ ('+inventory.length+' dosya). Sunucuda yalnızca bu dizini, kimlik doğrulaması arkasında sunun.');
+await writeFile(join(root,'release-manifest.json'),JSON.stringify({version:196,files:inventory},null,2)+'\n');
+console.log('196 web dağıtımı hazır: dist/ ('+inventory.length+' dosya). Sunucuda yalnızca bu dizini, kimlik doğrulaması arkasında sunun.');
