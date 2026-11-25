@@ -170,7 +170,7 @@ test('Automatic archive catches recent previous-month invoices, prepares Excel a
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  try{
   await f.engine.start();await drain(f.engine,f.db);
-  const summary=await f.engine.summary();assert.equal(summary.counts.total,2);assert.equal(summary.counts.pdfs,2);assert.equal(summary.counts.fresh,2);assert(summary.status.lastSuccess);
+  const summary=await f.engine.summary();assert.equal(summary.counts.total,2);assert.equal(summary.counts.pdfs,2);assert.equal(summary.counts.fresh,2);assert(summary.status.lastSuccess);assert.equal(summary.checkHistory.length,1);assert.equal(summary.checkHistory[0].success,true);assert.equal(summary.checkHistory[0].fresh,2);assert.equal(summary.checkHistory[0].duration,0);
   const groups=(await(await f.engine.handle('folders','GET')).json()).folders;assert.equal(groups.length,2);assert(groups.every(g=>g.excel?.current));
   assert(groups.some(g=>g.name==='Pusula Ekim 2026 Gelen E-Faturalar'));
   assert(groups.some(g=>g.name==='Pusula Kasım 2026 Gelen E-Faturalar'));
@@ -275,7 +275,7 @@ test('Merged monthly folders expose all PDF pages and clamp pages after records 
 
 test('Failed PDF fetches never become successful archives or new invoice success notifications',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;f.failPdf();
- try{await f.engine.start();await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.pdfs,0);assert.equal(summary.counts.errors,2);assert(summary.status.error);assert.equal(summary.status.lastSuccess,null);assert.equal(f.events.filter(e=>e.kind==='invoices').length,0);assert.equal(f.events.filter(e=>e.kind==='error').length,1);}finally{globalThis.fetch=original;}
+ try{await f.engine.start();await drain(f.engine,f.db);const summary=await f.engine.summary();assert.equal(summary.counts.pdfs,0);assert.equal(summary.counts.errors,2);assert(summary.status.error);assert.equal(summary.status.lastSuccess,null);assert.equal(summary.checkHistory.length,1);assert.equal(summary.checkHistory[0].success,false);assert.equal(f.events.filter(e=>e.kind==='invoices').length,0);assert.equal(f.events.filter(e=>e.kind==='error').length,1);}finally{globalThis.fetch=original;}
 });
 test('Initial processed-number import is company-local and does not require recurring Excel uploads',async()=>{
  const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;

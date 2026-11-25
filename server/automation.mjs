@@ -360,14 +360,14 @@ export class InvoiceArchive{
       if(!previousMonth||previousMonth<currentMonth)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);await tx.put('notification:period',currentMonth);});
       for(const row of unnotified)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
       if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF Hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});
-      await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const state=await tx.get('status')||{};await tx.put('status',{...state,lastSuccess:errors.length?state.lastSuccess||null:this.now(),lastFinished:this.now(),lastResult:{fresh:fresh.length,pdfs:unnotified.length,errors:errors.length},error:errors.length?errors.length+' faturanın PDF’i hazırlanamadı. İzibiz Sistemini Başlat ile yeniden deneyebilirsiniz.':null,progress:null});await tx.delete('job');});
+      await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const state=await tx.get('status')||{},finished=this.now(),history=await tx.get('check-history')||[];await tx.put('check-history',[{id:job.id,at:finished,success:!errors.length,fresh:fresh.length,duration:Math.max(0,finished-job.started)},...history.filter(item=>item.id!==job.id)].slice(0,500));await tx.put('status',{...state,lastSuccess:errors.length?state.lastSuccess||null:finished,lastFinished:finished,lastResult:{fresh:fresh.length,pdfs:unnotified.length,errors:errors.length},error:errors.length?errors.length+' faturanın PDF’i hazırlanamadı. İzibiz Sistemini Başlat ile yeniden deneyebilirsiniz.':null,progress:null});await tx.delete('job');});
     }catch(e){
       if(e.cancelled)return;
       const outcome=await this.storage.transaction(async tx=>{
         const job=await tx.get('job');if(!job||job.id!==runId)return null;
         const metadata=!!job.metadataOnly,retry=job.attempts<2,status=await tx.get('status')||{};
         await tx.put('status',{...status,...(metadata?{typeRefreshError:'Fatura senaryoları güncellenemedi. Yenile ile tekrar denenecek.'}:{error:e.status?e.message:'İzibiz kontrolü tamamlanamadı. Bağlantı veya belge doğrulamasında hata oluştu.'}),progress:null});
-        if(retry)await tx.put('job',{...job,attempts:job.attempts+1});else await tx.delete('job');
+        if(retry)await tx.put('job',{...job,attempts:job.attempts+1});else{if(!metadata){const finished=this.now(),history=await tx.get('check-history')||[];await tx.put('check-history',[{id:job.id,at:finished,success:false,fresh:0,duration:Math.max(0,finished-job.started)},...history.filter(item=>item.id!==job.id)].slice(0,500));}await tx.delete('job');}
         return {metadata,retry,generation:job.generation||0,cycleId:job.cycleId||null,cycleIds:job.cycleIds||[]};
       });
       if(!outcome)return;
@@ -385,12 +385,12 @@ export class InvoiceArchive{
   }
   async summary(period=null,existingRows=null){
     period=period||await this.period();
-    const [storedRows,storedFolders]=await Promise.all([existingRows||this.all(),this.storage.list({prefix:'folder:'})]);
+    const [storedRows,storedFolders,checkHistory]=await Promise.all([existingRows||this.all(),this.storage.list({prefix:'folder:'}),this.storage.get('check-history')]);
     const rows=storedRows.filter(r=>!r.deletedAt),folders=[...new Map([...storedFolders.values()].filter(f=>!f.deletedAt&&!f.mergedInto).map(f=>[f.month,f])).values()];
     await this.queueTypeRefresh(rows);const [job,settings,status,bytes]=await Promise.all([this.storage.get('job'),this.settings(),this.status(),this.storage.get('totalBytes')]);
     const count=items=>({total:items.length,fresh:items.filter(r=>invoiceState(r,localDate(this.now()))==='new').length,waiting:items.filter(r=>invoiceState(r,localDate(this.now()))==='waiting').length,done:items.filter(r=>r.done&&!r.isRet).length,rejected:items.filter(r=>r.isRet).length,pdfs:items.filter(r=>r.file).length,errors:items.filter(r=>r.pdfError&&!r.file&&!r.isRet).length});
     const months=[...new Set([...rows.map(r=>r.tarih.slice(0,7)),...folders.map(f=>f.month)])],monthly=Object.fromEntries(months.map(month=>[month,{...count(rows.filter(r=>r.tarih.startsWith(month))),folders:folders.filter(f=>f.month===month).length}]));
-    return {company:this.company,period,monthly,settings,status,running:!!job,updatingTypes:!!job?.metadataOnly,nextCheck:nextCheck(this.now()),counts:{...count(rows),folders:folders.length},bytes:bytes||0,capacity:MAX_BYTES};
+    return {company:this.company,period,monthly,settings,status,checkHistory:checkHistory||[],running:!!job,updatingTypes:!!job?.metadataOnly,nextCheck:nextCheck(this.now()),counts:{...count(rows),folders:folders.length},bytes:bytes||0,capacity:MAX_BYTES};
   }
   async notificationSummary(){
     const [storedRows,settings,status]=await Promise.all([this.all(),this.settings(),this.status()]),rows=storedRows.filter(r=>!r.deletedAt);

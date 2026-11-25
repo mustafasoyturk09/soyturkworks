@@ -330,3 +330,4 @@ body.expense-light .expense-accounting{background:#f4f8fc;border-color:#91aac2}
 .pusula-expenses .expense-vat-control:after{content:'';position:absolute;right:11px;top:17px;width:7px;height:7px;border:solid #c7d9ee;border-width:0 1.5px 1.5px 0;transform:rotate(45deg);pointer-events:none}
 .pusula-expenses.expense-light .expense-vat-value{color:#10233c}
 .pusula-expenses.expense-light .expense-vat-control:after{border-color:#29485d}
+@media(min-width:1100px){.pusula-expenses .expense-work-grid>.editor[open]{position:sticky;inset:auto;top:12px;width:100%;height:calc(100dvh - 24px);max-height:calc(100dvh - 24px);min-width:0;margin:0;z-index:5}}

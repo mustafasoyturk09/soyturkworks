@@ -1,5 +1,5 @@
 {
-  "version": 190,
+  "version": 191,
   "files": [
     {
       "file": "404.html",
@@ -235,7 +235,7 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "dc70b0c5de95d38d7cf985baf177ad144ae73ffc26989e269c48d877ab32bf73"
+      "sha256": "cd72cade3a5ac0f79ef37b127770a60bfb20709e64bf4c28d0a89991a8647e4d"
     },
     {
       "file": "automation/assets/iphone15.png",
@@ -247,11 +247,11 @@
     },
     {
       "file": "automation/index.html",
-      "sha256": "d99b52033dd67a2f062c8ce8d649d53badcdda3c260c3550123240b2573e8ebd"
+      "sha256": "445431be20803b4b549ef95ef2829a3685f769d2b0447f828ee5342bb691b5d4"
     },
     {
       "file": "automation/redesign.css",
-      "sha256": "dd46a2701d58b02d0c1572fdf85a5214696e1f49a098fc2e7db4316e0d0f7e3c"
+      "sha256": "f59fcfcce7e4a927ea604dabfff2220eb2592a7db680d748d7795a0e9cfba879"
     },
     {
       "file": "automation/style.css",
@@ -259,7 +259,7 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "89c1090736de9da40450c00129288a42230ae0721f8736e8310fc9a1112e5358"
+      "sha256": "f205e494e5b40a0c6858c0b3023c4739bcfbcf4e3feb72d5e743af4e1c7ed606"
     },
     {
       "file": "expenses/crop.mjs",
@@ -271,7 +271,7 @@
     },
     {
       "file": "expenses/index.html",
-      "sha256": "8293ed371751f2e004f3af86c46305f1a7c55108da518bb7cd0e15ba4367b393"
+      "sha256": "c88b9c7f185a251e885ec0e4900f4804d7fa23b625dde331df91e7996b08f38e"
     },
     {
       "file": "expenses/model.mjs",
@@ -287,7 +287,7 @@
     },
     {
       "file": "expenses/style.css",
-      "sha256": "6adb31539f2579e63bbd35f8d0f604b528e5bd642336103969053ca08a9c8453"
+      "sha256": "f307b617cddf0633f3fca25b6a6a9887d8cc7d5910b55d21a68335987d3c6a0a"
     },
     {
       "file": "expenses/tur.traineddata",
