@@ -106,7 +106,11 @@ test('Seçili aynı dönem fişlerinde en yeni fiş başlık olur ve toplamlar b
   const c={...receipt(),id:'c',date:'2026-11-17',number:'002',paymentCard:'309.07'};
   const xml=buildPurchaseXML([a,b,c],{},'PUSULA',{selected:true});
   assert.equal((xml.match(/<INVOICE DBOP=/g)||[]).length,1);assert.match(xml,/<DATE>25\.11\.2026<\/DATE>/);assert.match(xml,/<DOC_NUMBER>003<\/DOC_NUMBER>/);assert.match(xml,/<DESCRIPTION>FİŞ NO:003 YENİ İŞLETME<\/DESCRIPTION>/);assert.match(xml,/<TOTAL_NET>330\.00<\/TOTAL_NET>/);assert.equal((xml.match(/<TRANSACTION>/g)||[]).length,3);
-  assert.throws(()=>buildPurchaseXML([a,{...b,date:'2026-10-06'}],{},'PUSULA',{selected:true}),/Logo üzerinde henüz doğrulanamadı/);
+  const old={...receipt(),id:'old',date:'2026-10-06',number:'004',seller:'ÖNCEKİ AY',paymentCard:'309.07',lines:receipt().lines.map(l=>({...l,description:'Kırtasiye'}))};
+  const mixed=buildPurchaseXML([old,c,b,a],{},'PUSULA',{selected:true});
+  assert.equal((mixed.match(/<INVOICE DBOP=/g)||[]).length,1);assert.match(mixed,/<DATE>25\.11\.2026<\/DATE>/);assert.match(mixed,/<DOC_NUMBER>003<\/DOC_NUMBER>/);assert.match(mixed,/<DESCRIPTION>FİŞ NO:004 ÖNCEKİ AY · Kırtasiye<\/DESCRIPTION>/);assert.equal((mixed.match(/<TRANSACTION>/g)||[]).length,4);assert(!mixed.includes('01.11.2026'));assert(!mixed.includes('06.10.2026'));
+  const tied={...a,id:'tie',date:'2027-01-02',number:'009'},next={...b,date:'2027-01-02',number:'010'};
+  const yearChange=buildPurchaseXML([old,tied,next],{},'PUSULA',{selected:true});assert.match(yearChange,/<DATE>02\.01\.2027<\/DATE>/);assert.match(yearChange,/<DOC_NUMBER>009<\/DOC_NUMBER>/);assert.equal((yearChange.match(/<TRANSACTION>/g)||[]).length,3);
   assert.throws(()=>buildPurchaseXML([a,{...b,paymentCard:'309.08'}],{},'PUSULA',{selected:true}),/ödeme kart/);
 });
 test('Karma KDV oranlı iki fiş Logo örneğindeki toplamlarla birleşir',()=>{

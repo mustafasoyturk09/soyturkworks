@@ -1,4 +1,4 @@
-import {categories,normalize,cents,amount,groupedAmount,vatRateLabel,parseReceipt,draftMissingLines,issues,duplicateIds,exportReadiness,categoryProfile,lineProfile,buildPurchaseXML,encodeLogoXML,splitFlight,lineAmounts,memoryKey,validExpenseCode,validQuantity,matchesReceiptFilters,receiptDescription,rememberedProfile,mergeReceiptReadings,calendarDays} from './model.mjs?v=ocr10';
+import {categories,normalize,cents,amount,groupedAmount,vatRateLabel,parseReceipt,draftMissingLines,issues,duplicateIds,exportReadiness,categoryProfile,lineProfile,buildPurchaseXML,encodeLogoXML,splitFlight,lineAmounts,memoryKey,validExpenseCode,validQuantity,matchesReceiptFilters,receiptDescription,rememberedProfile,mergeReceiptReadings,calendarDays} from './model.mjs?v=ocr11';
 import {receiptPaperFromPixels} from './crop.mjs?v=ocr5';
 const $=id=>document.getElementById(id),company=window.SW_CONTEXT?.company;
 if(!company)throw Error('Önce firma çalışma alanından Masraf Fişleri’ni aç.');
