@@ -1,5 +1,5 @@
 {
-  "version": 189,
+  "version": 190,
   "files": [
     {
       "file": "404.html",
@@ -235,7 +235,7 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "ff3134d74a0a04c79ff3c74382e153f4ef4f7bd6ea1dc09e9fe02eb5313742dd"
+      "sha256": "dc70b0c5de95d38d7cf985baf177ad144ae73ffc26989e269c48d877ab32bf73"
     },
     {
       "file": "automation/assets/iphone15.png",
@@ -247,11 +247,11 @@
     },
     {
       "file": "automation/index.html",
-      "sha256": "7b44562c5b8a5cd4f81469b27733bfe7877264466421b8220ff84cb3bf71eb9f"
+      "sha256": "d99b52033dd67a2f062c8ce8d649d53badcdda3c260c3550123240b2573e8ebd"
     },
     {
       "file": "automation/redesign.css",
-      "sha256": "aaf1d00a6348a2a58a2f7b44a24f05ecf26add86fbd4f356f40614715dea268e"
+      "sha256": "dd46a2701d58b02d0c1572fdf85a5214696e1f49a098fc2e7db4316e0d0f7e3c"
     },
     {
       "file": "automation/style.css",
