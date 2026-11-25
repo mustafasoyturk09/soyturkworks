@@ -94,7 +94,7 @@ export class InvoiceArchive{
       }
       for(const folder of folders)if(folder.excel)for(const key of fileKeys(folder.excel))keys.add(key);
       for(const [key,excel] of await tx.list({prefix:'monthly-excel:'})){keys.add(key);for(const part of fileKeys(excel.file))keys.add(part);}
-      for(const prefix of ['invoice:','folder:','active-folder:','month-revision:'])for(const key of (await tx.list({prefix})).keys())keys.add(key);
+      for(const prefix of ['invoice:','folder:','active-folder:','month-revision:','notification:return:'])for(const key of (await tx.list({prefix})).keys())keys.add(key);
       const list=[...keys];for(let i=0;i<list.length;i+=100)await tx.delete(list.slice(i,i+100));
       const generation=(await tx.get('archive-generation')||0)+1;await tx.put('archive-generation',generation);await tx.put('totalBytes',0);await tx.put('status',{clearedAt:this.now(),notificationResetGeneration:null,error:null,progress:null});
       return {ok:true,generation};
@@ -306,6 +306,8 @@ export class InvoiceArchive{
             const current=await tx.get(key),seen=await tx.get('seen:'+uuid),baseline=await tx.get('baseline:'+sha(incoming.fatno.replace(/\s/g,'').toLocaleUpperCase('tr')));
             if(current&&(current.fatno!==incoming.fatno||current.tarih!==incoming.tarih))fail('Aynı ETTN için fatura kimliği değişti.',409);
             const {ticket,tipLabel,...data}=incoming;
+            const isReturn=!!data.isRet||/IADE$/.test(String(data.tip||'').toUpperCase()),wasReturn=!!current&&(!!current.isRet||/IADE$/.test(String(current.tip||'').toUpperCase()));
+            if(isReturn&&!wasReturn&&!current?.deletedAt&&(current||(!seen&&!baseline)))await tx.put('notification:return:'+uuid,{id:randomUUID(),uuid});
             if(!current||['fatno','tarih','unvan','tip','profile','tutar','birim','yanit','isRet'].some(k=>k!=='unvan'&&current[k]!==data[k])){
               const versionKey='month-revision:'+incoming.tarih.slice(0,7);await tx.put(versionKey,(await tx.get(versionKey)||0)+1);
             }
@@ -351,6 +353,11 @@ export class InvoiceArchive{
         const summary={monthly,allMonthly:allNotificationMonthCounts(rows),lastFinished:this.now()},pending=notificationSections(summary,this.now()).pending;
         for(const notification of statusNotifications(this.company,summary,id,this.now()))await this.notify({...notification,id:sha(notification.id),title:this.company.name+' · '+(pending?pending+' Yeni Gelen':'Yeni Gelen Fatura Yok'),kind:'company-result',count:pending,pending,monthly});
         }
+      const returnPending=await this.storage.list({prefix:'notification:return:'});
+      if(returnPending.size){const entries=[...returnPending],tokens=entries.map(([,value])=>value.id).sort();await this.notify({id:sha(this.company.id+':returns:'+tokens.join(':')),company:this.company.id,title:this.company.name+' · İade / RET',body:entries.length+' iade veya RET faturası algılandı.',url:'/workspace/'+this.company.id+'/takip/?view=invoices',kind:'return',category:'returns',created:this.now()});await this.storage.transaction(async tx=>{await this.requireJob(job,tx);for(const [key,value] of entries)if((await tx.get(key))?.id===value.id)await tx.delete(key);});}
+      const currentMonth=today.slice(0,7),previousMonth=await this.storage.get('notification:period');
+      if(previousMonth&&previousMonth<currentMonth)await this.notify({id:sha(this.company.id+':period:'+currentMonth),company:this.company.id,title:this.company.name+' · Yeni dönem',body:'Yeni takvim dönemi başladı. Fatura arşivin korunuyor.',url:'/workspace/'+this.company.id+'/takip/?view=folders',kind:'period',category:'period',created:this.now()});
+      if(!previousMonth||previousMonth<currentMonth)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);await tx.put('notification:period',currentMonth);});
       for(const row of unnotified)await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const current=await tx.get('invoice:'+row.uuid);if(current)await tx.put('invoice:'+row.uuid,{...current,notified:true});});
       if(errors.length)await this.notify({id:sha(this.company.id+':pdf-error:'+localDate(this.now())),company:this.company.id,title:this.company.name+' · '+errors.length+' PDF Hazırlanamadı',body:'Faturalar listede duruyor. Sonraki kontrolde tekrar denenecek. Detayları görmek için dokun.',url:'/takip?company='+this.company.id+'&view=invoices',kind:'error',created:this.now()});
       await this.storage.transaction(async tx=>{await this.requireJob(job,tx);const state=await tx.get('status')||{};await tx.put('status',{...state,lastSuccess:errors.length?state.lastSuccess||null:this.now(),lastFinished:this.now(),lastResult:{fresh:fresh.length,pdfs:unnotified.length,errors:errors.length},error:errors.length?errors.length+' faturanın PDF’i hazırlanamadı. İzibiz Sistemini Başlat ile yeniden deneyebilirsiniz.':null,progress:null});await tx.delete('job');});

@@ -58,7 +58,7 @@ export class InvoiceCycles{
       const monthly=event.monthly||[],{pending}=notificationSections(event,this.now());
       const notifications=statusNotifications(company,{...event,monthly,lastFinished:event.lastFinished||(!event.error?this.now():null)},'cycle:'+cycle.id,this.now(),event.error||'');
       for(const notification of notifications){
-        notification.id=hash(notification.id);notification.kind='company-result';notification.title=company.name+' · '+(event.error?'Kontrol Uyarısı':pending?pending+' Yeni Gelen':'Yeni Gelen Fatura Yok');
+        notification.id=hash(notification.id);notification.kind='company-result';notification.category=event.error?'error':'newInvoice';notification.title=company.name+' · '+(event.error?'Kontrol Uyarısı':pending?pending+' Yeni Gelen':'Yeni Gelen Fatura Yok');
         notification.tag='invoice-check-'+cycle.id+'-'+company.id+'-'+notifications.indexOf(notification);
         await enqueueNotification(tx,notification,true);
       }
@@ -77,7 +77,7 @@ export class InvoiceCycles{
       await this.dispatch(cycle.id);
       if(now>=cycle.deadline&&!cycle.warned)await this.storage.transaction(async tx=>{
         const current=await tx.get(key);if(!current||current.warned)return;
-        for(const company of current.companies.filter(c=>!current.results[c.id]))await enqueueNotification(tx,{id:hash('waiting:'+cycle.id+':'+company.id),company:company.id,title:company.name+' · Kontrol Sürüyor',body:current.startErrors?.[company.id]?'Bağlantı yeniden deneniyor. Tamamlandığında sonuç ayrıca gelecek.':'Faturalar hazırlanıyor. Tamamlandığında sonuç ayrıca gelecek.',kind:'company-result',tag:'invoice-check-'+cycle.id+'-'+company.id+'-0',url:'/workspace/'+company.id+'/takip/',created:now},true);
+        for(const company of current.companies.filter(c=>!current.results[c.id]))await enqueueNotification(tx,{id:hash('waiting:'+cycle.id+':'+company.id),company:company.id,title:company.name+' · Kontrol Sürüyor',body:current.startErrors?.[company.id]?'Bağlantı yeniden deneniyor. Tamamlandığında sonuç ayrıca gelecek.':'Faturalar hazırlanıyor. Tamamlandığında sonuç ayrıca gelecek.',kind:'company-result',category:current.startErrors?.[company.id]?'error':'newInvoice',tag:'invoice-check-'+cycle.id+'-'+company.id+'-0',url:'/workspace/'+company.id+'/takip/',created:now},true);
         await tx.put(key,{...current,warned:true});
       });
     }

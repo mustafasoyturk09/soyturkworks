@@ -1,5 +1,5 @@
 {
-  "version": 188,
+  "version": 189,
   "files": [
     {
       "file": "404.html",
@@ -235,15 +235,23 @@
     },
     {
       "file": "automation/app.js",
-      "sha256": "daad4e1ba3148ff2cc625df017f9d540a1559f95edeb62886d4b5433cf53542f"
+      "sha256": "ff3134d74a0a04c79ff3c74382e153f4ef4f7bd6ea1dc09e9fe02eb5313742dd"
+    },
+    {
+      "file": "automation/assets/iphone15.png",
+      "sha256": "866de17deb7f869e1f0980fd91bac832918037e1a2950b089d1421827eea5dcb"
+    },
+    {
+      "file": "automation/assets/macbook-pro.png",
+      "sha256": "b528b4f537f7cc60cf2a47081b8a0bab71fae5440f3f3a23b38362f27ab4d0c6"
     },
     {
       "file": "automation/index.html",
-      "sha256": "f76411682cc96b4308b2b0f51275ade96cf3a6b74ec559ea6c87fb02691a19fb"
+      "sha256": "7b44562c5b8a5cd4f81469b27733bfe7877264466421b8220ff84cb3bf71eb9f"
     },
     {
       "file": "automation/redesign.css",
-      "sha256": "4b527f90ea962aafbf46b176e1dbcef53b9c73c6df3a57075b57788cbb0d9beb"
+      "sha256": "aaf1d00a6348a2a58a2f7b44a24f05ecf26add86fbd4f356f40614715dea268e"
     },
     {
       "file": "automation/style.css",

@@ -111,6 +111,13 @@ test('Worker protects assets, sessions, company lifecycle, recovery and real Web
       assert.equal((await request('/api/automation/PUSULA/mark',{items:[{uuid:'11111111-2222-4333-8444-555555555555',revision:0}],done:true},cookie)).status,404);
       assert.equal((await request('/api/push/devices',null,cookie)).status,400);
       assert.equal((await request('/api/push/devices?company=UNKNOWN',null,cookie)).status,400);
+      assert.equal((await request('/api/push/preferences?company=PUSULA')).status,401);
+      assert.equal((await request('/api/push/preferences?company=UNKNOWN',null,cookie)).status,400);
+      assert.equal((await request('/api/push/preferences?company=PUSULA',{preferences:{returns:false}},cookie)).value.preferences.returns,false);
+      assert.equal((await request('/api/push/preferences?company=COMED',null,cookie)).value.preferences.returns,true);
+      assert.equal((await request('/api/push/preferences?company=PUSULA',null,cookie)).value.preferences.returns,false);
+      assert.equal((await request('/api/push/preferences?company=PUSULA',{preferences:{returns:true}},cookie,'POST',{Origin:'https://other.example'})).status,403);
+      await request('/api/push/preferences?company=PUSULA',{preferences:{returns:true}},cookie);
       const config=await request('/api/push/config?company=PUSULA',null,cookie);assert.equal(config.status,200);assert.equal(Buffer.from(config.value.publicKey,'base64url').length,65);assert.equal(config.value.privateKey,undefined);
       assert.equal((await request('/api/push/devices?company=PUSULA',null,cookie)).value.devices.length,0);
       assert.equal((await request('/api/push/subscribe?company=PUSULA',{subscription:{endpoint:'https://127.0.0.1/private',keys:{}}},cookie)).status,400);

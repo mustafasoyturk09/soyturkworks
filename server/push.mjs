@@ -3,6 +3,12 @@ import {createHash} from 'node:crypto';
 import {formatNotificationMonths,formatCompanyNotificationLine,normalizeNotificationMonths} from './notification-format.mjs';
 
 const COMPANY_IDS=['PUSULA','COMED','KIB','DIJITAL_GARAJ','KIB_DIJITAL'];
+export const DEFAULT_NOTIFICATION_PREFERENCES=Object.freeze({newInvoice:true,returns:true,period:true,error:true});
+const preferenceKey=company=>'push:preferences:'+company;
+export function notificationPreferences(value){return Object.fromEntries(Object.keys(DEFAULT_NOTIFICATION_PREFERENCES).map(key=>[key,typeof value?.[key]==='boolean'?value[key]:true]));}
+function notificationCategory(event){if(Object.hasOwn(DEFAULT_NOTIFICATION_PREFERENCES,event.category))return event.category;if(event.kind==='error')return 'error';if(event.kind==='return')return 'returns';if(event.kind==='period')return 'period';if(event.kind==='company-result'||event.kind==='digest')return 'newInvoice';return null;}
+async function notificationsEnabled(storage,event){const category=notificationCategory(event);return !category||!COMPANY_IDS.includes(event.company)||notificationPreferences(await storage.get(preferenceKey(event.company)))[category];}
+async function setEventDelivery(storage,event,id,status){if(!event?.id)return;await storage.transaction(async tx=>{const key='push:event:'+event.id,current=await tx.get(key);if(!current)return;await tx.put(key,{...current,deliveries:{...(current.deliveries||{}),[id]:{status,at:Date.now()}}});});}
 const touchDevice=(storage,id,revision,company=null,status='sent',httpStatus=null)=>storage.transaction(async tx=>{
   const device=await tx.get('push:device:'+id);if(!device||device.revision!==revision)return;
   const at=Date.now(),deliveries=company?{...device.deliveries,[company]:{status,at,httpStatus}}:device.deliveries;
@@ -31,6 +37,11 @@ export async function deliver(subscription,payload,keys,origin,fetcher=fetch){
 export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
   if(!COMPANY_IDS.includes(body.company))fail('Önce bir firma seçin.');
   if(action==='devices'&&method==='GET')return json({devices:[...(await storage.list({prefix:'push:device:'})).values()].map(d=>({id:d.id,name:d.name,created:d.created,lastSent:d.lastSent||null,active:d.revision===body.revision,accountWide:true}))});
+  if(action==='preferences'&&method==='GET')return json({preferences:notificationPreferences(await storage.get(preferenceKey(body.company)))});
+  if(action==='preferences'&&method==='POST'){
+    const changes=body.preferences;if(!changes||typeof changes!=='object'||Array.isArray(changes)||!Object.keys(changes).length||Object.entries(changes).some(([key,value])=>!Object.hasOwn(DEFAULT_NOTIFICATION_PREFERENCES,key)||typeof value!=='boolean'))fail('Bildirim ayarı geçersiz.');
+    const preferences=await storage.transaction(async tx=>{const next={...notificationPreferences(await tx.get(preferenceKey(body.company))),...changes};await tx.put(preferenceKey(body.company),next);return next;});return json({preferences});
+  }
   const keys=await vapidKeys(storage);
   if(action==='config'&&method==='GET')return json({publicKey:keys.publicKey});
   if(action==='subscribe'&&method==='POST'){
@@ -51,10 +62,11 @@ export async function pushAPI(storage,origin,action,method,body,fetcher=fetch){
 }
 export async function enqueueNotification(storage,event,inTransaction=false){
   if(!inTransaction)return storage.transaction(tx=>enqueueNotification(tx,event,true));
-  if(await storage.get('push:event:'+event.id))return;
+  if(await storage.get('push:event:'+event.id)||await storage.get('push:suppressed:'+event.id))return;
+  if(!await notificationsEnabled(storage,event)){await storage.put('push:suppressed:'+event.id,{created:event.created||Date.now()});const suppressed=await storage.list({prefix:'push:suppressed:'}),old=[...suppressed].sort((a,b)=>b[1].created-a[1].created).slice(100);if(old.length)await storage.delete(old.map(([key])=>key));return;}
   event={...event,created:event.created||Date.now()};
-  await storage.put('push:event:'+event.id,event);
   const devices=await storage.list({prefix:'push:device:'});
+  const deliveries=Object.fromEntries([...devices.values()].map(device=>[device.id,{status:'queued',at:event.created}]));await storage.put('push:event:'+event.id,{...event,deliveries});
   for(const device of devices.values())await storage.put('push:outbox:'+event.id+':'+device.id,{event,device:device.id,attempts:0});
   const events=await storage.list({prefix:'push:event:'});const old=[...events].sort((a,b)=>b[1].created-a[1].created).slice(100);if(old.length)await storage.delete(old.map(([k])=>k));
 }
@@ -80,9 +92,10 @@ export async function flushNotifications(storage,origin,revision,fetcher=fetch){
   // One slow/offline provider must not hold every other phone and company.
   for(let i=0;i<items.length;i+=5)await Promise.all(items.slice(i,i+5).map(async([key,item])=>{
     const device=await storage.get('push:device:'+item.device);
-    if(!device||device.revision!==revision||Date.now()-item.event.created>86400000){await storage.delete(key);return;}
-    try{const result=await deliver(device.subscription,item.event,keys,origin,fetcher);if(result==='expired')await storage.delete('push:device:'+device.id);else await touchDevice(storage,device.id,revision,item.event.company);await storage.delete(key);}
-    catch(error){await touchDevice(storage,device.id,revision,item.event.company,'retrying',Number(error.httpStatus)||null);item.attempts++;await storage.put(key,{...item,nextAttempt:Date.now()+Math.min(3600000,15000*2**Math.min(8,item.attempts-1))});}
+    if(!await notificationsEnabled(storage,item.event)){await setEventDelivery(storage,item.event,item.device,'disabled');await storage.delete(key);return;}
+    if(!device||device.revision!==revision||Date.now()-item.event.created>86400000){await setEventDelivery(storage,item.event,item.device,'unavailable');await storage.delete(key);return;}
+    try{const result=await deliver(device.subscription,item.event,keys,origin,fetcher);if(result==='expired'){await setEventDelivery(storage,item.event,device.id,'unavailable');await storage.delete('push:device:'+device.id);}else{await setEventDelivery(storage,item.event,device.id,'accepted');await touchDevice(storage,device.id,revision,item.event.company);}await storage.delete(key);}
+    catch(error){await setEventDelivery(storage,item.event,device.id,'retrying');await touchDevice(storage,device.id,revision,item.event.company,'retrying',Number(error.httpStatus)||null);item.attempts++;await storage.put(key,{...item,nextAttempt:Date.now()+Math.min(3600000,15000*2**Math.min(8,item.attempts-1))});}
   }));
 }
 

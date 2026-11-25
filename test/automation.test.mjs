@@ -432,6 +432,58 @@ test('Push outbox deduplicates events and revokes expired or old-session subscri
  await flushNotifications(db,'https://soyturkworks.com','new',()=>assert.fail('Old session must not receive notifications'));
 });
 
+test('Notification preferences are company scoped, validated and stop both new and already queued messages',async()=>{
+ const db=storage(),sub=subscription(),call=(method,company,preferences)=>pushAPI(db,'https://soyturkworks.com','preferences',method,{company,revision:'current',...(preferences?{preferences}:{})});
+ await db.put('push:device:one',{id:'one',subscription:sub.value,revision:'current'});
+ assert.deepEqual((await (await call('GET','PUSULA')).json()).preferences,{newInvoice:true,returns:true,period:true,error:true});
+ await enqueueNotification(db,{id:'before-disable',company:'PUSULA',kind:'company-result',created:Date.now()});
+ assert.equal((await (await call('POST','PUSULA',{newInvoice:false})).json()).preferences.newInvoice,false);
+ assert.equal((await (await call('GET','COMED')).json()).preferences.newInvoice,true);
+ await enqueueNotification(db,{id:'disabled',company:'PUSULA',kind:'company-result',created:Date.now()});
+ await enqueueNotification(db,{id:'other-company',company:'COMED',kind:'company-result',created:Date.now()});
+ await enqueueNotification(db,{id:'error-still-enabled',company:'PUSULA',kind:'error',created:Date.now()});
+ assert.equal(await db.get('push:event:disabled'),undefined);let sent=0;
+ await flushNotifications(db,'https://soyturkworks.com','current',async()=>{sent++;return new Response('',{status:201});});
+ assert.equal(sent,2);assert.equal((await db.get('push:event:before-disable')).deliveries.one.status,'disabled');
+ await call('POST','PUSULA',{newInvoice:true,returns:false,period:false,error:false});
+ await enqueueNotification(db,{id:'disabled',company:'PUSULA',kind:'company-result',created:Date.now()});
+ for(const [id,kind] of [['no-return','return'],['no-period','period'],['no-error','error']])await enqueueNotification(db,{id,company:'PUSULA',kind,created:Date.now()});
+ assert.equal((await db.list({prefix:'push:outbox:'})).size,0);assert.equal(await db.get('push:event:disabled'),undefined);
+ await assert.rejects(()=>call('POST','PUSULA',{newInvoice:'false'}),/geçersiz/);
+ await assert.rejects(()=>call('POST','PUSULA',{unexpected:true}),/geçersiz/);
+});
+
+test('Notification history distinguishes provider acceptance and retries without sending device details in payload',async()=>{
+ const db=storage(),sub=subscription();await db.put('push:device:one',{id:'one',subscription:sub.value,revision:'current'});
+ await enqueueNotification(db,{id:'delivery-test',company:'PUSULA',kind:'return',title:'İade',created:Date.now()});
+ assert.equal((await db.get('push:event:delivery-test')).deliveries.one.status,'queued');let payload;
+ await flushNotifications(db,'https://soyturkworks.com','current',async(url,options)=>{payload=JSON.parse(ece.decrypt(options.body,{version:'aes128gcm',privateKey:sub.client,authSecret:sub.auth}).toString());return new Response('',{status:201});});
+ assert.equal((await db.get('push:event:delivery-test')).deliveries.one.status,'accepted');assert.equal(payload.deliveries,undefined);
+ await enqueueNotification(db,{id:'retry-test',company:'PUSULA',kind:'error',created:Date.now()});
+ await flushNotifications(db,'https://soyturkworks.com','current',async()=>new Response('',{status:503}));
+ assert.equal((await db.get('push:event:retry-test')).deliveries.one.status,'retrying');
+});
+
+test('New return and calendar-period events are emitted once without changing accounting status',async()=>{
+ const f=fixture({date:'2026-11-01T06:00:00Z'}),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{
+  const returned={...remoteInvoice(3,'2026-11-01'),invoiceType:'IADE'};f.setRemote([returned]);
+  await f.engine.start(true);await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='return').length,1);
+  const saved=(await f.engine.all()).find(r=>r.uuid===returned.uuid);assert.equal(saved.done,false);
+  f.advanceTime();await f.engine.start(true);await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='return').length,1);
+  f.advanceTime(30*24);await f.engine.start(true);await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='period').length,1);
+  assert.equal((await f.engine.all()).find(r=>r.uuid===returned.uuid).done,false);
+ }finally{globalThis.fetch=original;}
+});
+
+test('A later RET transition alerts once without inventing a second invoice',async()=>{
+ const f=fixture(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
+ try{const invoice=remoteInvoice(10,'2026-11-01');f.setRemote([invoice]);await f.engine.start(true);await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='return').length,0);
+  f.setRemote([{...invoice,invoiceStatus:'REJECTED'}]);f.advanceTime();await f.engine.start(true);await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='return').length,1);assert.equal((await f.engine.all()).length,1);assert.equal((await f.engine.all())[0].isRet,true);
+  f.advanceTime();await f.engine.start(true);await drain(f.engine,f.db);assert.equal(f.events.filter(e=>e.kind==='return').length,1);
+ }finally{globalThis.fetch=original;}
+});
+
 test('One global test notification verifies the phone without per-company setup or invented invoices',async()=>{
  const db=storage(),sub=subscription();await db.put('push:device:test-device',{id:'test-device',subscription:sub.value,revision:'current'});
  let payload;
