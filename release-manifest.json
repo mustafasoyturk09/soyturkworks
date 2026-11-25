@@ -1,5 +1,5 @@
 {
-  "version": 191,
+  "version": 192,
   "files": [
     {
       "file": "404.html",
@@ -271,7 +271,7 @@
     },
     {
       "file": "expenses/index.html",
-      "sha256": "c88b9c7f185a251e885ec0e4900f4804d7fa23b625dde331df91e7996b08f38e"
+      "sha256": "dcf69d6a4fef68a56a7babfafbb11261073d96a9c41a93358969dfec712e154b"
     },
     {
       "file": "expenses/model.mjs",
@@ -287,7 +287,7 @@
     },
     {
       "file": "expenses/style.css",
-      "sha256": "f307b617cddf0633f3fca25b6a6a9887d8cc7d5910b55d21a68335987d3c6a0a"
+      "sha256": "e50621a26767f9264762c1ca3b0174a6da3d20c266af3696218e7e1276c9872c"
     },
     {
       "file": "expenses/tur.traineddata",
