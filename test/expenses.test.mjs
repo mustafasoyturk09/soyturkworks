@@ -105,9 +105,17 @@ test('Seçili aynı dönem fişlerinde en yeni fiş başlık olur ve toplamlar b
   const b={...receipt(),id:'b',date:'2026-11-25',number:'003',seller:'YENİ İŞLETME',paymentCard:'309.07'};
   const c={...receipt(),id:'c',date:'2026-11-17',number:'002',paymentCard:'309.07'};
   const xml=buildPurchaseXML([a,b,c],{},'PUSULA',{selected:true});
-  assert.equal((xml.match(/<INVOICE DBOP=/g)||[]).length,1);assert.match(xml,/<DATE>25\.11\.2026<\/DATE>/);assert.match(xml,/<DOC_NUMBER>003<\/DOC_NUMBER>/);assert.match(xml,/<NOTES1>FİŞ NO:003 YENİ İŞLETME<\/NOTES1>/);assert.match(xml,/<DESCRIPTION>FİŞ NO:003 YENİ İŞLETME<\/DESCRIPTION>/);assert.match(xml,/<TOTAL_NET>330\.00<\/TOTAL_NET>/);assert.equal((xml.match(/<TRANSACTION>/g)||[]).length,3);
+  assert.equal((xml.match(/<INVOICE DBOP=/g)||[]).length,1);assert.match(xml,/<DATE>25\.11\.2026<\/DATE>/);assert.match(xml,/<DOC_NUMBER>003<\/DOC_NUMBER>/);assert.match(xml,/<DESCRIPTION>FİŞ NO:003 YENİ İŞLETME<\/DESCRIPTION>/);assert.match(xml,/<TOTAL_NET>330\.00<\/TOTAL_NET>/);assert.equal((xml.match(/<TRANSACTION>/g)||[]).length,3);
   assert.throws(()=>buildPurchaseXML([a,{...b,date:'2026-10-06'}],{},'PUSULA',{selected:true}),/Logo üzerinde henüz doğrulanamadı/);
   assert.throws(()=>buildPurchaseXML([a,{...b,paymentCard:'309.08'}],{},'PUSULA',{selected:true}),/ödeme kart/);
+});
+test('Karma KDV oranlı iki fiş Logo örneğindeki toplamlarla birleşir',()=>{
+  const first={...receipt(),id:'a',date:'2026-11-24',number:'0027',seller:'ORNEK BIR',paymentCard:'309.07',total:100000,vat:9091,lines:[{category:'meal',description:'FİŞ NO:0027 ORNEK BIR',gross:100000,vatRate:10,vatIncluded:true}]};
+  const second={...receipt(),id:'b',date:'2026-11-20',number:'41',seller:'ORNEK IKI',paymentCard:'309.07',total:110000,vat:18333,lines:[{category:'other',expenseCode:'770.15.001',description:'FİŞ NO:41 ORNEK IKI',gross:110000,vatRate:20,vatIncluded:true}]};
+  const profiles={categories:{other:{serviceCode:'770.15.001',vatCode20:'191.01.020'}}};
+  const xml=buildPurchaseXML([second,first],profiles,'PUSULA',{selected:true});
+  for(const tag of ['<DATE>24.11.2026</DATE>','<DOC_NUMBER>0027</DOC_NUMBER>','<TOTAL_VAT>274.24</TOTAL_VAT>','<TOTAL_GROSS>1825.76</TOTAL_GROSS>','<TOTAL_NET>2100.00</TOTAL_NET>','<TOTAL_SERVICES>2100.00</TOTAL_SERVICES>'])assert(xml.includes(tag),tag);
+  assert(xml.indexOf('FİŞ NO:0027 ORNEK BIR')<xml.indexOf('FİŞ NO:41 ORNEK IKI'));
 });
 test('Fişteki şahıs adı unvandan sonra gelir, açıklamada tekrarlanmaz',()=>{
   const raw=sample.replace('ÖRNEK LOKANTA','ÖRNEK LOKANTA\nDENİZ ÖRNEK');

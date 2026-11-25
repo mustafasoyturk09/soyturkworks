@@ -1,5 +1,5 @@
 {
-  "version": 193,
+  "version": 194,
   "files": [
     {
       "file": "404.html",
@@ -259,7 +259,7 @@
     },
     {
       "file": "expenses/app.mjs",
-      "sha256": "a12e6d029ddeff4c3334eb2425ad11cdf44f40e60a2a0f917975bd5b8392dc39"
+      "sha256": "dd97fee500ff6d4ffe824e38336d2f4423d3be0ea9ac2632b436b73036a36f66"
     },
     {
       "file": "expenses/crop.mjs",
@@ -271,11 +271,11 @@
     },
     {
       "file": "expenses/index.html",
-      "sha256": "5ca37987fafca8ae2414697024eeaf2ee1c790a190a71bb73be643f5a0b001c3"
+      "sha256": "b34b48d306cb681be1cb374743fbfbae5722e26f2342408c806cff00255657ba"
     },
     {
       "file": "expenses/model.mjs",
-      "sha256": "a2aa1a510087b0fc796f42eb5e4af00086598a18b7311aa608533370df8095cc"
+      "sha256": "082ff39e7ad7a0f488314270ff72acdcebbfc1beca2a1b7b6121acf8ac23504e"
     },
     {
       "file": "expenses/ocr-core.js",
