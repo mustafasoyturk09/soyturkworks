@@ -9362,7 +9362,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     return found.length===1?found[0]:'';
   }
   function s177Description(r,l){
-    var current=String(l.lineDescription||'').trim();if(current||l.s150Edited)return current;
+    var current=String(l.lineDescription||'').trim();if(current||l.s150Edited||l.s180MemoryApplied)return current;
     if(activeCompany!=='PUSULA')return '';
     var description=String(l.pdfDescription||l.sourceDescription||'').trim(),title=r.sourceXmlTitle||r.s149PdfTitle||r.unvan||'';
     if(String(r.vkn)==='4810552613'){
@@ -9411,7 +9411,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
       var serviceWarning=s150ServiceWarning(rec,l);if(serviceWarning)w.push((i+1)+'. satır: '+serviceWarning);
       if(!s150Gl(l))w.push((i+1)+'. satırın hizmet muhasebe hesabını girin.');
       if(!(l.quantity>0))w.push((i+1)+'. satırın adedi geçersiz.');if(!(l.price>0))w.push((i+1)+'. satırın birim fiyatı geçersiz.');if(!(l.vat>=0))w.push((i+1)+'. satırın KDV oranı geçersiz.');
-      if(s177University(rec)&&!s177Description(rec,l))w.push((i+1)+'. satır için şube adı Logo açıklamasına yazılmalı.');
+      if(s177University(rec)&&!s177Description(rec,l)&&!s180VerifiedEmptyDescription(rec,l))w.push((i+1)+'. satır için şube adı Logo açıklamasına yazılmalı.');
     });
     var dup=state.records.filter(function(x){return x!==rec&&x.docNo&&x.docNo===rec.docNo;}).length||state.history.some(function(x){return x.docNo&&x.docNo===rec.docNo;});
     if(dup)w.push('Belge No mükerrer: '+rec.docNo+' çalışma listesinde veya geçmişte birden fazla bulunuyor. İki kaydın da Belge No alanını kontrol edin.');
@@ -9419,7 +9419,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     if(Number.isFinite(rec.sourceBase)&&Math.abs(calculated.base-rec.sourceBase)>.05)w.push('XML matrahı ile satır toplamı uyuşmuyor.');
     if(Number.isFinite(rec.sourceVat)&&Math.abs(calculated.vat-rec.sourceVat)>.05)w.push('XML KDV tutarı ile satır KDV toplamı uyuşmuyor.');
     rec.warnings=w;rec.status=w.length?'review':'ready';
-    if(!w.length)rec.lines.forEach(function(l){s150RememberService(rec,l);});
+    if(activeCompany!=='PUSULA'&&!w.length)rec.lines.forEach(function(l){s150RememberService(rec,l);});
     if(rec.lines.some(function(l){return !!s150ServiceWarning(rec,l);})){rec.linesOpen=true;}
     return rec.status;
   }
@@ -9446,7 +9446,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     if(!r.unvan)f.unvan=1;if(!r.vkn)f.vkn=1;if(!r.arpCode||s102Warnings(r).length)f.arpCode=1;
     var dup=r.docNo&&(state.records.filter(function(x){return x!==r&&x.docNo===r.docNo;}).length||state.history.some(function(x){return x.docNo===r.docNo;}));
     if(dup)f.docNo=1;
-    (r.lines||[]).forEach(function(l){var x={};if(!String(l.sourceDescription||'').trim())x.sourceDescription=1;if(!l.code||s150ServiceWarning(r,l)){x.code=1;x.sourceDescription=1;x.lineDescription=1;}if(!s150Gl(l))x.glCode=1;if(!(l.quantity>0))x.quantity=1;if(!(l.price>0))x.price=1;if(!(l.vat>=0))x.vat=1;if(s177University(r)&&!s177Description(r,l))x.lineDescription=1;issue.lines.push(x);});
+    (r.lines||[]).forEach(function(l){var x={};if(!String(l.sourceDescription||'').trim())x.sourceDescription=1;if(!l.code||s150ServiceWarning(r,l)){x.code=1;x.sourceDescription=1;x.lineDescription=1;}if(!s150Gl(l))x.glCode=1;if(!(l.quantity>0))x.quantity=1;if(!(l.price>0))x.price=1;if(!(l.vat>=0))x.vat=1;if(s177University(r)&&!s177Description(r,l)&&!s180VerifiedEmptyDescription(r,l))x.lineDescription=1;issue.lines.push(x);});
     if(r.sourceNet&&Math.abs(totals(r).net-r.sourceNet)>.05)issue.lines.forEach(function(x){x.price=1;});
     return issue;
   }
@@ -9472,12 +9472,12 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
       '<div class="s80-desc s150-master"><label>Logo hizmet kartı açıklaması</label><input data-line-field="masterDef" value="'+htmlEsc(l.masterDef||'')+'"></div>'+
       '<div class="'+cls('glCode','s150-gl')+'"><label>Hizmet muhasebe hesabı</label><input data-line-field="glCode" value="'+htmlEsc(s150Gl(l))+'"></div>'+
       '<div class="s150-line-preview">Logo XML açıklaması: <strong>'+htmlEsc(s150ExportDescription(r,l)||'—')+'</strong> · KDV %'+htmlEsc(l.vat)+(l.withholdingRate?' · Tevkifat %'+htmlEsc(l.withholdingRate):'')+'</div>'+
-      (problem?'<div class="s150-line-review" tabindex="-1">'+htmlEsc(problem)+'</div>':'')+s156Actions('line',l.s156Editing,l.s156Undo)+'</div>';
+      (problem?'<div class="s150-line-review" tabindex="-1">'+htmlEsc(problem)+'</div>':'')+s156Actions('line',l.s156Editing,l.s156Undo)+(activeCompany==='PUSULA'?s180MemoryButtons(r,l):'')+'</div>';
 
   }
   function invoiceXml(r){
     if(!/^120\.[0-9A-Za-z.]+$/.test(r.arpCode)||!/^120\.[0-9A-Za-z.]+$/.test(salesGlCode(activeCompany,r.arpCode)))throw new Error('Satış cari hesabı 120 ile başlamalıdır.');
-    if(s177University(r)&&r.lines.some(function(l){return !s177Description(r,l);}))throw new Error('İstanbul Medipol Üniversitesi şube adını tamamlayın.');
+    if(s177University(r)&&r.lines.some(function(l){return !s177Description(r,l)&&!s180VerifiedEmptyDescription(r,l);}))throw new Error('Şube açıklamasını tamamlayın veya boş bırakılacağını doğrulayın.');
     if(!s151CompanyKnown(activeCompany)||r.company&&r.company!==activeCompany||s151HardIssues(r).length)throw new Error('Cari veya firma çelişkisi çözülmeden XML oluşturulamaz.');
     if(!s156Profile(activeCompany))throw new Error('Bu firma için hesap planı ve XML profili tanımlanmalı.');
     var t=totals(r),month=String(r.date.split('.')[1]||''),year=String(r.date.split('.')[2]||''),isKib=s156Profile(activeCompany)==='KIB',rows=[];
@@ -9625,7 +9625,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
   document.getElementById('s80PdfClose').addEventListener('click',closePdf);
   pdfModal.addEventListener('click',function(e){if(e.target===pdfModal)closePdf();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&pdfModal.classList.contains('open'))closePdf();});
-  document.getElementById('s79List').addEventListener('click',function(e){if(e.target.closest('[data-clear-issue]')){s152ClearFilter();return;}var jump=e.target.closest('[data-issue-jump]');if(jump){var host=jump.closest('.s79-card'),record=state.records.find(function(x){return host&&x.id===host.dataset.id;});if(record)s152GoToIssue(record,jump.dataset.issueJump);return;}var card=e.target.closest('.s79-card');if(!card)return;var r=state.records.find(function(x){return x.id===card.dataset.id;});if(!r)return;var action=e.target.closest('[data-action]');if(!action)return;if(s156RowClick(e,r,action))return;if(action.dataset.action==='toggle'){r.open=!r.open;}else if(action.dataset.action==='lines'){r.linesOpen=!r.linesOpen;}else if(action.dataset.action==='delete'){if(state.fileUrls[r.id])URL.revokeObjectURL(state.fileUrls[r.id]);delete state.fileUrls[r.id];state.records=state.records.filter(function(x){return x!==r;});}else if(action.dataset.action==='s102-confirm'){s102Confirm(r);}else if(action.dataset.action==='s150-confirm-service'){var box=action.closest('[data-line]');if(box)s150ConfirmService(r,r.lines[+box.dataset.line]);}else if(action.dataset.action==='source'&&state.fileUrls[r.id]){if(r.sourceKind==='xml')window.open(state.fileUrls[r.id],'_blank','noopener');else openPdf(state.fileUrls[r.id]);}render();});
+  document.getElementById('s79List').addEventListener('click',function(e){if(e.target.closest('[data-clear-issue]')){s152ClearFilter();return;}var jump=e.target.closest('[data-issue-jump]');if(jump){var host=jump.closest('.s79-card'),record=state.records.find(function(x){return host&&x.id===host.dataset.id;});if(record)s152GoToIssue(record,jump.dataset.issueJump);return;}var card=e.target.closest('.s79-card');if(!card)return;var r=state.records.find(function(x){return x.id===card.dataset.id;});if(!r)return;var action=e.target.closest('[data-action]');if(!action)return;if(s156RowClick(e,r,action))return;if(action.dataset.action==='toggle'){r.open=!r.open;if(activeCompany==='PUSULA')s180ShowPreview(r);}else if(action.dataset.action==='lines'){r.linesOpen=!r.linesOpen;}else if(action.dataset.action==='delete'){if(state.fileUrls[r.id])URL.revokeObjectURL(state.fileUrls[r.id]);delete state.fileUrls[r.id];state.records=state.records.filter(function(x){return x!==r;});}else if(action.dataset.action==='s102-confirm'){s102Confirm(r);}else if(action.dataset.action==='s150-confirm-service'){var box=action.closest('[data-line]');if(box)s150ConfirmService(r,r.lines[+box.dataset.line]);}else if(action.dataset.action==='source'&&state.fileUrls[r.id]){if(r.sourceKind==='xml')window.open(state.fileUrls[r.id],'_blank','noopener');else openPdf(state.fileUrls[r.id]);}render();});
   document.getElementById('s79List').addEventListener('change',s156DraftChange);
   render();
   function s149ReadRecipient(items){
@@ -9733,7 +9733,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     var matches=s150ServiceEntries(r,l),signatures=Array.from(new Set(matches.map(s150ServiceSignature)));
     if(signatures.length!==1||matches.some(function(x){return x.forgotten;}))return;
     var x=matches[0];l.code=x.code;l.masterDef=x.masterDef;l.glCode=x.glCode;
-    l.lineDescription=x.usePdfDescription?l.sourceDescription:s150CurrentPeriod(x,l);l.s150FromMemory=true;
+    l.lineDescription=x.usePdfDescription?l.sourceDescription:s150CurrentPeriod(x,l);l.s150FromMemory=true;l.s180MemoryApplied=true;
   }
   function s150CurrentPeriod(entry,line){
     var result=entry.lineDescription,old=String(entry.sourceDescription||''),current=String(line.pdfDescription||line.sourceDescription||'');
@@ -9780,7 +9780,8 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     var entries=s150ServiceEntries(r,l),signatures=Array.from(new Set(entries.map(s150ServiceSignature)));
     if(entries.some(function(x){return x.forgotten;}))return 'Bu açıklamanın eşleşmesi unutuldu; doğru hizmet ve açıklamayı bir kez hatırlatın.';
     if(signatures.length>1)return 'Bu XML hizmeti için hafızada çelişen eşleşmeler var; doğru kodu seçip kaydedin.';
-    if(entries.length){return s150ServiceSignature(entries[0])===s150ServiceSignature(l)?'':'XML hizmetinin hatırlanan Logo kodu veya açıklaması değişti; kontrol edin.';}
+    if(entries.length){var same=s150ServiceSignature(entries[0])===s150ServiceSignature(l);if(activeCompany==='PUSULA')same=same&&s150Text(s177Description(r,l))===s150Text(entries[0].usePdfDescription?l.sourceDescription:s150CurrentPeriod(entries[0],l));return same?'':'XML hizmetinin hatırlanan Logo kodu veya açıklaması değişti; kontrol edin.';}
+    if(activeCompany==='PUSULA'&&s177Description(r,l))return 'Logo satır açıklamasını örnekle karşılaştırıp hafızaya kaydedin.';
     if((r.sourceKind==='xml'||!s150Profile(r).length)&&s150Builtin(r,l))return '';
     return 'Yeni XML hizmeti. Logo hizmet kodunu ve açıklamasını kontrol edip kaydedin.';
   }
@@ -10250,7 +10251,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     var draft=Object.assign({},s156LineValues(l),l.s156Draft||{}),trial=Object.assign({},l,draft),entry=s155ServiceItem(r,trial);
     trial.s150Edited=true;draft.lineDescription=s177Description(r,trial);entry.lineDescription=draft.lineDescription;
     if(!/^[A-Z0-9][A-Z0-9._-]{0,39}$/.test(draft.code||'')||!String(draft.masterDef||'').trim()||!/^\d{3}(?:\.[0-9A-Za-z]+)+$/.test(draft.glCode||'')||(s177University(r)&&!draft.lineDescription)||!(draft.quantity>0)||!(draft.price>0)||!(draft.vat>=0&&draft.vat<=100)||!(draft.withholdingRate>=0&&draft.withholdingRate<=100)){showNotice('Satırdaki eksik veya geçersiz alanları düzeltin.');return false;}
-    var canRemember=!s102Warnings(r).length&&s150ValidService(entry),undo={values:s156LineValues(l),services:canRemember?s156Clone(s156Related(entry)):[]};
+    var canRemember=activeCompany!=='PUSULA'&&!s102Warnings(r).length&&s150ValidService(entry),undo={values:s156LineValues(l),services:canRemember?s156Clone(s156Related(entry)):[]};
     Object.assign(l,draft);l.s150Edited=true;
     if(canRemember)s150RememberService(r,l);
     l.s156Undo=undo;l.s156Editing=false;l.s156Changed=false;delete l.s156Draft;
@@ -10261,6 +10262,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     var l=r.lines[index];if(!l||s102Busy)return;
     if(l.s156Editing){delete l.s156Draft;l.s156Editing=false;l.s156Changed=false;render();return;}
     var undo=l.s156Undo;if(!undo)return;
+    if(activeCompany==='PUSULA'){Object.assign(l,undo.values);l.s150Edited=true;delete l.s156Undo;render();return;}
     var entry=s155ServiceItem(r,l),key=s155ServiceKey(entry);
     s150Services=s150Services.filter(function(x){return s155ServiceKey(x)!==key;}).concat(s156Clone(undo.services));
     s155RefreshService(entry);Object.assign(l,undo.values);l.s150Edited=true;delete l.s156Undo;
@@ -10313,6 +10315,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
   function s156RowClick(e,r,action){
     var name=action.dataset.action;if(name.indexOf('s156-')!==0)return false;
     var box=action.closest('[data-line]'),index=box?+box.dataset.line:null;
+    if(name==='s156-memory-save'){s180SaveMemory(r,index);return true;}else if(name==='s156-memory-undo'){s180UndoMemory(r,index);return true;}
     if(name==='s156-line-edit')s156StartEdit(r,index);else if(name==='s156-line-save')s156SaveLine(r,index);else if(name==='s156-line-undo')s156UndoLine(r,index);
     else if(name==='s156-record-edit')s156StartEdit(r,null);else if(name==='s156-record-save')s156SaveRecord(r);else if(name==='s156-record-undo')s156UndoRecord(r);return true;
   }
@@ -10376,7 +10379,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
   function s156LoadWork(){
     try{var all=JSON.parse(s153Storage.getItem('fc_sales_work_v156')||'{}');Object.keys(companyStates).forEach(function(c){if(!Array.isArray(all[c]))return;companyStates[c].records=all[c].filter(function(r){return r&&r.company===c&&typeof r.id==='string'&&Array.isArray(r.lines);}).slice(0,500);});s156MemoryUndo=JSON.parse(s153Storage.getItem('fc_sales_row_undo_v156')||'{}')||{};}catch(e){}
   }
-  function s156FileValues(){var values={};values[s102MemoryKey]=JSON.stringify(s102Memory);values[s150ServiceKey]=JSON.stringify(s150Services);values.fc_sales_memory_undo_v1=JSON.stringify(s151Undo);Object.keys(HISTORY_KEYS).forEach(function(c){values[HISTORY_KEYS[c]]=JSON.stringify(companyStates[c].history);});values.fc_sales_work_v156=JSON.stringify(s156WorkValues());values.fc_sales_row_undo_v156=JSON.stringify(s156MemoryUndo);values.fc_sales_companies_v156=JSON.stringify(s156ExtraCompanies);return values;}
+  function s156FileValues(){var values={};values[s102MemoryKey]=JSON.stringify(s102Memory);values[s150ServiceKey]=JSON.stringify(s150Services);values.fc_sales_memory_undo_v1=JSON.stringify(s151Undo);Object.keys(HISTORY_KEYS).forEach(function(c){values[HISTORY_KEYS[c]]=JSON.stringify(companyStates[c].history);});values.fc_sales_work_v156=JSON.stringify(s156WorkValues());values.fc_sales_row_undo_v156=JSON.stringify(s156MemoryUndo);values.fc_sales_companies_v156=JSON.stringify(s156ExtraCompanies);values.fc_sales_dashboard_pusula_v1=JSON.stringify(s180DashboardIndex||{});return values;}
   function s156Stamp(values){var text=JSON.stringify(Object.keys(values).filter(function(k){return k!=='fc156_file_stamp';}).sort().map(function(k){return [k,values[k]];})),hash=2166136261;for(var i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}return String(hash>>>0)+':'+text.length;}
   function s156UpdateSaveLight(){var button=document.getElementById('s156SaveAll');if(!button||!s156Ready)return;var dirty=s156Stamp(s156FileValues())!==s156SavedStamp;button.classList.toggle('s156-unsaved',dirty);button.setAttribute('aria-label',dirty?'Kaydet ve Güncelle — Dosyaya Alınmamış Değişiklik Var':'Kaydet ve Güncelle');button.disabled=s102Busy;}
   async function s156Download(){
@@ -10440,6 +10443,124 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     '@media(max-width:600px){#page-satis .s157-upload-search{gap:10px}#page-satis #s79Drop{flex-basis:250px;width:250px}#page-satis #s156Search{width:285px;flex-basis:285px}#page-satis .s157-upload-search>.s156-save-all{margin-left:0}}';
   document.head.append(s157Style);
 
+  // Pusula'da hizmet hafızası her satır için ayrı ve geri alınabilir.
+  function s180MemoryKey(r,l){return 'row:'+s155ServiceKey(s155ServiceItem(r,l));}
+  function s180VerifiedEmptyDescription(r,l){var entries=s150ServiceEntries(r,l);return entries.length===1&&!entries[0].forgotten&&!entries[0].usePdfDescription&&!String(entries[0].lineDescription||'').trim()&&s150ServiceSignature(entries[0])===s150ServiceSignature(l);}
+  function s180MemoryButtons(r,l){
+    var entry=s155ServiceItem(r,l),matches=s156Related(entry),saved=matches.length===1&&!matches[0].forgotten&&s150ServiceSignature(matches[0])===s150ServiceSignature(entry)&&s150Text(matches[0].lineDescription)===s150Text(entry.lineDescription);
+    return '<div class="s180-memory-actions"><button type="button" class="s79-btn s180-memory-save" data-action="s156-memory-save"'+(saved||l.s156Editing?' disabled':'')+'>'+(saved?'Hafızada':'Hafızaya Kaydet')+'</button><button type="button" class="s79-btn" data-action="s156-memory-undo"'+(!s156MemoryUndo[s180MemoryKey(r,l)]?' disabled':'')+'>Hafızadan Geri Al</button></div>';
+  }
+  function s180SaveMemory(r,index){
+    var l=r.lines[index];if(!l||l.s156Editing||s102Busy)return;
+    var entry=s155ServiceItem(r,l),key=s180MemoryKey(r,l);
+    if(s102Warnings(r).length||!s150ValidService(entry)){showNotice('Önce cari ve satırdaki eksik bilgileri tamamlayın.');return;}
+    var before=s156Clone(s156Related(entry));
+    s150Services=s150Services.filter(function(x){return s155ServiceKey(x)!==s155ServiceKey(entry);});
+    s150Services.push(entry);s156MemoryUndo[key]={before:before,after:s156Clone(entry)};
+    s151Persist();s156Persist();render();showNotice('Bu satırın eşleşmesi hafızaya kaydedildi.');
+  }
+  function s180UndoMemory(r,index){
+    var l=r.lines[index];if(!l||s102Busy)return;var entry=s155ServiceItem(r,l),key=s180MemoryKey(r,l),undo=s156MemoryUndo[key];if(!undo)return;
+    var now=s156Related(entry);if(now.length!==1||JSON.stringify(now[0])!==JSON.stringify(undo.after)){showNotice('Bu eşleşme daha sonra değişmiş; yanlış bir kaydı silmemek için hafıza geri alınmadı.');return;}
+    s150Services=s150Services.filter(function(x){return s155ServiceKey(x)!==s155ServiceKey(entry);}).concat(s156Clone(undo.before));
+    if(!undo.before.length)s150Services.push(Object.assign({},entry,{forgotten:true}));
+    delete s156MemoryUndo[key];s151Persist();s156Persist();render();showNotice('Yalnızca bu satırın hafıza kaydı geri alındı.');
+  }
+  // Görünüm ve özet yalnızca Pusula çalışma alanına uygulanır.
+  var s180Dashboard=document.createElement('section');s180Dashboard.className='s180-dashboard';
+  s180Dashboard.innerHTML='<div class="s180-dash-head"><div><span class="s180-kicker">SATIŞ GENEL BAKIŞI</span><h3>Faturalarınız bir bakışta</h3><p>Bu cihazda yüklenen XML’lerden hesaplanır; tüm satışları kapsamayabilir.</p></div><div><select id="s180Year" aria-label="Yıl seçin"></select> <button type="button" id="s180Theme" class="s79-btn">☀ Açık mod</button></div></div><div id="s180Cards" class="s180-cards"></div><div id="s180Months" class="s180-months"></div>';
+  page.querySelector('.s79-top').after(s180Dashboard);
+  var s180List=document.getElementById('s79List'),s180Columns=document.createElement('div'),s180Preview=document.createElement('aside');
+  s180Columns.className='s180-columns';s180List.parentNode.insertBefore(s180Columns,s180List);s180Columns.appendChild(s180List);
+  s180Preview.className='s180-preview';s180Preview.innerHTML='<div class="s180-preview-title"><strong>Fatura önizlemesi</strong><span>XML görünümü</span></div><div class="s180-preview-stage" id="s180PreviewStage"><div class="s180-preview-paper" id="s180PreviewPaper"><p>Bir fatura seçtiğinizde bilgileri burada görüntülenir.</p></div></div><div class="s180-preview-tools"><button type="button" class="s79-btn" id="s180ZoomOut" aria-label="Uzaklaştır">⌕ −</button><output id="s180ZoomValue">%100</output><button type="button" class="s79-btn" id="s180ZoomIn" aria-label="Yakınlaştır">⌕ +</button><button type="button" class="s79-btn" id="s180Pan" aria-pressed="false" title="Sürükle">✋</button><button type="button" class="s79-btn" id="s180Text" aria-pressed="true" title="Metni seç">↖</button></div><small>XML bilgilerinden oluşturulmuş görünümdür; orijinal PDF değildir.</small>';s180Columns.appendChild(s180Preview);
+  var s180Zoom=1,s180Dragging=false,s180Hand=false,s180Point=null;
+  function s180ShowPreview(r){var paper=document.getElementById('s180PreviewPaper'),t=totals(r);paper.innerHTML='<h3>FATURA</h3><p><b>Fatura No:</b> '+htmlEsc(r.docNo||'—')+'<br><b>Tarih:</b> '+htmlEsc(r.date||'—')+'</p><hr><p><b>Alıcı</b><br>'+htmlEsc(r.unvan||'—')+'<br>'+htmlEsc(r.sourceAddress||'')+'</p><table><thead><tr><th>Hizmet</th><th>Adet</th><th>Tutar</th></tr></thead><tbody>'+r.lines.map(function(l){return '<tr><td>'+htmlEsc(l.sourceDescription||'—')+'</td><td>'+htmlEsc(l.quantity)+'</td><td>'+money((+l.quantity||0)*(+l.price||0))+' ₺</td></tr>';}).join('')+'</tbody></table><p class="s180-paper-total"><b>Toplam: '+money(t.net)+' ₺</b></p>';}
+  function s180SetZoom(value){s180Zoom=Math.max(.6,Math.min(2.5,value));document.getElementById('s180PreviewPaper').style.zoom=String(s180Zoom);document.getElementById('s180ZoomValue').textContent='%'+Math.round(s180Zoom*100);}
+  document.getElementById('s180ZoomOut').addEventListener('click',function(){s180SetZoom(s180Zoom-.2);});document.getElementById('s180ZoomIn').addEventListener('click',function(){s180SetZoom(s180Zoom+.2);});
+  var s180Stage=document.getElementById('s180PreviewStage');function s180Mode(hand){s180Hand=hand;s180Stage.classList.toggle('hand',hand);document.getElementById('s180Pan').setAttribute('aria-pressed',String(hand));document.getElementById('s180Text').setAttribute('aria-pressed',String(!hand));}
+  document.getElementById('s180Pan').addEventListener('click',function(){s180Mode(true);});document.getElementById('s180Text').addEventListener('click',function(){s180Mode(false);});
+  s180Stage.addEventListener('pointerdown',function(e){if(!s180Hand||e.button!==0)return;s180Dragging=true;s180Point={x:e.clientX,y:e.clientY,left:s180Stage.scrollLeft,top:s180Stage.scrollTop};s180Stage.setPointerCapture(e.pointerId);});s180Stage.addEventListener('pointermove',function(e){if(s180Dragging&&s180Point){s180Stage.scrollLeft=s180Point.left-(e.clientX-s180Point.x);s180Stage.scrollTop=s180Point.top-(e.clientY-s180Point.y);}});s180Stage.addEventListener('pointerup',function(){s180Dragging=false;});s180Stage.addEventListener('pointercancel',function(){s180Dragging=false;});
+  var s180Import=document.createElement('div');s180Import.className='s180-import';
+  s180Import.innerHTML='<button type="button" class="s79-btn" id="s180ImportButton">Logo örneklerini karşılaştır</button><input type="file" id="s180ImportFile" accept=".xml,application/xml,text/xml" hidden><span>Önce aynı faturaların İzibiz XML’lerini yükleyin; ardından Logo örnek XML’ini seçin.</span>';
+  document.querySelector('#page-satis .s79-actions').appendChild(s180Import);
+  document.getElementById('s180ImportButton').addEventListener('click',function(){document.getElementById('s180ImportFile').click();});
+  document.getElementById('s180ImportFile').addEventListener('change',async function(){
+    var file=this.files[0];this.value='';if(!file||activeCompany!=='PUSULA'||s102Busy)return;
+    if(file.size>20*1024*1024){showNotice('Logo örneği 20 MB sınırını aşıyor.');return;}
+    try{
+      var source=new TextDecoder('windows-1254').decode(await file.arrayBuffer());
+      if(/<!\s*(?:DOCTYPE|ENTITY)/i.test(source))throw new Error('XML bildirimleri güvenli değil.');
+      var xml=new DOMParser().parseFromString(source,'application/xml');if(xml.querySelector('parsererror')||xml.documentElement.localName!=='SALES_INVOICES')throw new Error('Geçerli bir Logo satış XML dosyası seçin.');
+      function child(node,name){var x=Array.from(node.children).find(function(y){return y.localName===name;});return x?x.textContent.trim():'';}
+      var logos=Array.from(xml.documentElement.children).filter(function(x){return x.localName==='INVOICE';}),byDoc=new Map(),duplicate=new Set();
+      logos.forEach(function(x){var no=child(x,'DOC_NUMBER');if(byDoc.has(no))duplicate.add(no);else byDoc.set(no,x);});
+      var proposals=new Map(),conflicts=new Set(),matched=0,skipped=0;
+      state.records.forEach(function(r){
+        var ref=byDoc.get(r.docNo);if(!ref||duplicate.has(r.docNo)){skipped++;return;}
+        var linesNode=Array.from(ref.children).find(function(x){return x.localName==='TRANSACTIONS';});
+        var tx=linesNode?Array.from(linesNode.children).filter(function(x){return x.localName==='TRANSACTION';}):[];
+        if(child(ref,'DATE')!==r.date||child(ref,'ARP_CODE')!==r.arpCode||tx.length!==r.lines.length||!Number.isFinite(r.sourceNet)||Math.abs(Number(child(ref,'TOTAL_NET'))-r.sourceNet)>.05||s102Warnings(r).length||(r.sourceWarnings||[]).length){skipped++;return;}
+        var entries=[];for(var i=0;i<tx.length;i++){
+          var l=r.lines[i],t=tx[i],draft=Object.assign({},l,{s150Edited:true,lineDescription:child(t,'DESCRIPTION')});
+          if(child(t,'MASTER_CODE')!==l.code||child(t,'GL_CODE1')!==s150Gl(l)||Math.abs(Number(child(t,'QUANTITY'))-Number(l.quantity))>.0001||Math.abs(Number(child(t,'PRICE'))-Number(l.price))>.0001||Math.abs(Number(child(t,'VAT_RATE'))-Number(l.vat))>.0001){entries=[];break;}
+          var entry=s155ServiceItem(r,draft);if(!s150ValidService(entry)){entries=[];break;}entries.push({entry:entry,record:r,line:l});
+        }
+        if(entries.length!==r.lines.length){skipped++;return;}matched++;
+        entries.forEach(function(p){var key=s155ServiceKey(p.entry),old=proposals.get(key);if(old&&(s150ServiceSignature(old.entry)!==s150ServiceSignature(p.entry)||s150Text(old.entry.lineDescription)!==s150Text(p.entry.lineDescription)))conflicts.add(key);else if(!old)proposals.set(key,p);});
+      });
+      var applied=0;proposals.forEach(function(p,key){if(conflicts.has(key))return;var before=s156Clone(s156Related(p.entry));s150Services=s150Services.filter(function(x){return s155ServiceKey(x)!==key;});s150Services.push(p.entry);s156MemoryUndo['row:'+key]={before:before,after:s156Clone(p.entry)};applied++;});
+      state.records.forEach(function(r){r.lines.forEach(function(l){var key=s155ServiceKey(s155ServiceItem(r,l)),proposal=proposals.get(key);if(proposal&&!conflicts.has(key)){l.lineDescription=proposal.entry.lineDescription;l.s150Edited=true;}});});
+      s151Persist();s156Persist();render();showNotice(matched+' fatura karşılaştırıldı; '+applied+' satır eşleşmesi kaydedildi.'+(skipped?' '+skipped+' fatura tam eşleşmedi ve değiştirilmedi.':'')+(conflicts.size?' '+conflicts.size+' çelişkili eşleşme kaydedilmedi.':''));
+    }catch(error){showNotice('Logo örneği okunamadı: '+error.message);}
+  });
+  var s180Theme='dark',s180DashboardIndex={},s180DashboardStamp='';try{s180Theme=s153Storage.getItem('fc_sales_pusula_theme')||'dark';s180DashboardIndex=JSON.parse(s153Storage.getItem('fc_sales_dashboard_pusula_v1')||'{}')||{};s180DashboardStamp=JSON.stringify(s180DashboardIndex);}catch(e){s180DashboardIndex={};}
+  function s180SetTheme(){page.classList.toggle('s180-pusula',activeCompany==='PUSULA');page.classList.toggle('s180-light',activeCompany==='PUSULA'&&s180Theme==='light');document.getElementById('s180Theme').textContent=s180Theme==='dark'?'☀ Açık mod':'☾ Koyu mod';}
+  document.getElementById('s180Theme').addEventListener('click',function(){s180Theme=s180Theme==='dark'?'light':'dark';try{s153Storage.setItem('fc_sales_pusula_theme',s180Theme);}catch(e){}s180SetTheme();});
+  document.getElementById('s180Year').addEventListener('change',s180RenderDashboard);
+  function s180RenderDashboard(){
+    s180SetTheme();if(activeCompany!=='PUSULA')return;
+    var year=document.getElementById('s180Year'),selected=year.value,years=[new Date().getFullYear()];
+    state.records.forEach(function(r){var d=isoDate(r.date),amount=Number.isFinite(r.sourceNet)?r.sourceNet:totals(r).net;if(r.status!=='error'&&/^PUS/i.test(r.docNo||'')&&/^\d{4}-\d{2}-\d{2}$/.test(d))s180DashboardIndex[r.docNo]={date:d,amount:amount};});
+    var stamp=JSON.stringify(s180DashboardIndex);if(stamp!==s180DashboardStamp){try{s153Storage.setItem('fc_sales_dashboard_pusula_v1',stamp);s180DashboardStamp=stamp;}catch(e){}}
+    Object.values(s180DashboardIndex).forEach(function(x){var y=+String(x.date||'').slice(0,4);if(y&&years.indexOf(y)<0)years.push(y);});years.sort(function(a,b){return b-a;});
+    year.innerHTML=years.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');year.value=years.indexOf(+selected)>=0?selected:String(years[0]);
+    var data=Array.from({length:12},function(){return{count:0,amount:0};});Object.values(s180DashboardIndex).forEach(function(r){var d=String(r.date||''),m=+d.slice(5,7);if(+d.slice(0,4)===+year.value&&m>=1&&m<=12){data[m-1].count++;data[m-1].amount+=Number(r.amount)||0;}});
+    var latest=data.reduce(function(a,x,i){return x.count?i:a;},-1),current=latest>=0?data[latest]:{count:0,amount:0},previous=latest>0?data[latest-1]:null;if(latest===0){var prior=Object.values(s180DashboardIndex).filter(function(x){return String(x.date||'').slice(0,7)===(+year.value-1)+'-12';});if(prior.length)previous={count:prior.length,amount:prior.reduce(function(a,x){return a+(Number(x.amount)||0);},0)};}var delta=previous&&previous.count?((current.count-previous.count)/previous.count*100):null,amountDelta=previous&&previous.amount?((current.amount-previous.amount)/previous.amount*100):null;
+    var ready=state.records.filter(function(r){return r.status==='ready';}).length,review=state.records.filter(function(r){return r.status==='review';}).length,errors=state.records.filter(function(r){return r.status==='error';}).length;
+    document.getElementById('s180Cards').innerHTML=[['Çalışma listesi',state.records.length,'blue'],['Hazır',ready,'green'],['Kontrol gerekli',review,'amber'],['Hatalı',errors,'red'],['Son ay tutarı',money(current.amount)+' ₺','purple'],['Adet değişimi',delta===null?'—':(delta>0?'+':'')+delta.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%','cyan'],['Tutar değişimi',amountDelta===null?'—':(amountDelta>0?'+':'')+amountDelta.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%','cyan']].map(function(x){return '<div class="s180-card '+x[2]+'"><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>';}).join('');
+    document.getElementById('s180Months').innerHTML=data.map(function(x,i){return '<div class="s180-month'+(i===latest?' current':'')+'"><span>'+MONTH_NAMES[i].slice(0,3)+'</span><b>'+x.count+'</b><small>'+money(x.amount)+' ₺</small></div>';}).join('');
+  }
+  var s180Render=render;render=function(){s180Render();s180RenderDashboard();};
+  var s180Style=document.createElement('style');s180Style.textContent=`
+  #page-satis:not(.s180-pusula) .s180-dashboard{display:none}
+  #page-satis.s180-pusula{--sbg:#081524;--spanel:#10243a;--sborder:#28445e;--stext:#edf6ff;--smuted:#9bb0c5;color:var(--stext)}
+  #page-satis.s180-pusula.s180-light{--sbg:#f3f7fb;--spanel:#fff;--sborder:#cddae7;--stext:#162b40;--smuted:#586e83}
+  #page-satis.s180-pusula .page-head h1,#page-satis.s180-pusula h2,#page-satis.s180-pusula h3{color:var(--stext)}
+  #page-satis.s180-pusula .sales-shell{background:var(--sbg);border:1px solid var(--sborder);border-radius:20px;overflow:hidden}
+  #page-satis.s180-pusula .s79-top,#page-satis.s180-pusula .s79-actions,#page-satis.s180-pusula .s79-toolbar,#page-satis.s180-pusula .s79-list{background:var(--sbg);color:var(--stext)}
+  #page-satis.s180-pusula .s79-top{background:linear-gradient(115deg,#0b1d34,#133a56);padding:24px}
+  #page-satis.s180-pusula .s79-top h2{color:#fff}
+  #page-satis.s180-pusula .s180-dashboard{padding:24px;background:var(--sbg);color:var(--stext)}
+  #page-satis.s180-pusula .s180-dash-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+  #page-satis.s180-pusula .s180-dash-head h3{margin:5px 0;font-size:20px}#page-satis.s180-pusula .s180-dash-head p{margin:0;color:var(--smuted);font-size:12px}
+  #page-satis.s180-pusula .s180-kicker{font-size:10px;letter-spacing:.14em;color:#20c5e6;font-weight:700}
+  #page-satis.s180-pusula .s180-cards{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin:18px 0}
+  #page-satis.s180-pusula .s180-card{padding:15px;border-radius:13px;border:1px solid var(--sborder);background:var(--spanel);min-width:0;border-top:3px solid #39bdf4}
+  #page-satis.s180-pusula .s180-card.green{border-top-color:#27d6a0}#page-satis.s180-pusula .s180-card.amber{border-top-color:#ffbd4b}#page-satis.s180-pusula .s180-card.red{border-top-color:#ff6d77}#page-satis.s180-pusula .s180-card.purple{border-top-color:#a98cff}#page-satis.s180-pusula .s180-card.cyan{border-top-color:#2ce0de}
+  #page-satis.s180-pusula .s180-card span,#page-satis.s180-pusula .s180-card strong{display:block}#page-satis.s180-pusula .s180-card span{font-size:11px;color:var(--smuted)}#page-satis.s180-pusula .s180-card strong{margin-top:9px;font-size:21px;overflow-wrap:anywhere}
+  #page-satis.s180-pusula .s180-months{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px}#page-satis.s180-pusula .s180-month{background:var(--spanel);border:1px solid var(--sborder);border-radius:9px;padding:8px 4px;text-align:center;min-width:0}#page-satis.s180-pusula .s180-month.current{border-color:#20c5e6;box-shadow:0 0 14px #20c5e633}
+  #page-satis.s180-pusula .s180-month span,#page-satis.s180-pusula .s180-month b,#page-satis.s180-pusula .s180-month small{display:block}#page-satis.s180-pusula .s180-month span,#page-satis.s180-pusula .s180-month small{font-size:10px;color:var(--smuted);overflow-wrap:anywhere}#page-satis.s180-pusula .s180-month b{font-size:16px;margin:4px 0}
+  #page-satis.s180-pusula .s79-card,#page-satis.s180-pusula .s79-detail,#page-satis.s180-pusula .s79-line,#page-satis.s180-pusula .s79-empty{background:var(--spanel);color:var(--stext);border-color:var(--sborder)}
+  #page-satis.s180-pusula .s79-card label,#page-satis.s180-pusula .s79-card small{color:var(--smuted)}#page-satis.s180-pusula .s79-card input{background:var(--sbg);color:var(--stext);border-color:var(--sborder)}#page-satis.s180-pusula .s90-issue input{border-color:#ff9961;box-shadow:0 0 0 2px #ff996133}
+  #page-satis.s180-pusula .s180-memory-actions{display:flex;gap:8px;grid-column:1/-1;flex-wrap:wrap}#page-satis.s180-pusula .s180-memory-save:not(:disabled){background:#0c9974;color:white;box-shadow:0 0 14px #0c997466}#page-satis.s180-pusula .s180-memory-actions button:disabled{opacity:.4}
+  #page-satis:not(.s180-pusula) .s180-import{display:none}#page-satis.s180-pusula .s180-import{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--smuted);font-size:12px;width:100%;margin-top:12px}
+  #page-satis .s180-columns{display:block}#page-satis .s180-preview{display:none}#page-satis.s180-pusula .s180-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;align-items:start;padding:0 18px 18px}#page-satis.s180-pusula .s180-columns .s79-list{min-width:0;padding:0}#page-satis.s180-pusula .s180-preview{display:block;border:1px solid var(--sborder);background:var(--spanel);border-radius:14px;padding:13px;min-width:0;color:var(--stext)}
+  #page-satis.s180-pusula .s180-preview-title{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:10px}#page-satis.s180-pusula .s180-preview-title span,#page-satis.s180-pusula .s180-preview small{color:var(--smuted);font-size:10px}#page-satis.s180-pusula .s180-preview-stage{height:460px;overflow:auto;background:#dae1e7;border-radius:6px;cursor:text}#page-satis.s180-pusula .s180-preview-stage.hand{cursor:grab;user-select:none;touch-action:none}#page-satis.s180-pusula .s180-preview-paper{box-sizing:border-box;background:white;color:#162334;width:100%;min-height:460px;padding:20px;font-size:11px;line-height:1.5;user-select:text}#page-satis.s180-pusula .s180-preview-paper h3{color:#162334;font-size:17px}#page-satis.s180-pusula .s180-preview-paper table{width:100%;border-collapse:collapse}#page-satis.s180-pusula .s180-preview-paper td,#page-satis.s180-pusula .s180-preview-paper th{border:1px solid #aebac6;padding:5px;text-align:left}#page-satis.s180-pusula .s180-paper-total{text-align:right}#page-satis.s180-pusula .s180-preview-tools{display:flex;align-items:center;justify-content:center;gap:5px;margin:10px 0}#page-satis.s180-pusula .s180-preview-tools button{padding:6px 8px}#page-satis.s180-pusula .s180-preview-tools [aria-pressed=true]{background:#087cac;color:white}
+  @media(max-width:1100px){#page-satis.s180-pusula .s180-columns{grid-template-columns:minmax(0,1fr)}#page-satis.s180-pusula .s180-preview-stage{height:350px}}
+  #page-satis.s180-pusula .page-head h1{color:#162b40}#page-satis.s180-pusula .s79-top h2{color:#fff}
+  @media(max-width:1100px){#page-satis.s180-pusula .s180-cards{grid-template-columns:repeat(3,minmax(0,1fr))}#page-satis.s180-pusula .s180-months{grid-template-columns:repeat(6,minmax(0,1fr))}}
+  @media(max-width:600px){#page-satis.s180-pusula .s180-dashboard{padding:15px}#page-satis.s180-pusula .s180-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#page-satis.s180-pusula .s180-months{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  `;document.head.appendChild(s180Style);
   s156LoadWork();s156Ready=true;s156SavedStamp=s153Storage.getItem('fc156_file_stamp')||s156Stamp(s156FileValues());
   s156RenderCompanyButtons();switchSalesCompany(activeCompany);
   if(window.addEventListener)window.addEventListener('pagehide',s156Persist);
