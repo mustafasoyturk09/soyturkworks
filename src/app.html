@@ -9786,6 +9786,7 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     if(entries.some(function(x){return x.forgotten;}))return 'Bu açıklamanın eşleşmesi unutuldu; doğru hizmet ve açıklamayı bir kez hatırlatın.';
     if(signatures.length>1)return 'Bu XML hizmeti için hafızada çelişen eşleşmeler var; doğru kodu seçip kaydedin.';
     if(entries.length){var same=s150ServiceSignature(entries[0])===s150ServiceSignature(l);if(activeCompany==='PUSULA')same=same&&s150Text(s177Description(r,l))===s150Text(entries[0].usePdfDescription?l.sourceDescription:s150CurrentPeriod(entries[0],l));return same?'':'XML hizmetinin hatırlanan Logo kodu veya açıklaması değişti; kontrol edin.';}
+    if(activeCompany==='PUSULA'&&s150Profile(r).some(function(x){return !x.forgotten;}))return 'Bu cari için yeni / farklı satır açıklaması. Logo hizmet kodunu ve açıklamasını kontrol edip kaydedin.';
     if(activeCompany==='PUSULA'&&s177Description(r,l))return 'Logo satır açıklamasını örnekle karşılaştırıp hafızaya kaydedin.';
     if((r.sourceKind==='xml'||!s150Profile(r).length)&&s150Builtin(r,l))return '';
     return 'Yeni XML hizmeti. Logo hizmet kodunu ve açıklamasını kontrol edip kaydedin.';
@@ -9860,6 +9861,13 @@ ALACAK TOPLAM\t${money(last.alacakToplam)}`;
     if(s102Identity(a)===s102Identity(b))return true;
     var ea=s151Expected(company,a),eb=s151Expected(company,b);
     if(ea&&eb&&ea===eb)return true;
+    // A verified single customer account can have several service descriptions;
+    // incidental differences in the XML recipient block do not make a new owner.
+    // Never use this shortcut for identities with branch rules.
+    if(company==='PUSULA'&&s150Text(s151Title(a))&&s150Text(s151Title(a))===s150Text(s151Title(b))){
+      var la=s151Lookup(company,a.vkn,s151Title(a),a.sourceAddress),lb=s151Lookup(company,b.vkn,s151Title(b),b.sourceAddress);
+      if(!la.branch&&!lb.branch&&la.known&&lb.known&&la.code===a.arpCode&&lb.code===b.arpCode)return true;
+    }
     // Old report rows have no recipient block. Only the complete same title is reusable.
     return (!a.sourceRecipient||!b.sourceRecipient)&&s150Text(s151Title(a))===s150Text(s151Title(b));
   }
